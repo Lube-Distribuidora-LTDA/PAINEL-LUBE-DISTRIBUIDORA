@@ -58,6 +58,8 @@ enxerga o próprio perfil e os próprios sistemas.
 
 ### Painel administrativo
 
+Conta administradora: **cpd@lube.com.br** (na tela de login basta digitar `cpd`).
+
 Entre no portal como administrador e clique em **Painel admin** na barra
 superior (o link só aparece para quem é admin; abrir `admin.html` direto sem
 permissão devolve para o portal).
