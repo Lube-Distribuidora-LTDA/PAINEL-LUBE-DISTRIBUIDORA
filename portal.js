@@ -281,6 +281,17 @@
     });
   }
 
+  /* ---------- sufixo @lube.com.br some quando a pessoa digita o e-mail todo ---------- */
+  $$('[data-gate-user], [data-novo-user]').forEach(function (campo) {
+    var sufixo = $('.gate__suffix', campo.parentElement);
+    if (!sufixo) return;
+    var atualiza = function () {
+      sufixo.classList.toggle('is-off', campo.value.indexOf('@') > -1);
+    };
+    campo.addEventListener('input', atualiza);
+    atualiza();
+  });
+
   /* ---------- mostrar/ocultar senha ---------- */
   $$('[data-eye]').forEach(function (olho) {
     var campo = $('input[type="password"]', olho.parentElement);

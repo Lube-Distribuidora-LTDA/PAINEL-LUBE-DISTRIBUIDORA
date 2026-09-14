@@ -391,7 +391,12 @@ body:not(.autenticado) .nav{ display:none; }
   font-family:inherit; font-size:1rem; font-weight:500; letter-spacing:-.01em; color:#fff;
 }
 .gate .search__field input::placeholder{ color:rgba(255,255,255,.32); font-weight:300; }
-.gate__suffix{ flex:none; color:rgba(255,255,255,.38); font-size:.66rem; }
+.gate__suffix{
+  flex:none; color:rgba(255,255,255,.38); font-size:.66rem;
+  transition:opacity .3s var(--ease), max-width .4s var(--ease);
+  overflow:hidden; white-space:nowrap; max-width:8rem;
+}
+.gate__suffix.is-off{ opacity:0; max-width:0; }
 .gate__eye{
   flex:none; width:26px; height:26px; display:grid; place-items:center;
   color:rgba(255,255,255,.42); transition:color .3s;
