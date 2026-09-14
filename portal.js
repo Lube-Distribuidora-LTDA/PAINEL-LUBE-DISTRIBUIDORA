@@ -12,11 +12,14 @@
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
   var gate     = $('[data-gate]');
-  var form     = $('[data-gate-form]');
+  var form     = $('[data-form="entrar"]');
   var campoUsr = $('[data-gate-user]');
   var campoPwd = $('[data-gate-pass]');
   var erroEl   = $('[data-gate-erro]');
   var btnEntrar= $('[data-gate-submit]');
+  var okBox    = $('[data-gate-ok]');
+  var okTexto  = $('[data-gate-ok-texto]');
+  var modos    = $('.gate__modos');
   var track    = $('[data-track]');
   var conta    = $('[data-conta]');
 
@@ -134,9 +137,12 @@
         if (r.error || !r.data) throw new Error('Perfil não encontrado');
         perfil = r.data;
         if (!perfil.ativo) {
+          var pendente = !perfil.aprovado_em;
           return sb.auth.signOut().then(function () {
             mostrarGate();
-            erro('Seu acesso está desativado. Procure o TI.');
+            erro(pendente
+              ? 'Seu cadastro ainda não foi liberado pelo TI. Assim que for, é só entrar.'
+              : 'Seu acesso está desativado. Procure o TI.');
           });
         }
         window.LUBE_PERFIL = perfil;
@@ -193,16 +199,99 @@
     });
   }
 
+  /* ---------- alternar entrar / primeiro acesso ---------- */
+  function irPara(modo) {
+    erro('');
+    $$('[data-modo]').forEach(function (b) {
+      b.classList.toggle('is-on', b.getAttribute('data-modo') === modo);
+    });
+    $$('[data-form]').forEach(function (f) {
+      f.classList.toggle('is-on', f.getAttribute('data-form') === modo);
+    });
+    if (modos) modos.classList.toggle('no-segundo', modo === 'primeiro');
+    if (okBox) okBox.classList.remove('is-on');
+  }
+  $$('[data-modo]').forEach(function (b) {
+    b.addEventListener('click', function () { irPara(b.getAttribute('data-modo')); });
+  });
+  var voltar = $('[data-voltar-login]');
+  if (voltar) voltar.addEventListener('click', function () { irPara('entrar'); });
+
+  /* ---------- primeiro acesso ---------- */
+  var formNovo = $('[data-form="primeiro"]');
+  if (formNovo) {
+    formNovo.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      erro('');
+
+      var nome  = $('[data-novo-nome]').value.trim();
+      var email = emailCompleto($('[data-novo-user]').value);
+      var s1    = $('[data-novo-pass]').value;
+      var s2    = $('[data-novo-pass2]').value;
+      var botao = $('[data-novo-submit]');
+
+      if (!nome)  { erro('Informe seu nome completo.'); return; }
+      if (!email) { erro('Informe seu e-mail corporativo.'); return; }
+      if (email.slice(-CFG.dominio.length) !== CFG.dominio) {
+        erro('O primeiro acesso é só para e-mails ' + CFG.dominio); return;
+      }
+      if (s1.length < 8) { erro('A senha precisa ter ao menos 8 caracteres.'); return; }
+      if (s1 !== s2)     { erro('As duas senhas não são iguais.'); return; }
+
+      botao.disabled = true;
+      botao.classList.add('is-loading');
+
+      sb.auth.signUp({ email: email, password: s1, options: { data: { nome: nome } } })
+        .then(function (r) {
+          botao.disabled = false;
+          botao.classList.remove('is-loading');
+
+          if (r.error) {
+            var m = r.error.message || '';
+            if (/already registered|already been registered/i.test(m)) {
+              erro('Esse e-mail já tem cadastro. Use "Entrar" ou peça a senha ao TI.');
+            } else if (/@lube\.com\.br/i.test(m)) {
+              erro(m);
+            } else {
+              erro(m);
+            }
+            return;
+          }
+
+          var precisaConfirmar = !r.data.session;
+          // a conta nasce pendente: ninguém entra antes da liberação
+          return sb.auth.signOut().then(function () {
+            $$('[data-form]').forEach(function (f) { f.classList.remove('is-on'); });
+            if (okTexto) {
+              okTexto.textContent = precisaConfirmar
+                ? 'Confirme o endereço pelo link enviado para ' + email +
+                  ' e aguarde a liberação do TI para ver seus sistemas.'
+                : 'Sua conta foi criada para ' + email +
+                  '. O TI precisa liberar seus sistemas antes do primeiro login — você será avisado.';
+            }
+            if (okBox) okBox.classList.add('is-on');
+            formNovo.reset();
+          });
+        })
+        .catch(function () {
+          botao.disabled = false;
+          botao.classList.remove('is-loading');
+          erro('Falha de conexão. Tente de novo.');
+        });
+    });
+  }
+
   /* ---------- mostrar/ocultar senha ---------- */
-  var olho = $('[data-eye]');
-  if (olho && campoPwd) {
+  $$('[data-eye]').forEach(function (olho) {
+    var campo = $('input[type="password"]', olho.parentElement);
+    if (!campo) return;
     olho.addEventListener('click', function () {
-      var mostrar = campoPwd.type === 'password';
-      campoPwd.type = mostrar ? 'text' : 'password';
+      var mostrar = campo.type === 'password';
+      campo.type = mostrar ? 'text' : 'password';
       olho.classList.toggle('is-on', mostrar);
       olho.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
     });
-  }
+  });
 
   /* ---------- início ---------- */
   sb.auth.getSession().then(function (r) {

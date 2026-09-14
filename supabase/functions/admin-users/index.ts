@@ -82,6 +82,8 @@ Deno.serve(async (req) => {
           cargo: corpo.cargo ?? '',
           is_admin: !!corpo.is_admin,
           ativo: true,
+          aprovado_em: new Date().toISOString(),
+          aprovado_por: userData.user.id,
         }).eq('id', id);
 
         const sistemas: string[] = Array.isArray(corpo.sistemas) ? corpo.sistemas : [];

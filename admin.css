@@ -102,6 +102,12 @@
 .tag--off{ color:var(--muted-d); }
 .tag--admin{ color:var(--red); }
 .tag--user{ color:var(--blue); }
+.tag--pendente{ color:#B8860B; }
+.adm__link--destaque{
+  color:#fff; background:var(--blue); padding:.4rem .7rem;
+}
+.adm__link--destaque::after{ display:none; }
+.adm__link--destaque:hover{ background:var(--red); }
 
 .chips{ display:flex; flex-wrap:wrap; gap:.35rem; }
 .chip{

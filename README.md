@@ -26,6 +26,24 @@ assets/         imagens
 
 ## Como funciona o acesso
 
+A tela inicial tem dois caminhos: **Entrar** e **Primeiro acesso**.
+
+### Primeiro acesso
+
+A pessoa informa nome, e-mail corporativo e cria a própria senha. O cadastro
+nasce **pendente**: ninguém entra sozinho. O TI vê o pedido no topo da lista de
+usuários, com a etiqueta *Aguardando*, e clica em **Liberar** escolhendo quais
+sistemas aquela pessoa pode ver.
+
+> **Ajuste necessário no Supabase.** Em *Authentication → Sign In / Providers →
+> Email*, desligue **Confirm email**. Com essa opção ligada o Supabase tenta
+> mandar um e-mail de confirmação, e o SMTP padrão só entrega para membros do
+> projeto — o colaborador ficaria travado. Como todo cadastro passa pela
+> aprovação do TI, a confirmação por e-mail não faz falta. Se preferir mantê-la,
+> configure um SMTP próprio.
+
+### Entrar
+
 1. A pessoa entra com **usuário + senha**. Se digitar só `nome.sobrenome`, o
    portal completa para `nome.sobrenome@lube.com.br`.
 2. O Supabase valida a senha (guardada com hash, nunca em texto).
@@ -44,7 +62,8 @@ Entre no portal como administrador e clique em **Painel admin** na barra
 superior (o link só aparece para quem é admin; abrir `admin.html` direto sem
 permissão devolve para o portal).
 
-- **Usuários** — criar, editar nome/cargo, promover a administrador, ativar e
+- **Usuários** — liberar quem pediu primeiro acesso, criar contas direto (com
+  senha provisória), editar nome/cargo, promover a administrador, ativar e
   desativar, redefinir senha e remover. As permissões de sistema são marcadas
   na mesma tela.
 - **Sistemas** — cadastrar, editar, reordenar, ativar/desativar e excluir as
@@ -117,9 +136,10 @@ formato `55` + DDD + número, sem espaços.
 ## Pendências recomendadas
 
 1. **Trocar a senha do administrador** no primeiro acesso.
-2. **Ligar a proteção contra senhas vazadas** no Supabase
+2. **Desligar o "Confirm email"** no Supabase (veja o aviso em *Primeiro acesso*).
+3. **Ligar a proteção contra senhas vazadas** no Supabase
    (Authentication → Policies → *Leaked password protection*).
-3. **Proteger os três sistemas**. Esconder o cartão no portal não impede que
+4. **Proteger os três sistemas**. Esconder o cartão no portal não impede que
    alguém com o link abra a aplicação direto. Para restringir de verdade, cada
    sistema precisa validar a sessão — os três já usam Supabase, o que facilita.
 

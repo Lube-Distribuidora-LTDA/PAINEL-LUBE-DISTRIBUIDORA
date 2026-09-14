@@ -35,48 +35,112 @@
 <!-- ============ TELA DE ACESSO ============ -->
 <div class="gate" data-gate>
   <div class="gate__bg" aria-hidden="true"></div>
-  <form class="gate__box" data-gate-form>
+
+  <div class="gate__box">
     <div class="gate__logo">
       <span class="gate__mark" data-logo-mark></span>
       <span class="gate__word"><strong>LUBE</strong><em>Distribuidora</em></span>
     </div>
 
     <h1 class="gate__title">Painel de<br /><span>Sistemas</span></h1>
-    <p class="gate__lead">Acesso restrito a colaboradores com e-mail @lube.com.br.</p>
+    <p class="gate__lead" data-gate-lead>Acesso restrito a colaboradores com e-mail @lube.com.br.</p>
 
-    <label class="gate__field">
-      <span class="mono">Usuário</span>
-      <span class="search__field">
-        <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <input type="text" data-gate-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
-        <span class="gate__suffix mono">@lube.com.br</span>
-      </span>
-    </label>
+    <div class="gate__modos" role="tablist">
+      <button class="gate__modo is-on" type="button" data-modo="entrar">Entrar</button>
+      <button class="gate__modo" type="button" data-modo="primeiro">Primeiro acesso</button>
+      <span class="gate__modo-barra" data-modo-barra></span>
+    </div>
 
-    <label class="gate__field">
-      <span class="mono">Senha</span>
-      <span class="search__field">
-        <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <input type="password" data-gate-pass autocomplete="current-password" placeholder="••••••••" />
-        <button type="button" class="gate__eye" data-eye aria-label="Mostrar senha">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
-          </svg>
-        </button>
+    <form class="gate__form is-on" data-form="entrar">
+      <label class="gate__field">
+        <span class="mono">Usuário</span>
+        <span class="search__field">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <input type="text" data-gate-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
+          <span class="gate__suffix mono">@lube.com.br</span>
+        </span>
+      </label>
+
+      <label class="gate__field">
+        <span class="mono">Senha</span>
+        <span class="search__field">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <input type="password" data-gate-pass autocomplete="current-password" placeholder="••••••••" />
+          <button type="button" class="gate__eye" data-eye="pass" aria-label="Mostrar senha">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </span>
+      </label>
+
+      <button class="btn gate__submit" type="submit" data-gate-submit>
+        <span class="btn__label">Entrar</span>
+        <span class="btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+    </form>
+
+    <form class="gate__form" data-form="primeiro">
+      <label class="gate__field">
+        <span class="mono">Nome completo</span>
+        <span class="search__field">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <input type="text" data-novo-nome autocomplete="name" placeholder="Seu nome" />
+        </span>
+      </label>
+
+      <label class="gate__field">
+        <span class="mono">E-mail corporativo</span>
+        <span class="search__field">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <input type="text" data-novo-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
+          <span class="gate__suffix mono">@lube.com.br</span>
+        </span>
+      </label>
+
+      <label class="gate__field">
+        <span class="mono">Crie uma senha</span>
+        <span class="search__field">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <input type="password" data-novo-pass autocomplete="new-password" placeholder="mínimo 8 caracteres" />
+          <button type="button" class="gate__eye" data-eye="novo" aria-label="Mostrar senha">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </span>
+      </label>
+
+      <label class="gate__field">
+        <span class="mono">Repita a senha</span>
+        <span class="search__field">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <input type="password" data-novo-pass2 autocomplete="new-password" placeholder="••••••••" />
+        </span>
+      </label>
+
+      <button class="btn gate__submit" type="submit" data-novo-submit>
+        <span class="btn__label">Criar meu acesso</span>
+        <span class="btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+    </form>
+
+    <div class="gate__ok" data-gate-ok>
+      <span class="gate__ok-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 7"/></svg>
       </span>
-    </label>
+      <h2>Cadastro enviado</h2>
+      <p data-gate-ok-texto></p>
+      <button class="gate__voltar" type="button" data-voltar-login>Voltar para o login</button>
+    </div>
 
     <p class="gate__erro" data-gate-erro role="alert"></p>
-
-    <button class="btn gate__submit" type="submit" data-gate-submit>
-      <span class="btn__label">Entrar</span>
-      <span class="btn__icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </span>
-    </button>
-
     <p class="gate__rodape mono">Esqueceu a senha? Fale com o TI · cpd@lube.com.br</p>
-  </form>
+  </div>
 </div>
 
 <!-- ============ NAVBAR (marca centralizada) ============ -->

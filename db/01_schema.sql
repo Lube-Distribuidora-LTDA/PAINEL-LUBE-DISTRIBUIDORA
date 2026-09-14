@@ -14,12 +14,16 @@ create table if not exists public.profiles (
   nome           text not null default '',
   cargo          text not null default '',
   is_admin       boolean not null default false,
-  ativo          boolean not null default true,
+  ativo          boolean not null default false,   -- primeiro acesso nasce pendente
+  aprovado_em    timestamptz,                      -- null = ainda não liberado pelo TI
+  aprovado_por   uuid references public.profiles(id) on delete set null,
   criado_em      timestamptz not null default now(),
   atualizado_em  timestamptz not null default now()
 );
 
 comment on table public.profiles is 'Usuários do painel. Criado automaticamente ao cadastrar em auth.users.';
+comment on column public.profiles.aprovado_em is
+  'null = cadastro feito pelo botão "Primeiro acesso" e ainda não liberado pelo TI';
 
 -- ---------------------------------------------------------
 -- 2. SISTEMAS DA EMPRESA

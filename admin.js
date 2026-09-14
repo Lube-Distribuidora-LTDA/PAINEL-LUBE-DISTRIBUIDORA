@@ -107,11 +107,20 @@
   }
 
   /* ---------------- usuários ---------------- */
+  function pendente(u) { return !u.ativo && !u.aprovado_em; }
+
   function pintarUsuarios() {
     var tb = $('[data-tbody-usuarios]');
     var resumo = $('[data-resumo-usuarios]');
     var ativos = usuarios.filter(function (u) { return u.ativo; }).length;
-    resumo.textContent = usuarios.length + ' cadastrados · ' + ativos + ' ativos';
+    var pend = usuarios.filter(pendente);
+    resumo.textContent = usuarios.length + ' cadastrados · ' + ativos + ' ativos' +
+      (pend.length ? ' · ' + pend.length + ' aguardando liberação' : '');
+
+    // quem pediu primeiro acesso aparece no topo
+    usuarios.sort(function (a, b) {
+      return (pendente(b) ? 1 : 0) - (pendente(a) ? 1 : 0);
+    });
 
     if (!usuarios.length) {
       tb.innerHTML = '<tr><td colspan="6" class="adm__vazio">Nenhum usuário ainda.</td></tr>';
@@ -130,9 +139,11 @@
         '<td>' + (u.is_admin ? '<span class="tag tag--admin">Admin</span>'
                              : '<span class="tag tag--user">Usuário</span>') + '</td>' +
         '<td>' + (u.ativo ? '<span class="tag tag--ok">Ativo</span>'
-                          : '<span class="tag tag--off">Desativado</span>') + '</td>' +
+                 : pendente(u) ? '<span class="tag tag--pendente">Aguardando</span>'
+                               : '<span class="tag tag--off">Desativado</span>') + '</td>' +
         '<td><div class="chips">' + chips + '</div></td>' +
         '<td><div class="cel-acoes">' +
+          (pendente(u) ? '<button class="adm__link adm__link--destaque" data-aprovar="' + u.id + '">Liberar</button>' : '') +
           '<button class="adm__link" data-editar="' + u.id + '">Editar</button>' +
           '<button class="adm__link" data-senha="' + u.id + '">Senha</button>' +
           '<button class="adm__link adm__link--perigo" data-remover="' + u.id + '">Remover</button>' +
@@ -237,6 +248,34 @@
         return carregarTudo();
       });
     });
+  }
+
+  function aprovarUsuario(id) {
+    var u = usuarios.filter(function (x) { return x.id === id; })[0];
+    if (!u) return;
+    abrirModal('Liberar ' + (u.nome || u.email),
+      '<p><strong>' + esc(u.email) + '</strong> criou o acesso pelo botão “Primeiro acesso” e está ' +
+      'aguardando liberação. Marque abaixo o que essa pessoa pode ver.</p>' +
+      listaSistemasHTML([]),
+      function () {
+        var escolhidos = marcados();
+        var passos = [
+          sb.from('profiles').update({
+            ativo: true, aprovado_em: new Date().toISOString(), aprovado_por: eu.id
+          }).eq('id', u.id)
+        ];
+        if (escolhidos.length) {
+          passos.push(sb.from('permissoes').insert(escolhidos.map(function (sid) {
+            return { user_id: u.id, sistema_id: sid, concedido_por: eu.id };
+          })));
+        }
+        return Promise.all(passos).then(function (rs) {
+          var falha = rs.filter(function (r) { return r && r.error; })[0];
+          if (falha) throw new Error(falha.error.message);
+          toast('Acesso liberado.');
+          return carregarTudo();
+        });
+      }, 'Liberar acesso');
   }
 
   function trocarSenha(id) {
@@ -399,6 +438,7 @@
     var t = ev.target.closest ? ev.target.closest('button,a') : null;
     if (!t) return;
     var g = function (n) { return t.getAttribute(n); };
+    if (g('data-aprovar'))  { aprovarUsuario(g('data-aprovar')); }
     if (g('data-editar'))   { editarUsuario(g('data-editar')); }
     if (g('data-senha'))    { trocarSenha(g('data-senha')); }
     if (g('data-remover'))  { removerUsuario(g('data-remover')); }
