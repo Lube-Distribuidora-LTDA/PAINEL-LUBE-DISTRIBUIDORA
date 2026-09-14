@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lube Distribuidora — Painel de Sistemas</title>
+<meta name="description" content="Painel organizacional de sistemas da Lube Distribuidora. Acesso centralizado às plataformas de Gestão Operacional, RH e Contabilidade." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 112'%3E%3Cg transform='translate(20,0) skewX(-10)'%3E%3Cpath fill='%231E2B8C' d='M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z'/%3E%3Cpath fill='%23EE1B24' d='M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="is-loading">
+
+<!-- ============ RUÍDO / GRAIN GLOBAL ============ -->
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ CORTINA DE ENTRADA ============ -->
+<div class="curtain" aria-hidden="true">
+  <div class="curtain__inner">
+    <div class="curtain__logo">
+      <span class="curtain__mark" data-logo-mark></span>
+      <span class="curtain__word">
+        <strong>LUBE</strong>
+        <em>Distribuidora</em>
+      </span>
+      <span class="curtain__shine"></span>
+    </div>
+    <div class="curtain__bar"><i data-load-bar></i></div>
+    <span class="curtain__count mono"><span data-count>00</span>%</span>
+  </div>
+</div>
+
+<!-- ============ TELA DE ACESSO ============ -->
+<div class="gate" data-gate>
+  <div class="gate__bg" aria-hidden="true"></div>
+  <form class="gate__box" data-gate-form>
+    <div class="gate__logo">
+      <span class="gate__mark" data-logo-mark></span>
+      <span class="gate__word"><strong>LUBE</strong><em>Distribuidora</em></span>
+    </div>
+
+    <h1 class="gate__title">Painel de<br /><span>Sistemas</span></h1>
+    <p class="gate__lead">Acesso restrito a colaboradores com e-mail @lube.com.br.</p>
+
+    <label class="gate__field">
+      <span class="mono">Usuário</span>
+      <span class="search__field">
+        <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <input type="text" data-gate-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
+        <span class="gate__suffix mono">@lube.com.br</span>
+      </span>
+    </label>
+
+    <label class="gate__field">
+      <span class="mono">Senha</span>
+      <span class="search__field">
+        <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <input type="password" data-gate-pass autocomplete="current-password" placeholder="••••••••" />
+        <button type="button" class="gate__eye" data-eye aria-label="Mostrar senha">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </span>
+    </label>
+
+    <p class="gate__erro" data-gate-erro role="alert"></p>
+
+    <button class="btn gate__submit" type="submit" data-gate-submit>
+      <span class="btn__label">Entrar</span>
+      <span class="btn__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </button>
+
+    <p class="gate__rodape mono">Esqueceu a senha? Fale com o TI · cpd@lube.com.br</p>
+  </form>
+</div>
+
+<!-- ============ NAVBAR (marca centralizada) ============ -->
+<header class="nav" id="topo">
+  <div class="nav__side nav__side--l">
+    <span class="conta mono" data-conta></span>
+  </div>
+
+  <a class="nav__brand" href="#topo" aria-label="Lube Distribuidora — início">
+    <span class="nav__mark" data-logo-mark></span>
+    <span class="nav__brandtext">LUBE<em>Distribuidora</em></span>
+  </a>
+
+  <div class="nav__side nav__side--r">
+    <nav class="nav__links" aria-label="Navegação principal">
+      <a href="#sistemas" data-nav>Sistemas</a>
+      <a href="#manifesto" data-nav>A Empresa</a>
+      <a href="#acesso" data-nav>Acesso</a>
+    </nav>
+    <button class="nav__burger" type="button" aria-label="Abrir menu" aria-expanded="false" data-burger>
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ============ MENU MOBILE ============ -->
+<div class="menu" data-menu data-surface="dark">
+  <a href="#sistemas" data-nav>Sistemas</a>
+  <a href="#manifesto" data-nav>A Empresa</a>
+  <a href="#acesso" data-nav>Acesso</a>
+</div>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<section class="hero" data-hero data-surface="dark">
+  <div class="hero__bg" data-hero-bg aria-hidden="true">
+    <div class="hero__glow"></div>
+    <div class="hero__grid"></div>
+  </div>
+
+  <div class="hero__content" data-hero-title>
+    <h1 class="hero__title">
+      <span class="mask"><span data-rise="2">SISTEMAS</span></span>
+      <span class="mask hero__title--alt"><span data-rise="3">CORPORATIVOS</span></span>
+    </h1>
+  </div>
+
+  <div class="hero__foot">
+    <span class="hero__cue" data-rise="5" aria-hidden="true"><i></i></span>
+    <div class="hero__meta" data-rise="6">
+      <div><span class="mono">03</span><small>Sistemas ativos</small></div>
+      <div><span class="mono">03</span><small>Áreas atendidas</small></div>
+      <div><span class="mono">24/7</span><small>Disponibilidade</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRANSIÇÃO — O CAMINHÃO ============ -->
+<section class="haul" data-haul aria-label="Transição">
+  <div class="haul__stage">
+    <div class="haul__dark" data-surface="dark">
+      <p class="haul__type" data-haul-type-dark>
+        <span>EM MOVIMENTO</span>
+        <em>desde 1959</em>
+      </p>
+    </div>
+
+    <div class="haul__light" data-haul-light data-surface="light">
+      <p class="haul__type haul__type--dark" data-haul-type-light>
+        <span>NOSSOS</span>
+        <em>sistemas</em>
+      </p>
+    </div>
+
+    <div class="haul__road" data-haul-road><i></i></div>
+
+    <div class="haul__truck" data-truck>
+      <div class="haul__speed" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="haul__vehicle" data-vehicle></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SISTEMAS ============ -->
+<section class="works" id="sistemas" data-surface="light">
+  <header class="works__head">
+    <div class="works__bar">
+      <h2 class="works__title">
+        <span class="mask"><span data-reveal>SISTEMAS</span></span>
+        <span class="mask"><span data-reveal class="ital">internos</span></span>
+      </h2>
+
+      <div class="search" data-reveal>
+        <label class="search__field" for="busca">
+          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="search__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+            </svg>
+          </span>
+          <input id="busca" type="search" autocomplete="off" spellcheck="false"
+                 placeholder="Buscar sistema, área ou palavra-chave"
+                 aria-label="Buscar sistema" data-search />
+          <button class="search__clear" type="button" aria-label="Limpar busca" data-search-clear>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- carrossel -->
+  <div class="rail">
+    <div class="rail__track" data-track data-stagger tabindex="0" aria-label="Carrossel de sistemas"></div>
+
+    <p class="rail__empty" data-empty hidden>
+      <span class="mono">Nenhum sistema encontrado</span>
+      Tente outro termo — por exemplo
+      <button type="button" data-suggest="rh">RH</button>,
+      <button type="button" data-suggest="fiscal">fiscal</button> ou
+      <button type="button" data-suggest="frota">frota</button>.
+    </p>
+  </div>
+
+  <div class="rail__ctrl">
+    <div class="rail__bar"><i data-rail-bar></i></div>
+    <div class="rail__btns">
+      <button class="cbtn" type="button" data-prev aria-label="Sistema anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+      </button>
+      <button class="cbtn" type="button" data-next aria-label="Próximo sistema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MANIFESTO ============ -->
+<section class="manifesto" id="manifesto" data-surface="dark">
+  <blockquote class="manifesto__text">
+    <span class="mask"><span data-reveal>Mais de seis décadas</span></span>
+    <span class="mask"><span data-reveal>movendo a distribuição</span></span>
+    <span class="mask"><span data-reveal>com <em>precisão</em> e <em>tecnologia</em>.</span></span>
+  </blockquote>
+  <div class="manifesto__line" data-line><i></i></div>
+  <p class="manifesto__sign mono" data-reveal>LUBE DISTRIBUIDORA · TECNOLOGIA DA INFORMAÇÃO</p>
+</section>
+
+</main>
+
+<!-- ============ RODAPÉ ============ -->
+<footer class="foot" id="acesso" data-surface="light">
+  <div class="foot__hero">
+    <h2 class="foot__big">PRECISA DE ACESSO?</h2>
+    <div class="contact" data-contact>
+      <button class="btn" type="button" aria-expanded="false" aria-controls="contatos-ti" data-contact-toggle>
+        <span class="btn__label">Falar com o TI</span>
+        <span class="btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+
+      <div class="contact__list" id="contatos-ti">
+        <div class="contact__inner">
+          <p class="mono contact__hint">Fale no WhatsApp</p>
+        <a class="contact__item" href="https://wa.me/5527988819807?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20com%20um%20sistema%20da%20Lube%20Distribuidora." target="_blank" rel="noopener">
+          <span class="contact__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          </span>
+          <span class="contact__txt">
+            <strong>Júlio</strong>
+            <em>+55 (27) 98881-9807</em>
+          </span>
+          <span class="contact__go" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </span>
+        </a>
+        <a class="contact__item" href="https://wa.me/5527992736082?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20com%20um%20sistema%20da%20Lube%20Distribuidora." target="_blank" rel="noopener">
+          <span class="contact__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          </span>
+          <span class="contact__txt">
+            <strong>Alexandre</strong>
+            <em>+55 (27) 99273-6082</em>
+          </span>
+          <span class="contact__go" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </span>
+        </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot__cols">
+    <div class="foot__col">
+      <p class="mono foot__label">Sistemas</p>
+      <a class="wavy" href="https://gestao-de-saidas-de-veiculos.vercel.app/" target="_blank" rel="noopener">Saída de Veículos</a>
+      <a class="wavy" href="https://rh-absentismo.vercel.app/" target="_blank" rel="noopener">Controle RH</a>
+      <a class="wavy" href="https://painel-icms.vercel.app/" target="_blank" rel="noopener">Painel ICMS</a>
+    </div>
+    <div class="foot__col foot__col--mail">
+      <p class="mono foot__label">Suporte TI</p>
+      <a class="foot__mail" href="mailto:cpd@lube.com.br">cpd@lube.com.br</a>
+    </div>
+    <div class="foot__col foot__col--end">
+      <span class="foot__mark" data-logo-mark></span>
+      <p class="mono foot__rights">© <span data-year>2026</span> Lube Distribuidora<br />Todos os direitos reservados</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="portal.js"></script>
+</body>
+</html>

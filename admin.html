@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Painel Administrativo — Lube Distribuidora</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 112'%3E%3Cg transform='translate(20,0) skewX(-10)'%3E%3Cpath fill='%231E2B8C' d='M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z'/%3E%3Cpath fill='%23EE1B24' d='M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body class="adm-body">
+
+<div class="adm-carregando" data-carregando><span class="mono">Verificando acesso…</span></div>
+
+<div class="adm" data-adm hidden>
+
+  <!-- ============ CABEÇALHO ============ -->
+  <header class="adm__top">
+    <a class="adm__brand" href="index.html">
+      <span class="adm__mark" data-logo-mark></span>
+      <span class="adm__brandtext">LUBE<em>Painel administrativo</em></span>
+    </a>
+    <div class="adm__user">
+      <span class="mono" data-adm-quem></span>
+      <a class="adm__link" href="index.html">Ver portal</a>
+      <button class="adm__link" type="button" data-sair>Sair</button>
+    </div>
+  </header>
+
+  <!-- ============ ABAS ============ -->
+  <nav class="adm__tabs">
+    <button class="adm__tab is-on" type="button" data-aba="usuarios">Usuários</button>
+    <button class="adm__tab" type="button" data-aba="sistemas">Sistemas</button>
+    <button class="adm__tab" type="button" data-aba="acessos">Acessos</button>
+  </nav>
+
+  <!-- ============ USUÁRIOS ============ -->
+  <section class="adm__painel is-on" data-painel="usuarios">
+    <div class="adm__head">
+      <div>
+        <h2 class="adm__h2">Usuários</h2>
+        <p class="adm__sub" data-resumo-usuarios></p>
+      </div>
+      <button class="btn adm__btn" type="button" data-novo-usuario>
+        <span class="btn__label">Novo usuário</span>
+        <span class="btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
+      </button>
+    </div>
+
+    <div class="adm__tablewrap">
+      <table class="adm__table">
+        <thead>
+          <tr>
+            <th>Usuário</th><th>Cargo</th><th>Perfil</th><th>Situação</th><th>Sistemas</th><th></th>
+          </tr>
+        </thead>
+        <tbody data-tbody-usuarios></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ SISTEMAS ============ -->
+  <section class="adm__painel" data-painel="sistemas">
+    <div class="adm__head">
+      <div>
+        <h2 class="adm__h2">Sistemas</h2>
+        <p class="adm__sub">Plataformas que podem ser liberadas aos usuários.</p>
+      </div>
+      <button class="btn adm__btn" type="button" data-novo-sistema>
+        <span class="btn__label">Novo sistema</span>
+        <span class="btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
+      </button>
+    </div>
+
+    <div class="adm__tablewrap">
+      <table class="adm__table">
+        <thead>
+          <tr><th>Sistema</th><th>Área</th><th>Endereço</th><th>Ordem</th><th>Situação</th><th></th></tr>
+        </thead>
+        <tbody data-tbody-sistemas></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ACESSOS ============ -->
+  <section class="adm__painel" data-painel="acessos">
+    <div class="adm__head">
+      <div>
+        <h2 class="adm__h2">Acessos</h2>
+        <p class="adm__sub">Últimos 200 registros de entrada e abertura de sistemas.</p>
+      </div>
+      <button class="adm__link" type="button" data-recarregar-acessos>Atualizar</button>
+    </div>
+
+    <div class="adm__tablewrap">
+      <table class="adm__table">
+        <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Sistema</th></tr></thead>
+        <tbody data-tbody-acessos></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal" data-modal hidden>
+  <div class="modal__fundo" data-modal-fechar></div>
+  <div class="modal__caixa" role="dialog" aria-modal="true">
+    <div class="modal__top">
+      <h3 class="modal__titulo" data-modal-titulo></h3>
+      <button class="modal__x" type="button" data-modal-fechar aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <form class="modal__corpo" data-modal-form></form>
+    <p class="modal__erro" data-modal-erro></p>
+    <div class="modal__acoes">
+      <button class="adm__link" type="button" data-modal-fechar>Cancelar</button>
+      <button class="btn adm__btn" type="button" data-modal-ok>
+        <span class="btn__label">Salvar</span>
+        <span class="btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" data-toast></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="marca.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

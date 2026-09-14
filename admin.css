@@ -1,0 +1,197 @@
+/* =========================================================
+   PAINEL ADMINISTRATIVO — Lube Distribuidora
+   (usa as variáveis e o botão .btn de styles.css)
+   ========================================================= */
+
+.adm-body{
+  background:var(--ghost); color:var(--blue-ink);
+  overflow-x:hidden;
+}
+
+.adm-carregando{
+  position:fixed; inset:0; display:grid; place-items:center;
+  background:var(--blue-ink); color:var(--muted); z-index:50;
+}
+.adm-carregando.is-off{ display:none; }
+
+.adm{ max-width:1400px; margin:0 auto; padding:0 var(--pad) 5rem; }
+
+/* ---------- topo ---------- */
+.adm__top{
+  display:flex; align-items:center; justify-content:space-between; gap:2rem;
+  padding:1.6rem 0; border-bottom:1px solid var(--line-d); flex-wrap:wrap;
+}
+.adm__brand{ display:flex; align-items:center; gap:.8rem; }
+.adm__mark{ width:34px; display:block; flex:none; }
+.adm__brandtext{ font-weight:900; font-size:1.1rem; letter-spacing:-.03em; line-height:1; display:flex; flex-direction:column; }
+.adm__brandtext em{
+  font-style:normal; font-weight:300; font-size:.56rem; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--muted-d); margin-top:4px;
+}
+.adm__user{ display:flex; align-items:center; gap:1.5rem; }
+.adm__user .mono{ color:var(--muted-d); font-size:.66rem; }
+
+.adm__link{
+  position:relative; font-family:'JetBrains Mono','Consolas',monospace;
+  font-size:.66rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--blue); padding-bottom:2px; background:none; border:0; cursor:pointer;
+}
+.adm__link::after{
+  content:''; position:absolute; left:0; bottom:0; width:100%; height:1px;
+  background:currentColor; transform:scaleX(0); transform-origin:right;
+  transition:transform .45s var(--ease);
+}
+.adm__link:hover::after{ transform:scaleX(1); transform-origin:left; }
+.adm__link--perigo{ color:var(--red); }
+
+/* ---------- abas ---------- */
+.adm__tabs{ display:flex; gap:2rem; padding:1.5rem 0 0; border-bottom:1px solid var(--line-d); }
+.adm__tab{
+  position:relative; padding:0 0 1rem; font-size:1rem; font-weight:600;
+  letter-spacing:-.02em; color:var(--muted-d); transition:color .35s var(--ease);
+}
+.adm__tab::after{
+  content:''; position:absolute; left:0; bottom:-1px; width:100%; height:2px;
+  background:var(--red); transform:scaleX(0); transform-origin:left;
+  transition:transform .5s var(--ease);
+}
+.adm__tab.is-on{ color:var(--blue-ink); }
+.adm__tab.is-on::after{ transform:scaleX(1); }
+
+/* ---------- painéis ---------- */
+.adm__painel{ display:none; padding-top:2.5rem; }
+.adm__painel.is-on{ display:block; animation:admIn .5s var(--ease) both; }
+@keyframes admIn{ from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none} }
+
+.adm__head{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:2rem;
+  margin-bottom:1.75rem; flex-wrap:wrap;
+}
+.adm__h2{ font-size:clamp(1.6rem,3vw,2.4rem); font-weight:900; letter-spacing:-.04em; text-transform:uppercase; }
+.adm__sub{ margin-top:.5rem; color:#525A72; font-size:.92rem; font-weight:300; }
+.adm__btn{ margin-top:0; }
+
+/* ---------- tabela ---------- */
+.adm__tablewrap{ overflow-x:auto; border:1px solid var(--line-d); background:#fff; }
+.adm__table{ width:100%; border-collapse:collapse; min-width:820px; }
+.adm__table th{
+  text-align:left; padding:1rem 1.15rem; border-bottom:1px solid var(--line-d);
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.62rem;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--muted-d); font-weight:500;
+  white-space:nowrap;
+}
+.adm__table td{
+  padding:1rem 1.15rem; border-bottom:1px solid rgba(6,11,41,.07);
+  font-size:.92rem; vertical-align:middle;
+}
+.adm__table tbody tr{ transition:background .3s var(--ease); }
+.adm__table tbody tr:hover{ background:rgba(30,43,140,.035); }
+.adm__table tbody tr:last-child td{ border-bottom:0; }
+
+.cel-nome{ font-weight:700; letter-spacing:-.02em; }
+.cel-email{ display:block; color:var(--muted-d); font-size:.76rem; margin-top:.2rem; }
+.cel-acoes{ display:flex; gap:1rem; justify-content:flex-end; white-space:nowrap; }
+
+.tag{
+  display:inline-flex; align-items:center; gap:.4rem;
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.6rem;
+  letter-spacing:.12em; text-transform:uppercase; padding:.35rem .6rem;
+  border:1px solid currentColor;
+}
+.tag--ok{ color:#1B8A4B; }
+.tag--off{ color:var(--muted-d); }
+.tag--admin{ color:var(--red); }
+.tag--user{ color:var(--blue); }
+
+.chips{ display:flex; flex-wrap:wrap; gap:.35rem; }
+.chip{
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.58rem;
+  letter-spacing:.1em; text-transform:uppercase;
+  padding:.3rem .5rem; background:rgba(30,43,140,.08); color:var(--blue);
+}
+.chip--vazio{ background:none; color:var(--muted-d); border:1px dashed var(--line-d); }
+
+.adm__vazio{ padding:3rem 1.15rem; text-align:center; color:var(--muted-d); }
+
+/* ---------- modal ---------- */
+.modal{ position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:var(--pad); }
+.modal[hidden]{ display:none; }
+.modal__fundo{ position:absolute; inset:0; background:rgba(3,6,22,.72); animation:fade .35s var(--ease) both; }
+@keyframes fade{ from{opacity:0} to{opacity:1} }
+.modal__caixa{
+  position:relative; width:min(100%,560px); max-height:88vh; overflow-y:auto;
+  background:#fff; border:1px solid var(--line-d);
+  animation:modalIn .5s var(--ease) both;
+}
+@keyframes modalIn{ from{opacity:0; transform:translateY(22px) scale(.98)} to{opacity:1; transform:none} }
+.modal__top{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  padding:1.5rem 1.75rem; border-bottom:1px solid var(--line-d);
+}
+.modal__titulo{ font-size:1.25rem; font-weight:900; letter-spacing:-.03em; text-transform:uppercase; }
+.modal__x{ width:32px; height:32px; display:grid; place-items:center; color:var(--muted-d); }
+.modal__x svg{ width:18px; height:18px; }
+.modal__x:hover{ color:var(--red); }
+.modal__corpo{ padding:1.75rem; display:flex; flex-direction:column; gap:1.2rem; }
+.modal__acoes{
+  display:flex; align-items:center; justify-content:flex-end; gap:1.5rem;
+  padding:1.25rem 1.75rem; border-top:1px solid var(--line-d);
+}
+.modal__erro{ padding:0 1.75rem; color:var(--red); font-size:.86rem; }
+.modal__erro:empty{ display:none; }
+
+/* ---------- campos ---------- */
+.campo{ display:flex; flex-direction:column; gap:.5rem; }
+.campo > span{
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.62rem;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--muted-d);
+}
+.campo input[type="text"],
+.campo input[type="password"],
+.campo input[type="number"],
+.campo input[type="url"],
+.campo select,
+.campo textarea{
+  font-family:inherit; font-size:.95rem; color:var(--blue-ink);
+  padding:.8rem .9rem; border:1px solid var(--line-d); background:#fff;
+  outline:0; transition:border-color .35s var(--ease), box-shadow .35s var(--ease);
+  width:100%;
+}
+.campo textarea{ resize:vertical; min-height:80px; }
+.campo input:focus,.campo select:focus,.campo textarea:focus{
+  border-color:var(--blue); box-shadow:0 0 0 3px rgba(30,43,140,.1);
+}
+.campo--linha{ display:flex; gap:1rem; }
+.campo--linha > *{ flex:1; }
+.campo__dica{ font-size:.76rem; color:var(--muted-d); font-weight:300; }
+
+.campo-inline{ display:flex; align-items:center; gap:.65rem; cursor:pointer; }
+.campo-inline input{ width:18px; height:18px; accent-color:var(--blue); }
+.campo-inline span{ font-size:.92rem; }
+
+.sufixo{ display:flex; align-items:stretch; }
+.sufixo input{ border-right:0 !important; }
+.sufixo b{
+  display:grid; place-items:center; padding:0 .9rem; border:1px solid var(--line-d);
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.68rem;
+  color:var(--muted-d); font-weight:400; background:#F4F5F9;
+}
+
+.listasistemas{ display:flex; flex-direction:column; gap:.6rem; max-height:220px; overflow-y:auto; padding-right:.25rem; }
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed; left:50%; bottom:2rem; transform:translate(-50%,140%);
+  background:var(--blue-ink); color:#fff; padding:1rem 1.4rem;
+  font-size:.9rem; z-index:300; max-width:min(92vw,440px);
+  transition:transform .6s var(--ease);
+}
+.toast.is-on{ transform:translate(-50%,0); }
+.toast.is-erro{ background:var(--red); }
+
+@media (max-width:700px){
+  .adm__top{ gap:1rem; }
+  .adm__tabs{ gap:1.25rem; overflow-x:auto; }
+  .adm__head{ align-items:flex-start; }
+  .campo--linha{ flex-direction:column; }
+}
