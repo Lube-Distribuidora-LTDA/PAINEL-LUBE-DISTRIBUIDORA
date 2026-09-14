@@ -210,6 +210,63 @@ create policy acessos_admin on public.acessos
   for select to authenticated using (public.is_admin());
 
 -- ---------------------------------------------------------
+-- 7b. ÍCONES REUTILIZÁVEIS DOS SISTEMAS
+--     "gerado" = desenhado no padrão Lube a partir dos textos
+--     "imagem" = arquivo enviado pelo admin (bucket "icones")
+-- ---------------------------------------------------------
+create table if not exists public.icones (
+  id         uuid primary key default gen_random_uuid(),
+  slug       text not null unique,
+  rotulo     text not null,
+  tipo       text not null default 'gerado',
+  kicker     text not null default '',
+  linha1     text not null default '',
+  linha2     text not null default '',
+  sub        text not null default '',
+  imagem_url text,
+  ordem      int  not null default 0,
+  criado_em  timestamptz not null default now()
+);
+
+alter table public.icones enable row level security;
+
+drop policy if exists icones_read  on public.icones;
+drop policy if exists icones_admin on public.icones;
+
+create policy icones_read on public.icones
+  for select to authenticated using (public.is_ativo() or public.is_admin());
+
+create policy icones_admin on public.icones
+  for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+insert into public.icones (slug, rotulo, tipo, kicker, linha1, linha2, sub, ordem) values
+  ('saida', 'Saída de Veículos', 'gerado', 'GESTÃO DE', 'SAÍDA DE', 'VEÍCULOS', '', 1),
+  ('rh',    'RH / Absenteísmo',  'gerado', '',          'RH',       '',         'Absenteísmo', 2),
+  ('icms',  'Painel ICMS',       'gerado', 'PAINEL',    'ICMS',     '',         '', 3)
+on conflict (slug) do nothing;
+
+-- armazenamento das imagens enviadas
+insert into storage.buckets (id, name, public)
+values ('icones', 'icones', true)
+on conflict (id) do nothing;
+
+drop policy if exists "icones leitura publica" on storage.objects;
+drop policy if exists "icones admin envia"     on storage.objects;
+drop policy if exists "icones admin apaga"     on storage.objects;
+
+create policy "icones leitura publica" on storage.objects
+  for select using (bucket_id = 'icones');
+
+create policy "icones admin envia" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'icones' and public.is_admin());
+
+create policy "icones admin apaga" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'icones' and public.is_admin());
+
+-- ---------------------------------------------------------
 -- 8. PRIVILÉGIOS DAS FUNÇÕES
 --    Gatilhos não devem ser chamáveis pela API REST; os
 --    ajudantes das policies só valem para quem já entrou.

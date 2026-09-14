@@ -13,7 +13,7 @@
   var $  = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
-  var eu = null, usuarios = [], sistemas = [], permissoes = [];
+  var eu = null, usuarios = [], sistemas = [], permissoes = [], icones = [];
 
   /* ---------------- utilidades ---------------- */
   function esc(s) {
@@ -90,11 +90,13 @@
     return Promise.all([
       sb.from('profiles').select('*').order('criado_em', { ascending: true }),
       sb.from('sistemas').select('*').order('ordem', { ascending: true }),
-      sb.from('permissoes').select('user_id,sistema_id')
+      sb.from('permissoes').select('user_id,sistema_id'),
+      sb.from('icones').select('*').order('ordem', { ascending: true })
     ]).then(function (r) {
       usuarios   = r[0].data || [];
       sistemas   = r[1].data || [];
       permissoes = r[2].data || [];
+      icones     = r[3].data || [];
       pintarUsuarios();
       pintarSistemas();
     });
@@ -331,21 +333,38 @@
     }).join('');
   }
 
+  function icone(slug) {
+    return icones.filter(function (i) { return i.slug === slug; })[0];
+  }
+
+  function galeriaHTML(selecionado) {
+    return '<div class="campo"><span>Ícone do sistema</span>' +
+      '<div class="galeria">' +
+        icones.map(function (ic) {
+          return '<label class="galeria__item' + (ic.slug === selecionado ? ' is-on' : '') + '">' +
+            '<input type="radio" name="badge" value="' + esc(ic.slug) + '"' +
+              (ic.slug === selecionado ? ' checked' : '') + ' />' +
+            '<span class="galeria__arte">' + window.LUBE_ICONE.html(ic) + '</span>' +
+            '<span class="galeria__nome">' + esc(ic.rotulo) + '</span>' +
+          '</label>';
+        }).join('') +
+        '<button type="button" class="galeria__novo" data-novo-icone>' +
+          '<span class="galeria__mais">+</span><span class="galeria__nome">Novo ícone</span>' +
+        '</button>' +
+      '</div></div>';
+  }
+
   function formSistema(s) {
-    s = s || { nome: '', categoria: '', descricao: '', url: '', badge: 'saida', ordem: sistemas.length + 1, ativo: true, slug: '' };
-    var op = function (v, r) {
-      return '<option value="' + v + '"' + (s.badge === v ? ' selected' : '') + '>' + r + '</option>';
-    };
+    s = s || { nome: '', categoria: '', descricao: '', url: '',
+               badge: (icones[0] || {}).slug || 'saida',
+               ordem: sistemas.length + 1, ativo: true, slug: '' };
     return '<label class="campo"><span>Nome</span><input type="text" name="nome" value="' + esc(s.nome) + '" required /></label>' +
       '<label class="campo"><span>Área</span><input type="text" name="categoria" value="' + esc(s.categoria) + '" /></label>' +
       '<label class="campo"><span>Descrição</span><textarea name="descricao">' + esc(s.descricao) + '</textarea></label>' +
       '<label class="campo"><span>Endereço (URL)</span><input type="url" name="url" value="' + esc(s.url) + '" required /></label>' +
-      '<div class="campo--linha">' +
-        '<label class="campo"><span>Ícone</span><select name="badge">' +
-          op('saida', 'Saída de Veículos') + op('rh', 'RH') + op('icms', 'ICMS') +
-        '</select></label>' +
-        '<label class="campo"><span>Ordem</span><input type="number" name="ordem" value="' + s.ordem + '" min="0" /></label>' +
-      '</div>' +
+      galeriaHTML(s.badge) +
+      '<label class="campo"><span>Ordem na vitrine</span>' +
+      '<input type="number" name="ordem" value="' + s.ordem + '" min="0" /></label>' +
       '<label class="campo-inline"><input type="checkbox" name="ativo"' + (s.ativo ? ' checked' : '') +
       ' /><span>Sistema ativo</span></label>';
   }
@@ -360,11 +379,184 @@
       categoria: $('input[name="categoria"]', mForm).value.trim(),
       descricao: $('textarea[name="descricao"]', mForm).value.trim(),
       url: url,
-      badge: $('select[name="badge"]', mForm).value,
+      badge: (($('input[name="badge"]:checked', mForm) || {}).value) || 'saida',
       ordem: parseInt($('input[name="ordem"]', mForm).value, 10) || 0,
       ativo: $('input[name="ativo"]', mForm).checked
     };
   }
+
+  /* ---------------- criador de ícones ---------------- */
+  var criadorHTML =
+    '<div class="criador" data-criador>' +
+      '<p class="criador__titulo mono">Novo ícone</p>' +
+      '<div class="criador__abas">' +
+        '<button type="button" class="criador__aba is-on" data-tipo="gerado">Desenhar no padrão Lube</button>' +
+        '<button type="button" class="criador__aba" data-tipo="imagem">Enviar imagem</button>' +
+      '</div>' +
+      '<label class="campo"><span>Nome do ícone</span>' +
+        '<input type="text" data-ic-rotulo placeholder="Ex.: Compras" /></label>' +
+      '<div class="criador__corpo" data-corpo="gerado">' +
+        '<div class="criador__grade">' +
+          '<div class="criador__campos">' +
+            '<label class="campo"><span>Linha de cima (opcional)</span>' +
+              '<input type="text" data-ic-kicker placeholder="GESTÃO DE" maxlength="16" /></label>' +
+            '<label class="campo"><span>Linha principal</span>' +
+              '<input type="text" data-ic-l1 placeholder="COMPRAS" maxlength="14" /></label>' +
+            '<label class="campo"><span>Segunda linha (opcional)</span>' +
+              '<input type="text" data-ic-l2 maxlength="14" /></label>' +
+            '<label class="campo"><span>Rodapé (opcional)</span>' +
+              '<input type="text" data-ic-sub placeholder="Suprimentos" maxlength="18" /></label>' +
+          '</div>' +
+          '<div class="criador__previa"><div data-ic-previa></div>' +
+            '<span class="campo__dica">Prévia</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="criador__corpo" data-corpo="imagem" hidden>' +
+        '<div class="criador__grade">' +
+          '<div class="criador__campos">' +
+            '<label class="campo"><span>Arquivo</span>' +
+              '<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" data-ic-arquivo /></label>' +
+            '<span class="campo__dica">PNG, JPG, SVG ou WEBP at\u00e9 2 MB. O ideal \u00e9 uma imagem quadrada.</span>' +
+          '</div>' +
+          '<div class="criador__previa"><div data-ic-previa-img></div>' +
+            '<span class="campo__dica">Prévia</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="criador__acoes">' +
+        '<button type="button" class="adm__link" data-ic-cancelar>Cancelar</button>' +
+        '<button type="button" class="adm__link adm__link--destaque" data-ic-salvar>Salvar ícone</button>' +
+      '</div>' +
+      '<p class="criador__erro" data-ic-erro></p>' +
+    '</div>';
+
+  function lerCriador() {
+    var v = function (sel) { var e = $(sel, mForm); return e ? e.value : ''; };
+    return {
+      kicker: v('[data-ic-kicker]'),
+      linha1: v('[data-ic-l1]'),
+      linha2: v('[data-ic-l2]'),
+      sub:    v('[data-ic-sub]')
+    };
+  }
+
+  function atualizarPrevia() {
+    var alvo = $('[data-ic-previa]', mForm);
+    if (!alvo) return;
+    var cfg = lerCriador();
+    if (!cfg.linha1.trim()) cfg.linha1 = 'NOME';
+    alvo.innerHTML = window.LUBE_ICONE.svg(cfg);
+  }
+
+  function slugificar(t) {
+    return String(t).toLowerCase().normalize('NFD')
+      .replace(/[^a-z0-9 -]/g, '').trim().replace(/ +/g, '-').slice(0, 30);
+  }
+
+  function salvarIcone() {
+    var erroEl  = $('[data-ic-erro]', mForm);
+    var rotulo  = ($('[data-ic-rotulo]', mForm).value || '').trim();
+    var tipo    = $('.criador__aba.is-on', mForm).getAttribute('data-tipo');
+    var campoAr = $('[data-ic-arquivo]', mForm);
+    var arquivo = tipo === 'imagem' && campoAr ? (campoAr.files || [])[0] : null;
+    var dados   = lerCriador();
+
+    erroEl.textContent = '';
+    if (!rotulo) { erroEl.textContent = 'Dê um nome ao ícone.'; return; }
+    if (tipo === 'gerado' && !dados.linha1.trim()) { erroEl.textContent = 'Preencha a linha principal.'; return; }
+    if (tipo === 'imagem' && !arquivo) { erroEl.textContent = 'Escolha um arquivo de imagem.'; return; }
+    if (arquivo && arquivo.size > 2 * 1024 * 1024) { erroEl.textContent = 'A imagem passa de 2 MB.'; return; }
+
+    var slug = slugificar(rotulo) || ('icone-' + Date.now());
+    if (icone(slug)) slug = slug + '-' + String(Date.now()).slice(-4);
+
+    var envio = Promise.resolve(null);
+    if (arquivo) {
+      var ext = (arquivo.name.split('.').pop() || 'png').toLowerCase();
+      var caminho = slug + '-' + Date.now() + '.' + ext;
+      envio = sb.storage.from('icones').upload(caminho, arquivo, { upsert: true })
+        .then(function (r) {
+          if (r.error) throw new Error(r.error.message);
+          return sb.storage.from('icones').getPublicUrl(caminho).data.publicUrl;
+        });
+    }
+
+    erroEl.textContent = 'Salvando...';
+    envio.then(function (url) {
+      return sb.from('icones').insert({
+        slug: slug, rotulo: rotulo, tipo: tipo,
+        kicker: dados.kicker, linha1: dados.linha1, linha2: dados.linha2, sub: dados.sub,
+        imagem_url: url, ordem: icones.length + 1
+      }).select().single();
+    }).then(function (r) {
+      if (r.error) throw new Error(r.error.message);
+      icones.push(r.data);
+      var caixa = $('[data-criador]', mForm);
+      var campo = caixa.previousElementSibling;      // o bloco da galeria
+      if (campo) campo.outerHTML = galeriaHTML(r.data.slug);
+      caixa.remove();
+      toast('Ícone salvo. Já fica disponível para os próximos sistemas.');
+    }).catch(function (e) {
+      erroEl.textContent = (e && e.message) || String(e);
+    });
+  }
+
+  /* eventos dentro do formulário do modal */
+  mForm.addEventListener('click', function (ev) {
+    var t = ev.target.closest ? ev.target.closest('button') : null;
+    if (!t) return;
+
+    if (t.hasAttribute('data-novo-icone')) {
+      ev.preventDefault();
+      if ($('[data-criador]', mForm)) return;
+      var campoGaleria = t.closest('.campo');   // fora da grade, ocupando a largura toda
+      (campoGaleria || t).insertAdjacentHTML('afterend', criadorHTML);
+      atualizarPrevia();
+      $('[data-ic-rotulo]', mForm).focus();
+    }
+    if (t.hasAttribute('data-ic-cancelar')) {
+      ev.preventDefault();
+      var c = $('[data-criador]', mForm);
+      if (c) c.remove();
+    }
+    if (t.hasAttribute('data-ic-salvar')) { ev.preventDefault(); salvarIcone(); }
+    if (t.classList.contains('criador__aba')) {
+      ev.preventDefault();
+      var tipo = t.getAttribute('data-tipo');
+      $$('.criador__aba', mForm).forEach(function (b) { b.classList.toggle('is-on', b === t); });
+      $$('[data-corpo]', mForm).forEach(function (c) {
+        c.hidden = c.getAttribute('data-corpo') !== tipo;
+      });
+    }
+  });
+
+  mForm.addEventListener('input', function (ev) {
+    var n = ev.target;
+    if (!n.hasAttribute) return;
+    if (n.hasAttribute('data-ic-kicker') || n.hasAttribute('data-ic-l1') ||
+        n.hasAttribute('data-ic-l2') || n.hasAttribute('data-ic-sub')) {
+      atualizarPrevia();
+    }
+  });
+
+  mForm.addEventListener('change', function (ev) {
+    var n = ev.target;
+    if (n.name === 'badge') {
+      $$('.galeria__item', mForm).forEach(function (l) {
+        l.classList.toggle('is-on', !!$('input:checked', l));
+      });
+    }
+    if (n.hasAttribute && n.hasAttribute('data-ic-arquivo')) {
+      var f = (n.files || [])[0];
+      var alvo = $('[data-ic-previa-img]', mForm);
+      if (f && alvo) {
+        var leitor = new FileReader();
+        leitor.onload = function () {
+          alvo.innerHTML = '<img src="' + leitor.result + '" alt="" style="width:100%;border-radius:18px" />';
+        };
+        leitor.readAsDataURL(f);
+      }
+    }
+  });
 
   function novoSistema() {
     abrirModal('Novo sistema', formSistema(null), function () {

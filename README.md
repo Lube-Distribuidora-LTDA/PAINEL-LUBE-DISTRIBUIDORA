@@ -17,6 +17,7 @@ admin.css       estilos do painel administrativo
 app.js          animações: scroll, caminhão, ícones SVG, busca, carrossel
 portal.js       sessão, permissões e montagem dos cartões
 admin.js        CRUD de usuários, sistemas, permissões e log de acessos
+icones.js       ícones dos sistemas (desenhados no padrão Lube ou imagem)
 marca.js        marca "L" em SVG para páginas que não carregam o app.js
 config.js       URL e chave pública do Supabase
 db/             SQL completo do banco (tabelas, gatilhos e políticas)
@@ -69,7 +70,11 @@ permissão devolve para o portal).
   desativar, redefinir senha e remover. As permissões de sistema são marcadas
   na mesma tela.
 - **Sistemas** — cadastrar, editar, reordenar, ativar/desativar e excluir as
-  plataformas que aparecem no portal.
+  plataformas que aparecem no portal. O ícone é escolhido numa galeria visual;
+  o botão **Novo ícone** cria mais opções, que ficam salvas como predefinidas
+  para os próximos cadastros. Um ícone novo pode ser *desenhado no padrão Lube*
+  (você digita as linhas e vê a prévia na hora) ou *enviado como imagem*
+  (PNG/JPG/SVG/WEBP até 2 MB, guardado no Storage do Supabase).
 - **Acessos** — últimos 200 registros de entrada e abertura de sistemas.
 
 Criar usuário, trocar senha e remover passam pela Edge Function `admin-users`,
@@ -87,6 +92,7 @@ sa-east-1). O SQL aplicado está em `db/01_schema.sql`.
 | `sistemas` | plataformas cadastradas |
 | `permissoes` | quem enxerga qual sistema |
 | `acessos` | registro de entradas e aberturas |
+| `icones` | ícones predefinidos dos sistemas |
 
 A chave em `config.js` é a *anon key*: ela é pública por natureza e não dá
 acesso a nada sozinha — quem decide o que pode ser lido são as políticas RLS.

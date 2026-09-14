@@ -24,6 +24,7 @@
   var conta    = $('[data-conta]');
 
   var perfil = null;
+  var icones = {};
 
   /* ---------- utilidades ---------- */
   function emailCompleto(v) {
@@ -63,7 +64,7 @@
          'data-keys="' + esc([s.nome, s.categoria, s.descricao, s.slug].join(' ')) + '">' +
         '<div class="card__visual">' +
           '<span class="card__num mono">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' +
-          '<span class="card__badge" data-badge="' + esc(s.badge) + '"></span>' +
+          '<span class="card__badge">' + window.LUBE_ICONE.html(icones[s.badge]) + '</span>' +
           '<span class="card__pattern" aria-hidden="true"></span>' +
         '</div>' +
         '<div class="card__info">' +
@@ -93,10 +94,7 @@
       return;
     }
     track.innerHTML = lista.map(cartao).join('');
-    if (window.LubePainel) {
-      window.LubePainel.badges(track);
-      window.LubePainel.indexCards();
-    }
+    if (window.LubePainel) window.LubePainel.indexCards();
     $$('.card', track).forEach(function (a) {
       a.addEventListener('click', function () {
         registrar('abriu_sistema', a.getAttribute('data-sistema'));
@@ -149,9 +147,12 @@
         mostrarPortal();
         barraConta();
 
-        return sb.from('permissoes')
-          .select('sistemas(id,slug,nome,categoria,descricao,url,badge,ordem,ativo)')
-          .then(function (p) {
+        return Promise.all([
+          sb.from('permissoes').select('sistemas(id,slug,nome,categoria,descricao,url,badge,ordem,ativo)'),
+          sb.from('icones').select('*')
+        ]).then(function (rs) {
+            var p = rs[0];
+            (rs[1].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
             var lista = (p.data || [])
               .map(function (x) { return x.sistemas; })
               .filter(function (s) { return s && s.ativo; })

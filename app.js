@@ -45,56 +45,10 @@
   });
 
   /* ---------------------------------------------------------
-     2. ÍCONES DOS SISTEMAS
-     Grade do viewBox (300x300):
-       marca ......... y  36 – 117
-       filetes/kicker  y 166 – 172
-       títulos ....... y 200 – 270
-     Os filetes vermelhos ficam FORA da caixa do texto.
+     2. ÍCONES
+     Ficam em icones.js (compartilhado com o painel admin) e são
+     montados pelo portal.js a partir do banco.
      --------------------------------------------------------- */
-  function txt(x, y, size, weight, fill, content, extra) {
-    return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-family="Archivo,Segoe UI,sans-serif" ' +
-      'font-size="' + size + '" font-weight="' + weight + '" fill="' + fill + '" ' + (extra || '') + '>' + content + '</text>';
-  }
-  function rule(x1, x2, y) {
-    return '<rect x="' + x1 + '" y="' + (y - 2) + '" width="' + (x2 - x1) + '" height="4" fill="' + RED + '"/>';
-  }
-
-  var BADGES = {
-    saida:
-      rule(30, 76, 166) + rule(224, 270, 166) +
-      txt(150, 173, 19, 700, NAVY, 'GESTÃO DE', 'letter-spacing="3.5"') +
-      txt(150, 217, 39, 900, NAVY, 'SAÍDA DE', 'letter-spacing="-1"') +
-      txt(150, 257, 39, 900, NAVY, 'VEÍCULOS', 'letter-spacing="-1"'),
-    rh:
-      txt(150, 208, 96, 900, NAVY, 'RH', 'letter-spacing="-3"') +
-      rule(96, 204, 228) +
-      txt(150, 268, 33, 600, NAVY, 'Absenteísmo'),
-    icms:
-      rule(30, 80, 172) + rule(220, 270, 172) +
-      txt(150, 179, 20, 700, NAVY, 'PAINEL', 'letter-spacing="4"') +
-      txt(150, 254, 78, 900, NAVY, 'ICMS', 'letter-spacing="-2"')
-  };
-
-  function badgeSVG(body, id) {
-    return '<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">' +
-      '<defs><linearGradient id="bd' + id + '" x1="0" y1="1" x2="1" y2="0">' +
-        '<stop offset="49.9%" stop-color="' + NAVY + '"/><stop offset="50%" stop-color="' + RED + '"/>' +
-      '</linearGradient></defs>' +
-      '<rect x="13" y="13" width="274" height="274" rx="56" fill="#FFFFFF"/>' +
-      '<rect x="13" y="13" width="274" height="274" rx="56" fill="none" stroke="url(#bd' + id + ')" stroke-width="13"/>' +
-      '<g transform="translate(99,36) scale(0.72)">' + bareMark(NAVY, RED) + '</g>' +
-      body +
-    '</svg>';
-  }
-
-  function renderBadges(raiz) {
-    $$('[data-badge]', raiz || document).forEach(function (el) {
-      var key = el.getAttribute('data-badge');
-      if (BADGES[key] && !el.firstChild) el.innerHTML = badgeSVG(BADGES[key], key);
-    });
-  }
-  renderBadges();
 
   /* ---------------------------------------------------------
      3. CAMINHÃO
@@ -521,7 +475,7 @@
     if (input && input.value) filter(input.value);
   }
 
-  window.LubePainel = { indexCards: indexCards, badges: renderBadges, updateRail: updateRail };
+  window.LubePainel = { indexCards: indexCards, updateRail: updateRail };
 
   /* ---------------------------------------------------------
      12. CONTATOS DO TI (WhatsApp)
