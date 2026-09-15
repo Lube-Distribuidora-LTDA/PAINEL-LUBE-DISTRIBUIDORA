@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
           nome: corpo.nome ?? '',
           cargo: corpo.cargo ?? '',
           is_admin: !!corpo.is_admin,
+          acesso_total: !!corpo.acesso_total,
           ativo: true,
           aprovado_em: new Date().toISOString(),
           aprovado_por: userData.user.id,

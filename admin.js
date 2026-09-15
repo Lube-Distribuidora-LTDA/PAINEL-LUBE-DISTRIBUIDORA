@@ -131,9 +131,11 @@
 
     tb.innerHTML = usuarios.map(function (u) {
       var meus = sistemasDe(u.id);
-      var chips = meus.length
-        ? meus.map(function (s) { return '<span class="chip">' + esc(s.nome) + '</span>'; }).join('')
-        : '<span class="chip chip--vazio">sem acesso</span>';
+      var chips = u.acesso_total
+        ? '<span class="chip chip--todos">Todos os sistemas</span>'
+        : meus.length
+          ? meus.map(function (s) { return '<span class="chip">' + esc(s.nome) + '</span>'; }).join('')
+          : '<span class="chip chip--vazio">sem acesso</span>';
       return '<tr>' +
         '<td><span class="cel-nome">' + esc(u.nome || '—') + '</span>' +
             '<span class="cel-email">' + esc(u.email) + '</span></td>' +
@@ -154,13 +156,26 @@
     }).join('');
   }
 
-  function listaSistemasHTML(marcados) {
-    return '<div class="campo"><span>Sistemas liberados</span><div class="listasistemas">' +
-      sistemas.map(function (s) {
-        var on = marcados.indexOf(s.id) > -1 ? ' checked' : '';
-        return '<label class="campo-inline"><input type="checkbox" name="sis" value="' + s.id + '"' + on + ' />' +
-               '<span>' + esc(s.nome) + (s.ativo ? '' : ' (inativo)') + '</span></label>';
-      }).join('') + '</div></div>';
+  function listaSistemasHTML(marcados, todos) {
+    return '<div class="campo"><span>Sistemas liberados</span>' +
+      '<label class="campo-inline campo-inline--todos">' +
+        '<input type="checkbox" name="todos" data-todos' + (todos ? ' checked' : '') + ' />' +
+        '<span><strong>Todos os sistemas</strong>' +
+          '<em>Inclusive os que forem cadastrados depois.</em></span>' +
+      '</label>' +
+      '<div class="listasistemas' + (todos ? ' is-off' : '') + '" data-lista-sis>' +
+        sistemas.map(function (s) {
+          var on = marcados.indexOf(s.id) > -1 ? ' checked' : '';
+          return '<label class="campo-inline"><input type="checkbox" name="sis" value="' + s.id + '"' +
+                 on + (todos ? ' disabled' : '') + ' />' +
+                 '<span>' + esc(s.nome) + (s.ativo ? '' : ' (inativo)') + '</span></label>';
+        }).join('') +
+      '</div></div>';
+  }
+
+  function acessoTotalMarcado() {
+    var c = $('[data-todos]', mForm);
+    return !!(c && c.checked);
   }
 
   function formUsuario(u) {
@@ -186,7 +201,7 @@
       (novo ? '' :
         '<label class="campo-inline"><input type="checkbox" name="ativo"' +
         (u.ativo ? ' checked' : '') + ' /><span>Acesso ativo</span></label>') +
-      listaSistemasHTML(marcados);
+      listaSistemasHTML(marcados, !novo && u.acesso_total);
   }
 
   function marcados() {
@@ -206,7 +221,8 @@
         cargo: $('input[name="cargo"]', mForm).value.trim(),
         senha: senha,
         is_admin: $('input[name="admin"]', mForm).checked,
-        sistemas: marcados()
+        acesso_total: acessoTotalMarcado(),
+        sistemas: acessoTotalMarcado() ? [] : marcados()
       }).then(function () {
         toast('Usuário criado.');
         return carregarTudo();
@@ -222,17 +238,19 @@
       var novoAtivo = $('input[name="ativo"]', mForm).checked;
       if (u.id === eu.id && !novoAdmin) throw new Error('Você não pode remover o próprio acesso de administrador.');
 
-      var escolhidos = marcados();
+      var todos = acessoTotalMarcado();
+      var escolhidos = todos ? [] : marcados();
       var atuais = sistemasDe(u.id).map(function (s) { return s.id; });
-      var incluir = escolhidos.filter(function (s) { return atuais.indexOf(s) < 0; });
-      var excluir = atuais.filter(function (s) { return escolhidos.indexOf(s) < 0; });
+      var incluir = todos ? [] : escolhidos.filter(function (s) { return atuais.indexOf(s) < 0; });
+      var excluir = todos ? atuais : atuais.filter(function (s) { return escolhidos.indexOf(s) < 0; });
 
       var passos = [
         sb.from('profiles').update({
           nome: $('input[name="nome"]', mForm).value.trim(),
           cargo: $('input[name="cargo"]', mForm).value.trim(),
           is_admin: novoAdmin,
-          ativo: novoAtivo
+          ativo: novoAtivo,
+          acesso_total: todos
         }).eq('id', u.id)
       ];
       if (incluir.length) {
@@ -258,12 +276,14 @@
     abrirModal('Liberar ' + (u.nome || u.email),
       '<p><strong>' + esc(u.email) + '</strong> criou o acesso pelo botão “Primeiro acesso” e está ' +
       'aguardando liberação. Marque abaixo o que essa pessoa pode ver.</p>' +
-      listaSistemasHTML([]),
+      listaSistemasHTML([], false),
       function () {
-        var escolhidos = marcados();
+        var todos = acessoTotalMarcado();
+        var escolhidos = todos ? [] : marcados();
         var passos = [
           sb.from('profiles').update({
-            ativo: true, aprovado_em: new Date().toISOString(), aprovado_por: eu.id
+            ativo: true, acesso_total: todos,
+            aprovado_em: new Date().toISOString(), aprovado_por: eu.id
           }).eq('id', u.id)
         ];
         if (escolhidos.length) {
@@ -540,6 +560,13 @@
 
   mForm.addEventListener('change', function (ev) {
     var n = ev.target;
+    if (n.hasAttribute && n.hasAttribute('data-todos')) {
+      var lista = $('[data-lista-sis]', mForm);
+      if (lista) {
+        lista.classList.toggle('is-off', n.checked);
+        $$('input[name="sis"]', lista).forEach(function (c) { c.disabled = n.checked; });
+      }
+    }
     if (n.name === 'badge') {
       $$('.galeria__item', mForm).forEach(function (l) {
         l.classList.toggle('is-on', !!$('input:checked', l));

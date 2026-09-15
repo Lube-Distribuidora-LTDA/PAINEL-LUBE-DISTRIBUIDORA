@@ -48,8 +48,10 @@ sistemas aquela pessoa pode ver.
 1. A pessoa entra com **usuário + senha**. Se digitar só `nome.sobrenome`, o
    portal completa para `nome.sobrenome@lube.com.br`.
 2. O Supabase valida a senha (guardada com hash, nunca em texto).
-3. O portal carrega o perfil e mostra **apenas os sistemas liberados** para
-   aquela pessoa. Quem não tem nada liberado vê um aviso.
+3. O portal mostra **todos os sistemas cadastrados**. Os liberados vêm
+   primeiro e abrem normalmente; os demais aparecem em cinza, com cadeado e o
+   aviso de que falta autorização — assim a pessoa sabe o que existe e o que
+   pedir ao TI.
 4. Cada login e cada abertura de sistema fica registrada na tabela `acessos`.
 
 A restrição de domínio roda **dentro do banco** (gatilho em `auth.users`), não no
@@ -68,7 +70,9 @@ permissão devolve para o portal).
 - **Usuários** — liberar quem pediu primeiro acesso, criar contas direto (com
   senha provisória), editar nome/cargo, promover a administrador, ativar e
   desativar, redefinir senha e remover. As permissões de sistema são marcadas
-  na mesma tela.
+  na mesma tela, com a opção **Todos os sistemas**: quem tem essa marcação
+  enxerga tudo, inclusive as plataformas cadastradas depois, sem precisar
+  voltar aqui para liberar uma a uma.
 - **Sistemas** — cadastrar, editar, reordenar, ativar/desativar e excluir as
   plataformas que aparecem no portal. O ícone é escolhido numa galeria visual;
   o botão **Novo ícone** cria mais opções, que ficam salvas como predefinidas
@@ -88,7 +92,7 @@ sa-east-1). O SQL aplicado está em `db/01_schema.sql`.
 
 | Tabela | Para que serve |
 |---|---|
-| `profiles` | usuários do painel (nome, cargo, admin, ativo) |
+| `profiles` | usuários do painel (nome, cargo, admin, ativo, acesso total) |
 | `sistemas` | plataformas cadastradas |
 | `permissoes` | quem enxerga qual sistema |
 | `acessos` | registro de entradas e aberturas |
@@ -121,6 +125,13 @@ imagem como `assets/caminhao-lube.png` (PNG com fundo transparente, caminhão de
 perfil voltado para a direita, ~1600px de largura). O `app.js` detecta o arquivo
 e substitui o SVG sozinho.
 
+## Cache dos arquivos
+
+Os `<script>` e `<link>` de `index.html` e `admin.html` carregam com
+`?v=AAAAMMDD`. Ao publicar uma alteração em JS ou CSS, **atualize essa data nos
+dois arquivos** — é o que faz o navegador buscar a versão nova em vez de usar a
+guardada em cache.
+
 ## Busca e carrossel
 
 - A busca ignora acentos e maiúsculas e casa várias palavras ao mesmo tempo.
@@ -147,9 +158,10 @@ formato `55` + DDD + número, sem espaços.
 2. **Desligar o "Confirm email"** no Supabase (veja o aviso em *Primeiro acesso*).
 3. **Ligar a proteção contra senhas vazadas** no Supabase
    (Authentication → Policies → *Leaked password protection*).
-4. **Proteger os três sistemas**. Esconder o cartão no portal não impede que
-   alguém com o link abra a aplicação direto. Para restringir de verdade, cada
-   sistema precisa validar a sessão — os três já usam Supabase, o que facilita.
+4. **Proteger os sistemas na origem**. O cadeado no portal é sinalização, não
+   barreira: quem tiver o link abre a aplicação direto, e o endereço vem na
+   listagem do catálogo. Para restringir de verdade, cada sistema precisa
+   validar a sessão — todos já usam Supabase, o que facilita.
 
 ## Identidade
 

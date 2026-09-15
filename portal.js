@@ -58,45 +58,69 @@
 
   /* ---------- montagem dos cartões ---------- */
   function cartao(s, i) {
+    var liberado = !!s._liberado;
+    var tag  = liberado ? 'a' : 'div';
+    var abre = liberado
+      ? ' href="' + esc(s.url) + '" target="_blank" rel="noopener"'
+      : ' role="group" aria-label="' + esc(s.nome) + ' — sem autorização"';
+
+    var acao = liberado
+      ? '<span class="card__go" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<path d="M7 17 17 7M9 7h8v8"/></svg></span>'
+      : '<span class="card__lock" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+          '<rect x="4" y="10" width="16" height="11" rx="2"/>' +
+          '<path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>';
+
     return '' +
-      '<a class="card" href="' + esc(s.url) + '" target="_blank" rel="noopener" ' +
-         'data-card data-surface="dark" data-sistema="' + esc(s.id) + '" ' +
-         'data-keys="' + esc([s.nome, s.categoria, s.descricao, s.slug].join(' ')) + '">' +
+      '<' + tag + ' class="card' + (liberado ? '' : ' card--bloqueado') + '"' + abre +
+         ' data-card data-surface="dark" data-sistema="' + esc(s.id) + '"' +
+         ' data-keys="' + esc([s.nome, s.categoria, s.descricao, s.slug].join(' ')) + '">' +
         '<div class="card__visual">' +
           '<span class="card__num mono">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' +
           '<span class="card__badge">' + window.LUBE_ICONE.html(icones[s.badge]) + '</span>' +
           '<span class="card__pattern" aria-hidden="true"></span>' +
+          (liberado ? '' :
+            '<span class="card__selo mono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+            'stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/>' +
+            '<path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Sem autorização</span>') +
         '</div>' +
         '<div class="card__info">' +
           '<p class="mono card__cat">' + esc(s.categoria) + '</p>' +
           '<h3 class="card__title">' + esc(s.nome) + '</h3>' +
           '<div class="card__bottom">' +
-            '<p class="card__desc">' + esc(s.descricao) + '</p>' +
-            '<span class="card__go" aria-hidden="true">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-              '<path d="M7 17 17 7M9 7h8v8"/></svg>' +
-            '</span>' +
+            '<p class="card__desc">' +
+              (liberado ? esc(s.descricao)
+                        : 'Você não tem autorização para entrar neste sistema. ' +
+                          'Peça a liberação ao TI pelo botão no rodapé.') +
+            '</p>' + acao +
           '</div>' +
         '</div>' +
-      '</a>';
+      '</' + tag + '>';
   }
 
   function montarSistemas(lista) {
     if (!track) return;
+    var vazio = $('[data-empty]');
+
     if (!lista.length) {
       track.innerHTML = '';
-      var vazio = $('[data-empty]');
       if (vazio) {
         vazio.hidden = false;
-        vazio.innerHTML = '<span class="mono">Nenhum sistema liberado</span>' +
-          'Seu acesso ainda não foi configurado. Fale com o TI pelo botão no rodapé.';
+        vazio.innerHTML = '<span class="mono">Nenhum sistema cadastrado</span>' +
+          'Assim que o TI cadastrar as plataformas, elas aparecem aqui.';
       }
       return;
     }
+    if (vazio) vazio.hidden = true;
+
     track.innerHTML = lista.map(cartao).join('');
     if (window.LubePainel) window.LubePainel.indexCards();
+
     $$('.card', track).forEach(function (a) {
       a.addEventListener('click', function () {
+        if (a.classList.contains('card--bloqueado')) return;
         registrar('abriu_sistema', a.getAttribute('data-sistema'));
       });
     });
@@ -148,15 +172,24 @@
         barraConta();
 
         return Promise.all([
-          sb.from('permissoes').select('sistemas(id,slug,nome,categoria,descricao,url,badge,ordem,ativo)'),
+          sb.from('sistemas').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+          sb.from('permissoes').select('sistema_id').eq('user_id', perfil.id),
           sb.from('icones').select('*')
         ]).then(function (rs) {
-            var p = rs[0];
-            (rs[1].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
-            var lista = (p.data || [])
-              .map(function (x) { return x.sistemas; })
-              .filter(function (s) { return s && s.ativo; })
-              .sort(function (a, b) { return a.ordem - b.ordem; });
+            (rs[2].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
+
+            var meus = {};
+            (rs[1].data || []).forEach(function (p) { meus[p.sistema_id] = true; });
+
+            var lista = (rs[0].data || []).map(function (s) {
+              s._liberado = !!(perfil.acesso_total || meus[s.id]);
+              return s;
+            });
+            // liberados primeiro, mantendo a ordem definida pelo TI
+            lista.sort(function (a, b) {
+              if (a._liberado !== b._liberado) return a._liberado ? -1 : 1;
+              return a.ordem - b.ordem;
+            });
             montarSistemas(lista);
           });
       })

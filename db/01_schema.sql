@@ -14,6 +14,7 @@ create table if not exists public.profiles (
   nome           text not null default '',
   cargo          text not null default '',
   is_admin       boolean not null default false,
+  acesso_total   boolean not null default false,   -- true = vê todos os sistemas, inclusive os futuros
   ativo          boolean not null default false,   -- primeiro acesso nasce pendente
   aprovado_em    timestamptz,                      -- null = ainda não liberado pelo TI
   aprovado_por   uuid references public.profiles(id) on delete set null,
@@ -22,6 +23,8 @@ create table if not exists public.profiles (
 );
 
 comment on table public.profiles is 'Usuários do painel. Criado automaticamente ao cadastrar em auth.users.';
+comment on column public.profiles.acesso_total is
+  'true = vê todos os sistemas ativos automaticamente, sem precisar de linha em permissoes';
 comment on column public.profiles.aprovado_em is
   'null = cadastro feito pelo botão "Primeiro acesso" e ainda não liberado pelo TI';
 
@@ -171,18 +174,12 @@ create policy profiles_admin_write on public.profiles
 drop policy if exists sistemas_read  on public.sistemas;
 drop policy if exists sistemas_admin on public.sistemas;
 
+-- O catálogo é visível para todo usuário ativo: os sistemas sem liberação
+-- aparecem bloqueados no portal (cinza, com cadeado). O que a pessoa pode
+-- ABRIR vem de permissoes ou de profiles.acesso_total.
 create policy sistemas_read on public.sistemas
   for select to authenticated
-  using (
-    public.is_admin()
-    or (
-      public.is_ativo()
-      and exists (
-        select 1 from public.permissoes p
-        where p.sistema_id = sistemas.id and p.user_id = auth.uid()
-      )
-    )
-  );
+  using (public.is_admin() or public.is_ativo());
 
 create policy sistemas_admin on public.sistemas
   for all to authenticated

@@ -817,6 +817,45 @@ body.loaded [data-rise="6"]{ transition-delay:.66s }
 .card__go:hover{ background:var(--red); }
 .card:focus-visible{ outline:2px solid var(--red); outline-offset:4px; }
 
+/* ---------- Cartão bloqueado (sem autorização) ---------- */
+.card--bloqueado{ cursor:not-allowed; }
+.card--bloqueado .card__visual{ position:relative; }
+.card--bloqueado .card__badge{
+  filter:grayscale(1) brightness(.62) contrast(.9);
+  opacity:.5;
+  transition:filter .6s var(--ease), opacity .6s var(--ease);
+}
+.card--bloqueado .card__visual::after{
+  content:''; position:absolute; inset:0; z-index:2;
+  background:linear-gradient(180deg, rgba(3,6,22,.55) 0%, rgba(3,6,22,.78) 100%);
+}
+.card--bloqueado .card__pattern{ opacity:.25; }
+.card--bloqueado .card__title,
+.card--bloqueado .card__cat{ color:#8A93AB; }
+.card--bloqueado .card__cat{ color:#6E7793; }
+.card--bloqueado .card__desc{ color:rgba(255,255,255,.4); transform:none; }
+.card--bloqueado:hover{ transform:none; }
+.card--bloqueado:hover .card__badge{ transform:none; }
+.card--bloqueado:hover .card__info::before{ transform:scaleX(0); }
+
+.card__selo{
+  position:absolute; z-index:3; left:50%; bottom:1.5rem; transform:translateX(-50%);
+  display:inline-flex; align-items:center; gap:.5rem; white-space:nowrap;
+  padding:.5rem .8rem; font-size:.6rem;
+  color:#E7EAF4; background:rgba(3,6,22,.72);
+  border:1px solid rgba(255,255,255,.22);
+  backdrop-filter:blur(4px);
+}
+.card__selo svg{ width:13px; height:13px; flex:none; }
+
+.card__lock{
+  flex:none; width:50px; height:50px; border-radius:50%;
+  display:grid; place-items:center;
+  color:#8A93AB; border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.04);
+}
+.card__lock svg{ width:19px; height:19px; }
+
 /* ---------- Controles do carrossel ---------- */
 .rail__ctrl{
   max-width:1600px; margin:1.5rem auto 0;
