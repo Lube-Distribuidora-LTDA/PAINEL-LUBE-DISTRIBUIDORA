@@ -48,6 +48,18 @@
     });
   }
 
+  /* ---------- estatísticas do hero (sistemas ativos / áreas) ---------- */
+  function pad2(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
+  function atualizarStats(lista) {
+    var elSis = $('[data-stat-sistemas]');
+    var elAreas = $('[data-stat-areas]');
+    if (!elSis && !elAreas) return;
+    var areas = {};
+    lista.forEach(function (s) { if (s.categoria) areas[s.categoria] = true; });
+    if (elSis) elSis.textContent = pad2(lista.length);
+    if (elAreas) elAreas.textContent = pad2(Object.keys(areas).length);
+  }
+
   /* ---------- registro de acesso ---------- */
   function registrar(acao, sistemaId) {
     if (!perfil) return;
@@ -190,6 +202,9 @@
               s._liberado = perfil.acesso_total ? !fora[s.id] : !!meus[s.id];
               return s;
             });
+            // "sistemas ativos" e "áreas atendidas" contam a empresa toda,
+            // não só o que esta pessoa pode abrir
+            atualizarStats(lista);
             // liberados primeiro, mantendo a ordem definida pelo TI
             lista.sort(function (a, b) {
               if (a._liberado !== b._liberado) return a._liberado ? -1 : 1;
