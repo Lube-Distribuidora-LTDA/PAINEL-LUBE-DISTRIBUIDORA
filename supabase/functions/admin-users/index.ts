@@ -93,6 +93,13 @@ Deno.serve(async (req) => {
             sistemas.map((s) => ({ user_id: id, sistema_id: s, concedido_por: userData.user.id })),
           );
         }
+
+        const excecoes: string[] = Array.isArray(corpo.excecoes) ? corpo.excecoes : [];
+        if (excecoes.length) {
+          await admin.from('permissoes_excecao').insert(
+            excecoes.map((s) => ({ user_id: id, sistema_id: s, criado_por: userData.user.id })),
+          );
+        }
         return json({ ok: true, id });
       }
 

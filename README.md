@@ -72,7 +72,9 @@ permissão devolve para o portal).
   desativar, redefinir senha e remover. As permissões de sistema são marcadas
   na mesma tela, com a opção **Todos os sistemas**: quem tem essa marcação
   enxerga tudo, inclusive as plataformas cadastradas depois, sem precisar
-  voltar aqui para liberar uma a uma.
+  voltar aqui para liberar uma a uma. Marcando "Todos", aparece uma segunda
+  lista, **"Liberar tudo, exceto:"** — dá para tirar sistemas específicos de
+  quem tem acesso total (ex.: todo mundo vê tudo, menos o Painel ICMS).
 - **Sistemas** — cadastrar, editar, reordenar, ativar/desativar e excluir as
   plataformas que aparecem no portal. O ícone é escolhido numa galeria visual;
   o botão **Novo ícone** cria mais opções, que ficam salvas como predefinidas
@@ -95,6 +97,7 @@ sa-east-1). O SQL aplicado está em `db/01_schema.sql`.
 | `profiles` | usuários do painel (nome, cargo, admin, ativo, acesso total) |
 | `sistemas` | plataformas cadastradas |
 | `permissoes` | quem enxerga qual sistema |
+| `permissoes_excecao` | sistemas retirados de quem tem `acesso_total` (ignorada para quem não tem) |
 | `acessos` | registro de entradas e aberturas |
 | `icones` | ícones predefinidos dos sistemas |
 

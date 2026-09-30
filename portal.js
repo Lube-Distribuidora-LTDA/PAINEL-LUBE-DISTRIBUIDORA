@@ -174,15 +174,20 @@
         return Promise.all([
           sb.from('sistemas').select('*').eq('ativo', true).order('ordem', { ascending: true }),
           sb.from('permissoes').select('sistema_id').eq('user_id', perfil.id),
-          sb.from('icones').select('*')
+          sb.from('icones').select('*'),
+          sb.from('permissoes_excecao').select('sistema_id').eq('user_id', perfil.id)
         ]).then(function (rs) {
             (rs[2].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
 
             var meus = {};
             (rs[1].data || []).forEach(function (p) { meus[p.sistema_id] = true; });
 
+            // só faz sentido quando acesso_total está ligado — fora disso é ignorada
+            var fora = {};
+            (rs[3].data || []).forEach(function (e) { fora[e.sistema_id] = true; });
+
             var lista = (rs[0].data || []).map(function (s) {
-              s._liberado = !!(perfil.acesso_total || meus[s.id]);
+              s._liberado = perfil.acesso_total ? !fora[s.id] : !!meus[s.id];
               return s;
             });
             // liberados primeiro, mantendo a ordem definida pelo TI

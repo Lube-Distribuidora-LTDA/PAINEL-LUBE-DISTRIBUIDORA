@@ -13,7 +13,7 @@
   var $  = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
-  var eu = null, usuarios = [], sistemas = [], permissoes = [], icones = [];
+  var eu = null, usuarios = [], sistemas = [], permissoes = [], excecoes = [], icones = [];
 
   /* ---------------- utilidades ---------------- */
   function esc(s) {
@@ -91,12 +91,14 @@
       sb.from('profiles').select('*').order('criado_em', { ascending: true }),
       sb.from('sistemas').select('*').order('ordem', { ascending: true }),
       sb.from('permissoes').select('user_id,sistema_id'),
-      sb.from('icones').select('*').order('ordem', { ascending: true })
+      sb.from('icones').select('*').order('ordem', { ascending: true }),
+      sb.from('permissoes_excecao').select('user_id,sistema_id')
     ]).then(function (r) {
       usuarios   = r[0].data || [];
       sistemas   = r[1].data || [];
       permissoes = r[2].data || [];
       icones     = r[3].data || [];
+      excecoes   = r[4].data || [];
       pintarUsuarios();
       pintarSistemas();
     });
@@ -106,6 +108,12 @@
     var ids = permissoes.filter(function (p) { return p.user_id === userId; })
                         .map(function (p) { return p.sistema_id; });
     return sistemas.filter(function (s) { return ids.indexOf(s.id) > -1; });
+  }
+
+  // sistemas retirados de quem tem "acesso_total" — só faz sentido nesse caso
+  function excecoesDe(userId) {
+    return excecoes.filter(function (e) { return e.user_id === userId; })
+                   .map(function (e) { return e.sistema_id; });
   }
 
   /* ---------------- usuários ---------------- */
@@ -131,8 +139,12 @@
 
     tb.innerHTML = usuarios.map(function (u) {
       var meus = sistemasDe(u.id);
+      var fora = u.acesso_total ? sistemas.filter(function (s) {
+        return excecoesDe(u.id).indexOf(s.id) > -1;
+      }) : [];
       var chips = u.acesso_total
-        ? '<span class="chip chip--todos">Todos os sistemas</span>'
+        ? '<span class="chip chip--todos">Todos os sistemas</span>' +
+          fora.map(function (s) { return '<span class="chip chip--excluido">exceto ' + esc(s.nome) + '</span>'; }).join('')
         : meus.length
           ? meus.map(function (s) { return '<span class="chip">' + esc(s.nome) + '</span>'; }).join('')
           : '<span class="chip chip--vazio">sem acesso</span>';
@@ -156,18 +168,30 @@
     }).join('');
   }
 
-  function listaSistemasHTML(marcados, todos) {
+  function listaSistemasHTML(marcados, todos, excecoesMarcadas) {
+    excecoesMarcadas = excecoesMarcadas || [];
     return '<div class="campo"><span>Sistemas liberados</span>' +
       '<label class="campo-inline campo-inline--todos">' +
         '<input type="checkbox" name="todos" data-todos' + (todos ? ' checked' : '') + ' />' +
         '<span><strong>Todos os sistemas</strong>' +
           '<em>Inclusive os que forem cadastrados depois.</em></span>' +
       '</label>' +
+
       '<div class="listasistemas' + (todos ? ' is-off' : '') + '" data-lista-sis>' +
         sistemas.map(function (s) {
           var on = marcados.indexOf(s.id) > -1 ? ' checked' : '';
           return '<label class="campo-inline"><input type="checkbox" name="sis" value="' + s.id + '"' +
                  on + (todos ? ' disabled' : '') + ' />' +
+                 '<span>' + esc(s.nome) + (s.ativo ? '' : ' (inativo)') + '</span></label>';
+        }).join('') +
+      '</div>' +
+
+      '<div class="listasistemas listasistemas--excecao' + (todos ? '' : ' is-off') + '" data-lista-excecao>' +
+        '<p class="campo__dica campo__dica--excecao">Liberar tudo, exceto:</p>' +
+        sistemas.map(function (s) {
+          var on = excecoesMarcadas.indexOf(s.id) > -1 ? ' checked' : '';
+          return '<label class="campo-inline"><input type="checkbox" name="exc" value="' + s.id + '"' +
+                 on + (todos ? '' : ' disabled') + ' />' +
                  '<span>' + esc(s.nome) + (s.ativo ? '' : ' (inativo)') + '</span></label>';
         }).join('') +
       '</div></div>';
@@ -176,6 +200,10 @@
   function acessoTotalMarcado() {
     var c = $('[data-todos]', mForm);
     return !!(c && c.checked);
+  }
+
+  function excecoesMarcadas() {
+    return $$('input[name="exc"]:checked', mForm).map(function (i) { return i.value; });
   }
 
   function formUsuario(u) {
@@ -201,7 +229,7 @@
       (novo ? '' :
         '<label class="campo-inline"><input type="checkbox" name="ativo"' +
         (u.ativo ? ' checked' : '') + ' /><span>Acesso ativo</span></label>') +
-      listaSistemasHTML(marcados, !novo && u.acesso_total);
+      listaSistemasHTML(marcados, !novo && u.acesso_total, novo ? [] : excecoesDe(u.id));
   }
 
   function marcados() {
@@ -222,7 +250,8 @@
         senha: senha,
         is_admin: $('input[name="admin"]', mForm).checked,
         acesso_total: acessoTotalMarcado(),
-        sistemas: acessoTotalMarcado() ? [] : marcados()
+        sistemas: acessoTotalMarcado() ? [] : marcados(),
+        excecoes: acessoTotalMarcado() ? excecoesMarcadas() : []
       }).then(function () {
         toast('Usuário criado.');
         return carregarTudo();
@@ -244,6 +273,12 @@
       var incluir = todos ? [] : escolhidos.filter(function (s) { return atuais.indexOf(s) < 0; });
       var excluir = todos ? atuais : atuais.filter(function (s) { return escolhidos.indexOf(s) < 0; });
 
+      // exceções só fazem sentido com "todos" ligado — desligando, todas somem
+      var excEscolhidas = todos ? excecoesMarcadas() : [];
+      var excAtuais = excecoesDe(u.id);
+      var excIncluir = excEscolhidas.filter(function (s) { return excAtuais.indexOf(s) < 0; });
+      var excExcluir = excAtuais.filter(function (s) { return excEscolhidas.indexOf(s) < 0; });
+
       var passos = [
         sb.from('profiles').update({
           nome: $('input[name="nome"]', mForm).value.trim(),
@@ -261,6 +296,14 @@
       if (excluir.length) {
         passos.push(sb.from('permissoes').delete().eq('user_id', u.id).in('sistema_id', excluir));
       }
+      if (excIncluir.length) {
+        passos.push(sb.from('permissoes_excecao').insert(excIncluir.map(function (s) {
+          return { user_id: u.id, sistema_id: s, criado_por: eu.id };
+        })));
+      }
+      if (excExcluir.length) {
+        passos.push(sb.from('permissoes_excecao').delete().eq('user_id', u.id).in('sistema_id', excExcluir));
+      }
       return Promise.all(passos).then(function (rs) {
         var falha = rs.filter(function (r) { return r && r.error; })[0];
         if (falha) throw new Error(falha.error.message);
@@ -276,10 +319,11 @@
     abrirModal('Liberar ' + (u.nome || u.email),
       '<p><strong>' + esc(u.email) + '</strong> criou o acesso pelo botão “Primeiro acesso” e está ' +
       'aguardando liberação. Marque abaixo o que essa pessoa pode ver.</p>' +
-      listaSistemasHTML([], false),
+      listaSistemasHTML([], false, []),
       function () {
         var todos = acessoTotalMarcado();
         var escolhidos = todos ? [] : marcados();
+        var excEscolhidas = todos ? excecoesMarcadas() : [];
         var passos = [
           sb.from('profiles').update({
             ativo: true, acesso_total: todos,
@@ -289,6 +333,11 @@
         if (escolhidos.length) {
           passos.push(sb.from('permissoes').insert(escolhidos.map(function (sid) {
             return { user_id: u.id, sistema_id: sid, concedido_por: eu.id };
+          })));
+        }
+        if (excEscolhidas.length) {
+          passos.push(sb.from('permissoes_excecao').insert(excEscolhidas.map(function (sid) {
+            return { user_id: u.id, sistema_id: sid, criado_por: eu.id };
           })));
         }
         return Promise.all(passos).then(function (rs) {
@@ -565,6 +614,11 @@
       if (lista) {
         lista.classList.toggle('is-off', n.checked);
         $$('input[name="sis"]', lista).forEach(function (c) { c.disabled = n.checked; });
+      }
+      var listaExc = $('[data-lista-excecao]', mForm);
+      if (listaExc) {
+        listaExc.classList.toggle('is-off', !n.checked);
+        $$('input[name="exc"]', listaExc).forEach(function (c) { c.disabled = !n.checked; });
       }
     }
     if (n.name === 'badge') {

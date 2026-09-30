@@ -196,6 +196,34 @@ create policy permissoes_admin on public.permissoes
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
+-- exceções do acesso total -------------------------------
+-- Quem tem acesso_total pode deixar de fora sistemas específicos.
+-- Ignorada por completo para quem não tem acesso_total.
+create table if not exists public.permissoes_excecao (
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  sistema_id  uuid not null references public.sistemas(id) on delete cascade,
+  criado_em   timestamptz not null default now(),
+  criado_por  uuid references public.profiles(id) on delete set null,
+  primary key (user_id, sistema_id)
+);
+
+comment on table public.permissoes_excecao is
+  'Sistemas retirados de quem tem profiles.acesso_total = true. Ignorada para quem não tem acesso total.';
+
+create index if not exists permissoes_excecao_user_idx on public.permissoes_excecao(user_id);
+
+alter table public.permissoes_excecao enable row level security;
+
+drop policy if exists permissoes_excecao_self  on public.permissoes_excecao;
+drop policy if exists permissoes_excecao_admin on public.permissoes_excecao;
+
+create policy permissoes_excecao_self on public.permissoes_excecao
+  for select to authenticated using (user_id = auth.uid() and public.is_ativo());
+
+create policy permissoes_excecao_admin on public.permissoes_excecao
+  for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
 -- acessos -----------------------------------------------
 drop policy if exists acessos_insert on public.acessos;
 drop policy if exists acessos_admin  on public.acessos;
