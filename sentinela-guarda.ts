@@ -43,11 +43,22 @@ const CONTADORES_MAX = 2000;
 const RECUSA_MS = 10 * 60000;       // token recusado pela central fica de quarentena
 const RECUSA_HMAC_MS = 60000;
 
+// Chave pública ES256 da Sentinela (sentinela.chaves, criada em 2026-10-06). Não é segredo.
+// Serve ao modo "fechado" quando a lista não veio (partida a frio, central fora): sem ela não
+// daria para conferir a sessão e todo mundo voltaria ao portal. Trocou a chave na central? Atualize aqui.
+const CHAVES_FIXAS: any[] = [
+  { kty: 'EC', crv: 'P-256', kid: '23295be7908c33a1', alg: 'ES256', use: 'sig',
+    x: 'fkhjiIvDNaaNYv8xMzJNYAiAddOuKzPqk8Yj5vENCbw', y: 'OWQCjAwJOJGpni7gEJRrX9rao95slIvVXafs7j_uTsw' },
+];
+
 type Tipo = 'pagina' | 'api' | 'arquivo' | 'outro';
 type Decisao = 'liberado' | 'observado' | 'bloqueado';
 type Nivel = 'certo' | 'suspeito';
 type Ctx = { waitUntil?(p: Promise<unknown>): void };
-type Opcoes = { identidade?: { email: string; origem: 'sessao_app' } };
+// fechado: sistema que só abre com login do Painel Lube. Vale quando a lista não vem (partida a
+// frio, central fora): aí só passa quem tem sessão válida. Com lista, quem manda é o exige_login do banco.
+type Fechado = { projeto: string; slug: string; rotas?: string[]; chaves?: any[] };
+type Opcoes = { identidade?: { email: string; origem: 'sessao_app' }; fechado?: Fechado | null };
 type Resp = { ok: boolean; status: number; json: any; recusada?: boolean };
 
 interface Evento {
@@ -290,7 +301,7 @@ function rotaCasa(p: string, caminho: string): boolean {
 export async function sentinela(
   request: Request,
   ctx?: { waitUntil?(p: Promise<unknown>): void },
-  opcoes?: { identidade?: { email: string; origem: 'sessao_app' } },
+  opcoes?: Opcoes,
 ): Promise<Response | null> {
   try {
     return await guardar(request, ctx, opcoes);
@@ -311,7 +322,13 @@ async function guardar(request: Request, ctx: Ctx | undefined, opcoes: Opcoes | 
 
   if (url.pathname === ROTA_SAUDE && metodo === 'GET') return await saude(h, ipTxt, cs, ctx);
 
-  const lista = await obterLista(cs, ctx);
+  let lista = await obterLista(cs, ctx);
+  // sistema fechado sem lista: espera a central um pouco mais e, se ainda não veio, usa a
+  // lista de reserva (só exige login). Fechado não pode virar aberto por partida a frio.
+  const fechado = opcoes && opcoes.fechado;
+  if (!lista && fechado && typeof fechado.projeto === 'string' && typeof fechado.slug === 'string') {
+    lista = (await obterLista(cs, ctx, TEMPO_CENTRAL)) || listaReserva(fechado);
+  }
 
   const caminhoDec = normalizarCaminho(decodificar(url.pathname));
   const tipo = tipoDe(url.pathname);
@@ -524,17 +541,17 @@ function paginaBloqueio(cod: string): string {
 /* =========================================================
    Lista (cache em memória, stale-while-revalidate)
    ========================================================= */
-async function obterLista(cs: Cred[], ctx: Ctx | undefined): Promise<Lista | null> {
+async function obterLista(cs: Cred[], ctx: Ctx | undefined, espera: number = ESPERA_LISTA): Promise<Lista | null> {
   const agora = Date.now();
   if (cache && agora - cache.em <= IDADE_MAX_LISTA) {
     if (cs.length && agora - cache.em > cache.ttl) emFundo(ctx, renovar(cs));
     return cache;
   }
   if (!cs.length) return null;
-  const limite = agora + ESPERA_LISTA;
+  const limite = agora + espera;
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     const p = renovar(cs);
-    const resta = Math.min(ESPERA_LISTA - (Date.now() - vooInicio), limite - Date.now());
+    const resta = Math.min(espera - (Date.now() - vooInicio), limite - Date.now());
     if (resta <= 0) { emFundo(ctx, p); return null; }
     const r = await comLimite(p, resta);
     if (r === ESTOUROU) { emFundo(ctx, p); return null; }
@@ -632,6 +649,24 @@ function compilarLista(d: any): Lista {
     };
   }
   return l;
+}
+
+// Lista mínima do modo fechado: sem bloqueios nem confiáveis, só o exige_login e as chaves
+// fixas. Nunca vai para o cache: a lista de verdade continua sendo buscada.
+let reserva: Lista | null = null;
+function listaReserva(f: Fechado): Lista {
+  if (reserva && reserva.sistema && reserva.sistema.projeto === f.projeto) return reserva;
+  const chaves = Array.isArray(f.chaves) && f.chaves.length ? f.chaves : CHAVES_FIXAS;
+  reserva = {
+    em: Date.now(), ttl: TTL_LISTA, modo: 'observar', portal: PORTAL_PADRAO,
+    ipsBloq: new Map(), redesBloq: [], ja4Bloq: new Map(), ipsConf: new Set(), redesConf: [],
+    sistema: {
+      projeto: f.projeto, slug: f.slug, exigeLogin: true, proibidos: [],
+      rotas: Array.isArray(f.rotas) ? f.rotas.filter((x: any) => typeof x === 'string' && x) : [],
+    },
+    jwks: chaves.filter((k: any) => k && typeof k === 'object'), chaves: new Map(), sessoes: new Map(),
+  };
+  return reserva;
 }
 
 function ehConfiavel(lista: Lista, ip: Ip): boolean {

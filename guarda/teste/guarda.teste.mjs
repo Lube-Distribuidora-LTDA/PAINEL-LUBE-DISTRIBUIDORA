@@ -438,6 +438,77 @@ caso('exige_login: rotas públicas seguem; lista ausente → falha aberta', asyn
   conta(4);
 });
 
+/* ---------- modo fechado: sem lista, só passa quem tem sessão ---------- */
+const FECHADO_FIN = { projeto: 'gestao-finaceiro', slug: 'gestao-financeiro', rotas: ['/publico/'] };
+
+caso('fechado + central fora: sem sessão → portal/401; rota pública segue; sessão válida segue; ataque barrado', async () => {
+  const g = await novoGuarda();
+  const chave = await gerarChave('a1b2c3d4e5f60718');
+  const fechado = { ...FECHADO_FIN, chaves: [chave.jwk] };
+  const c = centralFalsa(null);
+  c.fora = true;
+  const H = 'gestao-finaceiro.vercel.app';
+  const r = await rodar(g, req(H, '/'), { fechado });
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), PORTAL + '/?abrir=gestao-financeiro');
+  const a = await rodar(g, req(H, '/api/dados'), { fechado });
+  assert.equal(a.status, 401);
+  assert.deepEqual(await a.json(), { erro: 'login_necessario', portal: PORTAL });
+  assert.equal(await rodar(g, req(H, '/publico/aviso.html'), { fechado }), null, 'rota pública do fechado');
+  const sessao = await assinarJwt(sessaoPayload(), chave);
+  assert.equal(await rodar(g, req(H, '/folha.html', { cookie: '__Host-sentinela=' + sessao }), { fechado }), null, 'sessão válida pela chave fixa');
+  const outra = await gerarChave('ffffffffffffffff');
+  const falsa = await assinarJwt(sessaoPayload(), outra);
+  const rf = await rodar(g, req(H, '/', { cookie: '__Host-sentinela=' + falsa }), { fechado });
+  assert.equal(rf.status, 302, 'sessão de outra chave não passa');
+  const at = await rodar(g, req(H, '/.env'), { fechado });
+  assert.equal(at.status, 403, 'ataque continua barrado');
+  conta(9);
+});
+
+caso('fechado + chave fixa de fábrica: sessão de chave desconhecida → portal (sem ?abrir, não entra em laço)', async () => {
+  const g = await novoGuarda();
+  const c = centralFalsa(null);
+  c.fora = true;
+  const chave = await gerarChave('a1b2c3d4e5f60718');
+  const tok = await assinarJwt(sessaoPayload(), chave);
+  const r = await rodar(g, req('gestao-finaceiro.vercel.app', '/', { cookie: '__Host-sentinela=' + tok }), { fechado: FECHADO_FIN });
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), PORTAL + '/');
+  conta(2);
+});
+
+caso('fechado + partida a frio com central lenta (1,5 s): espera e usa a lista; exige_login=false no banco abre', async () => {
+  const g = await novoGuarda();
+  const c = centralFalsa(lista({ projeto: 'gestao-finaceiro', slug: 'gestao-financeiro', exige: false }));
+  c.atrasoLista = 1500;
+  const r = await rodar(g, req('gestao-finaceiro.vercel.app', '/'), { fechado: FECHADO_FIN });
+  assert.equal(r, null, 'com lista quem manda é o banco (chave de emergência no painel)');
+  assert.equal(c.rota('/lista').length, 1, 'uma busca só (o segundo pedido reaproveita o voo)');
+  conta(2);
+});
+
+caso('fechado + central muito lenta (4 s): desiste em ~2,5 s e usa a reserva (portal)', async () => {
+  const g = await novoGuarda();
+  const c = centralFalsa(lista({ projeto: 'gestao-finaceiro', slug: 'gestao-financeiro', exige: false }));
+  c.atrasoLista = 4000;
+  const t0 = performance.now();
+  const r = await g.sentinela(req('gestao-finaceiro.vercel.app', '/'), novoCtx(), { fechado: FECHADO_FIN });
+  const ms = performance.now() - t0;
+  assert.equal(r.status, 302, 'sem lista o fechado não abre');
+  assert.ok(ms < 2900, 'resposta em menos de 2,9 s (foi ' + ms.toFixed(0) + ' ms)');
+  conta(2);
+});
+
+caso('fechado + lista em cache com exige_login=true: igual ao exige_login normal', async () => {
+  const g = await novoGuarda();
+  const { H } = await cenarioLogin();
+  const r = await rodar(g, req(H, '/'), { fechado: FECHADO_FIN });
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), PORTAL + '/?abrir=gestao-financeiro');
+  conta(2);
+});
+
 caso('exige_login: rota pública "/" ou "/*" (casaria tudo) é ignorada; as outras continuam valendo', async () => {
   const g = await novoGuarda();
   const { H } = await cenarioLogin({ rotas: ['/', '/*', '/publico/'] });

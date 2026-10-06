@@ -11,10 +11,15 @@ export const config = {
   matcher: ['/((?!.*\\.(?:css|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot|map)$).*)'],
 };
 
+// Sistema que só abre com login do Painel Lube: preencha na instalação (null = aberto).
+// Vale quando a lista da central não vem (partida a frio, central fora); com lista, manda o banco.
+// Ex.: { projeto: 'gestao-finaceiro', slug: 'gestao-financeiro' }
+const FECHADO: { projeto: string; slug: string; rotas?: string[] } | null = null;
+
 export default async function middleware(request: Request, context?: { waitUntil?(p: Promise<unknown>): void }) {
   let r: Response | null = null;
   try {
-    r = await sentinela(request, context);
+    r = await sentinela(request, context, FECHADO ? { fechado: FECHADO } : undefined);
   } catch {
     r = null;   // o núcleo já falha aberto; isto é só cinto de segurança
   }
