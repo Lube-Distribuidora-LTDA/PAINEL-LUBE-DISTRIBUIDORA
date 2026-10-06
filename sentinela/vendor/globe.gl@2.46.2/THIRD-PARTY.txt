@@ -1,0 +1,47 @@
+globe.gl 2.46.2 — componentes de terceiros embutidos no globe.gl.min.js
+=====================================================================
+
+Arquivo: globe.gl.min.js (bundle UMD, cria window.Globe)
+Origem:  https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/dist/globe.gl.min.js
+SHA-256: 2c3e445c04d121215910a89688b96091c8a72071c122a4f830081a39b636c94c
+Baixado: 2026-10-05
+
+O próprio globe.gl é MIT (Vasco Asturiano) — texto completo em LICENSE, nesta pasta.
+O bundle traz dentro dele, entre outros, os pacotes abaixo:
+
+  three.js (r185) ..... MIT          (c) 2010-2025 three.js authors       https://github.com/mrdoob/three.js
+  three-globe ......... MIT          (c) Vasco Asturiano                  https://github.com/vasturiano/three-globe
+  three-render-objects  MIT          (c) Vasco Asturiano                  https://github.com/vasturiano/three-render-objects
+  kapsule ............. MIT          (c) Vasco Asturiano                  https://github.com/vasturiano/kapsule
+  float-tooltip ....... MIT          (c) Vasco Asturiano                  https://github.com/vasturiano/float-tooltip
+  @tweenjs/tween.js ... MIT          (c) tween.js authors                 https://github.com/tweenjs/tween.js
+  tinycolor2 .......... MIT          (c) Brian Grinstead                  https://github.com/bgrins/TinyColor
+  h3-js ............... Apache-2.0   (c) Uber Technologies, Inc.          https://github.com/uber/h3-js
+  d3-geo .............. ISC          (c) Mike Bostock                     https://github.com/d3/d3-geo
+  d3-scale ............ ISC          (c) Mike Bostock                     https://github.com/d3/d3-scale
+  e os módulos d3 de que esses dependem (d3-array, d3-interpolate, d3-color...) — ISC (c) Mike Bostock
+  fonte "Helvetiker" (typeface JSON dos rótulos 3D do globe.gl, embutida no bundle)
+      — MgOpen, Copyright (c) 2004 Magenta Ltd; licença MgOpen (permissiva, mantendo o aviso):
+      http://www.ellak.gr/fonts/MgOpen/license.html — o texto completo vem dentro do próprio bundle.
+      O painel não usa rótulos 3D (labelsData); a fonte só vai junto por estar no bundle.
+
+Licenças em uma linha:
+  MIT        — uso, cópia e modificação livres, mantendo o aviso de copyright.
+  ISC        — equivalente à MIT.
+  Apache-2.0 — uso livre; mantenha o aviso e o NOTICE do h3-js; texto em
+               https://www.apache.org/licenses/LICENSE-2.0
+
+---------------------------------------------------------------------
+Outros arquivos de terceiros do painel da Sentinela
+---------------------------------------------------------------------
+
+../supabase-js@2.45.4/supabase.js
+  @supabase/supabase-js 2.45.4 (UMD) — MIT (c) Supabase
+  Origem:  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js
+  SHA-256: 8596965fe918e656600a1b568d3a168f5c0d3d22a600886bb6f44a6555db01e7
+
+../../dados/paises.geojson
+  Natural Earth 1:110m Admin 0 – Countries (ne_110m_admin_0_countries), domínio público,
+  na cópia do pacote globe.gl 2.46.2 (example/datasets).
+  Origem:  https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/example/datasets/ne_110m_admin_0_countries.geojson
+  SHA-256: a4d67eac9c75d5b6f20170d2b07bb53ea791536b0c8e5ebae3ba94df093f76e0

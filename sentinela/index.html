@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sentinela Lube</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#050b1c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232a41c8' d='M12 1 3 5v6c0 5.6 3.8 10.7 9 12 5.2-1.3 9-6.4 9-12V5Z'/%3E%3Cpath fill='%23e5202c' d='M12 1v22c5.2-1.3 9-6.4 9-12V5Z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@500;600;700&family=JetBrains+Mono:wght@600;800&family=Noto+Color+Emoji&display=swap">
+<link rel="stylesheet" href="sentinela.css?v=20261005d">
+</head>
+<body>
+
+<div class="tarja-demo" data-tarja-demo hidden>DEMONSTRAÇÃO · dados sintéticos, nada aqui é real</div>
+
+<div class="carregando" data-carregando><span class="mono">Verificando acesso…</span></div>
+
+<!-- ============ ENTRADA (sem sessão) ============ -->
+<section class="entrada" data-entrada hidden>
+  <div class="entrada__caixa">
+    <div class="entrada__marca">
+      <span class="placa"><img src="../assets/logo-lube.png" alt="Lube Distribuidora"></span>
+      <span class="entrada__nome">Sentinela<em>Segurança dos sistemas</em></span>
+    </div>
+    <h1 class="entrada__titulo">Central de segurança</h1>
+    <form class="entrada__form" data-form-entrar autocomplete="on">
+      <label class="campo">
+        <span>Usuário</span>
+        <span class="sufixo">
+          <input type="text" name="usuario" data-entrar-usuario autocomplete="username" placeholder="seu.nome" spellcheck="false" autocapitalize="off">
+          <b data-entrar-sufixo>@lube.com.br</b>
+        </span>
+      </label>
+      <label class="campo">
+        <span>Senha</span>
+        <input type="password" name="senha" data-entrar-senha autocomplete="current-password" placeholder="••••••••">
+      </label>
+      <button class="btn blue grande" type="submit" data-entrar-botao>Entrar</button>
+      <p class="entrada__erro" data-entrar-erro role="alert"></p>
+    </form>
+    <p class="entrada__rodape mono">Acesso restrito ao TI · cpd@lube.com.br</p>
+  </div>
+</section>
+
+<!-- ============ SEM PERMISSÃO ============ -->
+<section class="entrada" data-restrito hidden>
+  <div class="entrada__caixa entrada__caixa--restrito">
+    <div class="entrada__marca">
+      <span class="placa"><img src="../assets/logo-lube.png" alt="Lube Distribuidora"></span>
+      <span class="entrada__nome">Sentinela<em>Segurança dos sistemas</em></span>
+    </div>
+    <span class="restrito__icone" aria-hidden="true">⛔</span>
+    <h1 class="entrada__titulo">Acesso restrito ao TI</h1>
+    <p class="restrito__quem mono" data-restrito-quem></p>
+    <div class="restrito__acoes">
+      <a class="btn link" href="../">Voltar ao portal</a>
+      <button class="btn blue" type="button" data-sair>Entrar com outro usuário</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAINEL ============ -->
+<div class="app" data-app hidden>
+  <button class="menu-btn" type="button" data-menu-btn aria-label="Abrir menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+
+  <aside class="side" data-side>
+    <div class="side-brand">
+      <span class="placa"><img src="../assets/logo-lube.png" alt="Lube Distribuidora"></span>
+      <span class="t">Sentinela<br>Segurança</span>
+    </div>
+    <nav data-menu>
+      <div class="side-grupo">Monitorar</div>
+      <button class="side-item ativo" type="button" data-ir="visao">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+        Visão geral
+      </button>
+      <button class="side-item" type="button" data-ir="bloqueios">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg></span>
+        Bloqueios <span class="qtd mono" data-qtd="bloqueios"></span>
+      </button>
+      <button class="side-item" type="button" data-ir="confiaveis">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 4.4 3.2 8.4 8 9.5 4.8-1.1 8-5.1 8-9.5V6Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span>
+        Confiáveis <span class="qtd mono" data-qtd="confiaveis"></span>
+      </button>
+      <button class="side-item" type="button" data-ir="ia">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="2.5"/><path d="M10 10h4v4h-4z"/></svg></span>
+        IA
+      </button>
+      <div class="side-grupo">Proteger</div>
+      <button class="side-item" type="button" data-ir="exposicoes">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17h.01"/></svg></span>
+        Exposições <span class="qtd mono alerta" data-qtd="exposicoes"></span>
+      </button>
+      <button class="side-item" type="button" data-ir="integridade">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>
+        Integridade
+      </button>
+      <button class="side-item" type="button" data-ir="configuracao">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+        Configuração
+      </button>
+    </nav>
+    <div class="side-rodape">
+      <span class="side-quem mono" data-quem></span>
+      <div class="side-links">
+        <a class="side-link" href="../">Portal</a>
+        <button class="side-link" type="button" data-sair>Sair</button>
+      </div>
+    </div>
+  </aside>
+  <div class="veu" data-veu></div>
+
+  <main class="conteudo">
+    <div class="wrap">
+
+      <div class="faixa-erro" data-faixa-erro hidden role="status"></div>
+
+      <!-- topo comum a todos os módulos -->
+      <header class="topbar">
+        <div class="topbar-esq">
+          <span class="placa topbar-placa"><img src="../assets/logo-lube.png" alt="Lube Distribuidora"></span>
+          <div>
+            <div class="eyebrow">Sentinela Lube</div>
+            <h1 data-titulo>Visão geral</h1>
+          </div>
+        </div>
+        <div class="topbar-dir">
+          <button class="modo" type="button" data-modo title="">—</button>
+          <span class="vivo" data-vivo title="Atualização do painel"><i></i><b>—</b></span>
+          <button class="chip-ia" type="button" data-chip-ia title="">IA</button>
+        </div>
+        <div class="sinais" data-sinais aria-label="Sinal dos guardas nos sistemas"></div>
+      </header>
+
+      <!-- ============ 1. VISÃO GERAL ============ -->
+      <section class="modulo" data-modulo="visao">
+        <div class="kpis" data-kpis></div>
+
+        <div class="grade-globo">
+          <div class="panel painel-globo">
+            <div class="panel-head">
+              <div>
+                <h2>Quem bate na porta · 24 h</h2>
+                <div class="sub" data-globo-sub>arcos até a Lube em Cariacica</div>
+              </div>
+              <div class="legend" data-legenda></div>
+            </div>
+            <div class="globo" data-globo>
+              <div class="globo__msg" data-globo-msg>Carregando o globo…</div>
+            </div>
+            <div class="globo-rodape" data-globo-dica>arraste para girar · Ctrl + roda para aproximar · clique no ponto para ver o IP</div>
+          </div>
+
+          <div class="panel painel-feed">
+            <div class="panel-head">
+              <div>
+                <h2>Agora</h2>
+                <div class="sub">últimos 30 acessos</div>
+              </div>
+              <span class="feed-pulso" aria-hidden="true"></span>
+            </div>
+            <ol class="feed" data-feed></ol>
+          </div>
+        </div>
+
+        <div class="panel painel-horas">
+          <div class="panel-head">
+            <div>
+              <h2>Acessos por hora (24 h)</h2>
+              <div class="sub" data-horas-sub></div>
+            </div>
+            <div class="legend">
+              <span><i class="dot g"></i>Liberado</span>
+              <span><i class="dot a"></i>Observado</span>
+              <span><i class="dot r"></i>Bloqueado</span>
+            </div>
+          </div>
+          <div class="horas" data-horas></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Quem está acessando</h2>
+              <div class="sub" data-vis-sub></div>
+            </div>
+            <div class="filtros" data-filtros>
+              <select data-f-status aria-label="Filtrar por status"></select>
+              <select data-f-sistema aria-label="Filtrar por sistema"></select>
+              <select data-f-pais aria-label="Filtrar por país"></select>
+              <input type="search" data-f-busca placeholder="Buscar IP, cidade, e-mail…" aria-label="Buscar">
+            </div>
+          </div>
+          <div class="scroll-x">
+            <table class="tv">
+              <thead>
+                <tr>
+                  <th>Local</th><th>IP</th><th>Quem</th><th class="th-disp">Dispositivo</th><th class="th-sis">Sistemas</th>
+                  <th class="r">Acessos</th><th>Último</th><th>Risco</th><th>Status</th><th class="r">Ações</th>
+                </tr>
+              </thead>
+              <tbody data-visitantes></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 2. BLOQUEIOS ============ -->
+      <section class="modulo" data-modulo="bloqueios" hidden>
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Bloqueios</h2>
+              <div class="sub" data-bl-sub></div>
+            </div>
+            <div class="acoes-head">
+              <label class="alternar" title="Mostra também os vencidos e os revogados">
+                <input type="checkbox" data-bl-inativos> <span>Mostrar inativos</span>
+              </label>
+              <button class="btn blue small" type="button" data-novo-bloqueio>Novo bloqueio</button>
+            </div>
+          </div>
+          <div class="scroll-x">
+            <table class="tbl">
+              <thead><tr><th>Alvo</th><th>Nível</th><th>Origem</th><th>Motivo</th><th>Desde</th><th>Até</th><th class="r">Barrados</th><th>Situação</th><th class="r col-acao"></th></tr></thead>
+              <tbody data-bl-lista><tr><td colspan="9" class="vazio">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 3. CONFIÁVEIS ============ -->
+      <section class="modulo" data-modulo="confiaveis" hidden>
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Redes confiáveis</h2>
+              <div class="sub" data-cf-sub></div>
+            </div>
+            <button class="btn blue small" type="button" data-novo-confiavel>Adicionar</button>
+          </div>
+          <div class="scroll-x">
+            <table class="tbl">
+              <thead><tr><th>Rede</th><th>Descrição</th><th>Origem</th><th>Desde</th><th>Expira</th><th>Situação</th><th class="r col-acao"></th></tr></thead>
+              <tbody data-cf-lista><tr><td colspan="7" class="vazio">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 4. IA ============ -->
+      <section class="modulo" data-modulo="ia" hidden>
+        <div data-ia-estado></div>
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Análises</h2>
+              <div class="sub" data-ia-sub></div>
+            </div>
+          </div>
+          <div class="scroll-x">
+            <table class="tbl">
+              <thead><tr><th>IP</th><th>Veredito</th><th class="r">Confiança</th><th>Motivo</th><th>Ação pedida</th><th>Aplicado</th><th>Quando</th></tr></thead>
+              <tbody data-ia-lista><tr><td colspan="7" class="vazio">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 5. EXPOSIÇÕES ============ -->
+      <section class="modulo" data-modulo="exposicoes" hidden>
+        <div class="kpis kpis-4" data-ex-resumo></div>
+        <div class="filtros filtros-solo">
+          <select data-ex-status aria-label="Filtrar por status">
+            <option value="pendentes">Abertas e aceitas</option>
+            <option value="aberta">Só abertas</option>
+            <option value="aceita">Só aceitas</option>
+            <option value="corrigida">Corrigidas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </div>
+        <div class="exposicoes" data-ex-lista><div class="vazio">Carregando…</div></div>
+      </section>
+
+      <!-- ============ 6. INTEGRIDADE ============ -->
+      <section class="modulo" data-modulo="integridade" hidden>
+        <div data-cadeia></div>
+        <h3 class="sec-title">Criptografia em uso</h3>
+        <div class="fatos">
+          <div class="fato"><span class="fato-ic">🔐</span><b>Tráfego sempre HTTPS / TLS</b><span>Todo acesso aos sistemas e à central passa cifrado.</span></div>
+          <div class="fato"><span class="fato-ic">🛰</span><b>Guarda → central assinado pela Vercel</b><span class="mono">OIDC · RS256</span></div>
+          <div class="fato"><span class="fato-ic">🔑</span><b>Login do portal</b><span class="mono">Supabase Auth · ES256</span></div>
+          <div class="fato"><span class="fato-ic">🎫</span><b>Passe e sessão dos sistemas</b><span><span class="mono">ES256</span> · chave privada no Vault do Supabase</span></div>
+          <div class="fato"><span class="fato-ic">⛓</span><b>Registro selado e encadeado</b><span><span class="mono">SHA-256</span> · cada evento sela o anterior</span></div>
+        </div>
+      </section>
+
+      <!-- ============ 7. CONFIGURAÇÃO ============ -->
+      <section class="modulo" data-modulo="configuracao" hidden>
+        <div class="cfg-grade">
+          <div class="panel">
+            <div class="panel-head"><div><h2>Modo</h2><div class="sub" data-cfg-modo-sub></div></div></div>
+            <div class="painel-corpo modos" data-cfg-modos></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>Casa no globo</h2></div></div>
+            <form class="painel-corpo form-grade" data-cfg-casa>
+              <label class="campo larga"><span>Nome</span><input type="text" name="nome" maxlength="80"></label>
+              <label class="campo"><span>Latitude</span><input type="number" name="lat" step="0.0001" min="-90" max="90"></label>
+              <label class="campo"><span>Longitude</span><input type="number" name="lon" step="0.0001" min="-180" max="180"></label>
+              <div class="form-acoes larga"><button class="btn blue small" type="submit">Salvar casa</button></div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>Limites</h2></div></div>
+            <form class="painel-corpo form-grade" data-cfg-limites>
+              <label class="campo" title="Acima disso, em 60 s, o IP leva bloqueio suspeito de 15 min"><span>Rajada / min</span><input type="number" name="limite_rajada_min" min="10" step="1"></label>
+              <label class="campo" title="Máximo de análises da IA por hora (custo)"><span>IA por hora</span><input type="number" name="ia_limite_hora" min="0" step="1"></label>
+              <label class="campo" title="A IA só cria bloqueio com confiança igual ou maior"><span>Confiança mínima</span><input type="number" name="ia_confianca_min" min="0.5" max="1" step="0.01"></label>
+              <div class="form-acoes larga"><button class="btn blue small" type="submit">Salvar limites</button></div>
+            </form>
+          </div>
+        </div>
+        <h3 class="sec-title">Sistemas protegidos</h3>
+        <div class="cfg-sistemas" data-cfg-sistemas><div class="vazio">Carregando…</div></div>
+      </section>
+
+      <p class="foot-note">Sentinela Lube · horários de Brasília · <span data-rodape-agora></span></p>
+    </div>
+  </main>
+</div>
+
+<!-- ============ GAVETA DO IP ============ -->
+<div class="gaveta-veu" data-gaveta-veu hidden></div>
+<aside class="gaveta" data-gaveta hidden aria-label="Detalhe do IP">
+  <div class="gaveta-topo">
+    <div data-gaveta-cab></div>
+    <button class="x" type="button" data-gaveta-fechar aria-label="Fechar">×</button>
+  </div>
+  <div class="gaveta-corpo" data-gaveta-corpo></div>
+</aside>
+
+<!-- ============ MODAL ============ -->
+<div class="overlay" data-modal hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">Sentinela</div>
+        <h3 id="modal-titulo" data-modal-titulo></h3>
+      </div>
+      <button class="x" type="button" data-modal-fechar aria-label="Fechar">×</button>
+    </div>
+    <form class="modal-body" data-modal-form></form>
+    <p class="modal-erro" data-modal-erro role="alert"></p>
+    <div class="modal-foot">
+      <button class="btn link" type="button" data-modal-fechar>Cancelar</button>
+      <button class="btn blue" type="button" data-modal-ok>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" data-toast role="status"></div>
+<div class="dica" data-dica hidden></div>
+
+<script src="vendor/supabase-js@2.45.4/supabase.js"></script>
+<script src="../config.js?v=20261005d"></script>
+<script src="util.js?v=20261005d"></script>
+<script src="globo.js?v=20261005d"></script>
+<script src="sentinela.js?v=20261005e"></script>
+</body>
+</html>

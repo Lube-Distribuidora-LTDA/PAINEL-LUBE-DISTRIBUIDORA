@@ -1,0 +1,11 @@
+# Arquivos internos que nao fazem parte do site publicado.
+# Sem isto, a Vercel servia o SQL do banco, o codigo das Edge Functions e a
+# documentacao para qualquer um (achado da Sentinela em 2026-10-05).
+db/
+supabase/
+guarda/
+docs/
+.claude/
+README.md
+# modo demonstração do painel da Sentinela: só roda em localhost (?demo=1)
+sentinela/demo.js
