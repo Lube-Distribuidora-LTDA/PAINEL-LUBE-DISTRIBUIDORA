@@ -20,10 +20,18 @@ admin.js        CRUD de usuários, sistemas, permissões e log de acessos
 icones.js       ícones dos sistemas (desenhados no padrão Lube ou imagem)
 marca.js        marca "L" em SVG para páginas que não carregam o app.js
 config.js       URL e chave pública do Supabase
+middleware.ts   guarda da Sentinela na porta do portal (FECHADO = null)
+sentinela-guarda.ts  núcleo do guarda (cópia de guarda/sentinela-guarda.ts)
+sentinela/      painel da Sentinela Lube (só administrador)
+guarda/         núcleo, modelo de middleware, testes e guia de instalação
 db/             SQL completo do banco (tabelas, gatilhos e políticas)
-supabase/       código da Edge Function admin-users
+supabase/       Edge Functions admin-users e sentinela (central)
+docs/           especificação da Sentinela
 assets/         imagens
 ```
+
+`db/`, `supabase/`, `guarda/`, `docs/`, `.claude/` e este README ficam fora do site
+publicado (`.vercelignore`): o endereço devolve 404.
 
 ## Como funciona o acesso
 
@@ -98,6 +106,30 @@ permissão devolve para o portal).
 Criar usuário, trocar senha e remover passam pela Edge Function `admin-users`,
 que confere o JWT e o `is_admin` no servidor antes de agir. A chave de serviço
 do Supabase fica só lá dentro — nunca no repositório.
+
+## Sentinela Lube (segurança)
+
+A Sentinela protege os sistemas da Lube na Vercel. Em cada sistema roda um
+**guarda** (`middleware.ts` + `sentinela-guarda.ts`) que olha toda requisição,
+barra ataques e manda os eventos para a **central** (Edge Function `sentinela`,
+schema `sentinela` neste mesmo Supabase). Especificação em
+`docs/SENTINELA-ESPECIFICACAO.md`; instalação em `guarda/LEIA-ME.md`.
+
+- **Painel**: `/sentinela/` (globo 3D, eventos, bloqueios, IA). Só abre para
+  administrador: as funções `public.sentinela_*` que alimentam o painel exigem
+  `is_admin()` e não devolvem nada para os demais.
+- **Passe**: ao abrir um sistema, o portal pede à central um passe de uso único
+  (vale 90 s, só para quem tem permissão no sistema) e abre o sistema com ele; o
+  guarda do sistema troca o passe por uma sessão de 8 h. Sistema com
+  `exige_login = true` em `sentinela.sistemas` só deixa entrar quem chegou pelo portal.
+- **O portal não é fechado**: aqui é a tela de login, então `FECHADO = null` no
+  `middleware.ts` e `exige_login = false` em `sentinela.sistemas`. No modo
+  `observar` o guarda registra tudo e só barra o que é ataque certo (o suspeito
+  vira "seria bloqueado"); no modo `proteger` barra também o suspeito.
+- **Saúde**: `/.sentinela/saude` mostra se o guarda recebe o token da Vercel
+  (`oidc`) e se a lista da central chegou (`lista.ok`).
+- Mudou o núcleo em `guarda/`? Copie para a raiz (`sentinela-guarda.ts`) e rode
+  `node guarda/teste/guarda.teste.mjs`.
 
 ## Banco de dados
 
@@ -174,9 +206,9 @@ formato `55` + DDD + número, sem espaços.
 3. **Ligar a proteção contra senhas vazadas** no Supabase
    (Authentication → Policies → *Leaked password protection*).
 4. **Proteger os sistemas na origem**. O cadeado no portal é sinalização, não
-   barreira: quem tiver o link abre a aplicação direto, e o endereço vem na
-   listagem do catálogo. Para restringir de verdade, cada sistema precisa
-   validar a sessão — todos já usam Supabase, o que facilita.
+   barreira: quem tiver o link abre a aplicação direto. Isto passa a ser feito
+   pela Sentinela (veja acima): guarda instalado em cada sistema e, depois,
+   `exige_login = true` sistema a sistema em `sentinela.sistemas`.
 
 ## Identidade
 
