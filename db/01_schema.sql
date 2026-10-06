@@ -75,6 +75,23 @@ create index if not exists acessos_data_idx on public.acessos(criado_em desc);
 -- 5. DOMÍNIO OBRIGATÓRIO @lube.com.br + criação do perfil
 --    Roda no banco: não dá para burlar pelo navegador.
 -- ---------------------------------------------------------
+-- E-mails fora do domínio que o TI liberou, um a um (consultores, parceiros).
+create table if not exists public.emails_externos (
+  email       text primary key check (email = lower(email)),
+  observacao  text not null default '',
+  criado_em   timestamptz not null default now(),
+  criado_por  uuid references public.profiles(id) on delete set null
+);
+
+comment on table public.emails_externos is
+  'Exceções ao domínio @lube.com.br (consultores, parceiros). Só administradores leem e alteram.';
+
+-- (RLS e política desta tabela ficam na seção 7, depois de is_admin())
+
+insert into public.emails_externos (email, observacao)
+values ('melissa@manceboconsulting.com', 'Consultora — Mancebo Consulting')
+on conflict (email) do nothing;
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -82,7 +99,8 @@ security definer
 set search_path = public
 as $$
 begin
-  if lower(new.email) not like '%@lube.com.br' then
+  if lower(new.email) not like '%@lube.com.br'
+     and not exists (select 1 from public.emails_externos e where e.email = lower(new.email)) then
     raise exception 'Acesso restrito: use um e-mail @lube.com.br';
   end if;
 
@@ -221,6 +239,14 @@ create policy permissoes_excecao_self on public.permissoes_excecao
   for select to authenticated using (user_id = auth.uid() and public.is_ativo());
 
 create policy permissoes_excecao_admin on public.permissoes_excecao
+  for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- e-mails externos liberados ----------------------------
+alter table public.emails_externos enable row level security;
+
+drop policy if exists emails_externos_admin on public.emails_externos;
+create policy emails_externos_admin on public.emails_externos
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 

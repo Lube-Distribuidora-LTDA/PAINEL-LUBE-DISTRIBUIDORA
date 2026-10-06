@@ -213,7 +213,7 @@
         ? '<label class="campo"><span>Usuário</span><div class="sufixo">' +
           '<input type="text" name="local" placeholder="nome.sobrenome" autocomplete="off" required />' +
           '<b>' + esc(CFG.dominio) + '</b></div>' +
-          '<span class="campo__dica">Só e-mails ' + esc(CFG.dominio) + ' são aceitos.</span></label>'
+          '<span class="campo__dica">Digite só o nome para ' + esc(CFG.dominio) + '. E-mail de fora (consultor) só funciona se estiver na lista de liberados — aí digite o e-mail completo.</span></label>'
         : '<label class="campo"><span>E-mail</span><input type="text" value="' + esc(u.email) + '" disabled /></label>') +
       '<div class="campo--linha">' +
         '<label class="campo"><span>Nome</span><input type="text" name="nome" value="' + esc(novo ? '' : u.nome) + '" /></label>' +
@@ -236,6 +236,16 @@
     return $$('input[name="sis"]:checked', mForm).map(function (i) { return i.value; });
   }
 
+  // some o "@lube.com.br" fixo quando o e-mail completo é digitado
+  mForm.addEventListener('input', function (ev) {
+    var n = ev.target;
+    if (n.name !== 'local') return;
+    var suf = $('.sufixo b', mForm);
+    var completo = n.value.indexOf('@') > -1;
+    if (suf) suf.style.display = completo ? 'none' : '';
+    n.style.setProperty('border-right', completo ? '1px solid var(--adm-borda)' : '', 'important');
+  });
+
   function novoUsuario() {
     abrirModal('Novo usuário', formUsuario(null), function () {
       var local = $('input[name="local"]', mForm).value.trim().toLowerCase();
@@ -244,7 +254,8 @@
       if (senha.length < 8) throw new Error('A senha precisa ter ao menos 8 caracteres.');
       return fn({
         acao: 'criar',
-        email: local + CFG.dominio,
+        // e-mail completo (consultor liberado) vai como está; só o nome ganha @lube.com.br
+        email: local.indexOf('@') > -1 ? local : local + CFG.dominio,
         nome: $('input[name="nome"]', mForm).value.trim(),
         cargo: $('input[name="cargo"]', mForm).value.trim(),
         senha: senha,

@@ -64,7 +64,14 @@ Deno.serve(async (req) => {
       case 'criar': {
         const email = String(corpo.email || '').trim().toLowerCase();
         const senha = String(corpo.senha || '');
-        if (!email.endsWith(DOMINIO)) return json({ erro: `O e-mail precisa terminar em ${DOMINIO}` }, 400);
+        if (!email.endsWith(DOMINIO)) {
+          // fora do domínio só passa quem o TI liberou na lista emails_externos
+          const { data: liberado } = await admin
+            .from('emails_externos').select('email').eq('email', email).maybeSingle();
+          if (!liberado) {
+            return json({ erro: `O e-mail precisa terminar em ${DOMINIO} ou estar na lista de e-mails liberados` }, 400);
+          }
+        }
         if (senha.length < 8) return json({ erro: 'A senha precisa ter ao menos 8 caracteres' }, 400);
 
         const { data, error } = await admin.auth.admin.createUser({

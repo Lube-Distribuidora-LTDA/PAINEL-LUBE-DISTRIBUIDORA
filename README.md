@@ -54,6 +54,18 @@ sistemas aquela pessoa pode ver.
    pedir ao TI.
 4. Cada login e cada abertura de sistema fica registrada na tabela `acessos`.
 
+**Exceção para e-mail de fora (consultores).** A tabela `emails_externos` guarda os
+e-mails fora do domínio que o TI liberou, um a um — hoje só
+`melissa@manceboconsulting.com`. Para esses, a pessoa digita o e-mail completo
+(o `@lube.com.br` não é acrescentado) e o painel admin também aceita o e-mail
+completo no campo "Usuário". Qualquer outro e-mail externo continua recusado. Para
+liberar mais um (só o administrador, direto no SQL Editor do Supabase):
+
+```sql
+insert into public.emails_externos (email, observacao)
+values ('nome@empresa.com', 'quem é / por quê');
+```
+
 A restrição de domínio roda **dentro do banco** (gatilho em `auth.users`), não no
 JavaScript — não dá para burlar pelo navegador. As tabelas usam Row Level
 Security: sem sessão válida a API não devolve nada, e um usuário comum só

@@ -32,6 +32,7 @@
     if (!v) return '';
     return v.indexOf('@') > -1 ? v : v + CFG.dominio;
   }
+  function emailValido(v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v); }
   function erro(msg) {
     if (!erroEl) return;
     erroEl.textContent = msg || '';
@@ -228,10 +229,8 @@
       var senha = campoPwd.value;
 
       if (!email) { erro('Informe seu usuário.'); return; }
-      if (email.slice(-CFG.dominio.length) !== CFG.dominio) {
-        erro('Acesso restrito a e-mails ' + CFG.dominio);
-        return;
-      }
+      // quem decide se o e-mail pode entrar é o banco (@lube.com.br ou a lista de e-mails liberados)
+      if (!emailValido(email)) { erro('Informe um e-mail válido.'); return; }
       if (!senha) { erro('Informe a senha.'); return; }
 
       carregando(true);
@@ -286,9 +285,7 @@
 
       if (!nome)  { erro('Informe seu nome completo.'); return; }
       if (!email) { erro('Informe seu e-mail corporativo.'); return; }
-      if (email.slice(-CFG.dominio.length) !== CFG.dominio) {
-        erro('O primeiro acesso é só para e-mails ' + CFG.dominio); return;
-      }
+      if (!emailValido(email)) { erro('Informe um e-mail válido.'); return; }
       if (s1.length < 8) { erro('A senha precisa ter ao menos 8 caracteres.'); return; }
       if (s1 !== s2)     { erro('As duas senhas não são iguais.'); return; }
 
