@@ -186,6 +186,25 @@ export function emailValido(v: unknown): string | null {
   return RE_EMAIL.test(e) ? e : null;
 }
 
+// Nome de robô que o app manda quando o pedido vem de um agendador verificado pelo segredo
+// (ex.: "robô do gestao ti (agendador da vercel)"). Só letras sem acento, dígitos, espaço e
+// ( ) . _ - depois de "robô "/"robo ": nunca "|" (separador do selo) nem "@" (e-mail de pessoa).
+const RE_ROBO = /^rob[oô] [a-z0-9 ()._-]{3,80}$/i;
+const RE_ROBO_MINUSCULO = /^rob[oô] [a-z0-9 ()._-]{3,80}$/;
+
+/**
+ * Nome de robô minúsculo, ou null. Confere o texto como veio (sem trocar controle por espaço):
+ * qualquer caractere fora da lista recusa o nome inteiro.
+ */
+export function nomeRoboValido(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  if (!RE_ROBO.test(s)) return null;
+  const n = s.toLowerCase();
+  // segunda conferência já minúscula (sem /i): nenhuma letra "parecida" passa pela troca de caixa
+  return RE_ROBO_MINUSCULO.test(n) ? n : null;
+}
+
 /** ts do guarda: inválido, mais de 5 min no futuro ou mais de 1 dia atrás → agora. */
 function tsValido(v: unknown, agoraMs: number): string {
   if (typeof v === 'string' && v.length <= 40) {
@@ -224,8 +243,11 @@ export function sanearEvento(bruto: unknown, agoraMs = Date.now()): Evento | nul
     return s && /^[a-z-]+$/.test(s) ? s : null;
   };
 
-  let identidade = emailValido(e.identidade);
+  // identidade: e-mail para qualquer origem; nome de robô SÓ com sessao_app (o app confirmou o
+  // agendador pelo segredo). Pelo passe a identidade é sempre o e-mail de quem fez login.
   let identidadeOrigem: string | null = umDe(e.identidade_origem, ORIGENS_IDENTIDADE);
+  let identidade = emailValido(e.identidade)
+    ?? (identidadeOrigem === 'sessao_app' ? nomeRoboValido(e.identidade) : null);
   if (!identidade || !identidadeOrigem) { identidade = null; identidadeOrigem = null; }
 
   return {

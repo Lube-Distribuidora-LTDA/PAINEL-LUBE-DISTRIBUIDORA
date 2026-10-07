@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ambienteValido, ipValido, lerListaTor, origemReferer, rotulo, sanearEvento, sanearLote, texto, usuarioTentativa,
+  ambienteValido, ipValido, lerListaTor, nomeRoboValido, origemReferer, rotulo, sanearEvento, sanearLote, texto,
+  usuarioTentativa,
 } from '../saneamento.ts';
 
 const AGORA = Date.parse('2026-10-05T15:00:00.000Z');
@@ -102,6 +103,87 @@ test('sanearEvento: enums validados', () => {
   assert.equal(sanearEvento({ ...base(), pais: 'br' }, AGORA)!.pais, 'BR');
   assert.equal(sanearEvento({ ...base(), pais: 'B1' }, AGORA)!.pais, null);
   assert.equal(sanearEvento({ ...base(), sec_fetch_mode: 'navigate<x>' }, AGORA)!.sec_fetch_mode, null);
+});
+
+// o que o Gestão TI manda no evento do agendador da Vercel verificado pelo segredo
+const ROBO = 'robo do gestao ti (agendador da vercel)';
+
+test('sanearEvento: nome de robô aceito só com sessao_app', () => {
+  let ev = sanearEvento({ ...base(), identidade: ROBO, identidade_origem: 'sessao_app' }, AGORA)!;
+  assert.equal(ev.identidade, ROBO);
+  assert.equal(ev.identidade_origem, 'sessao_app');
+  // maiúscula e acento no "robô": fica minúsculo (o banco também grava lower)
+  ev = sanearEvento({ ...base(), identidade: '  Robô do Gestao TI (Agendador da Vercel) ', identidade_origem: 'sessao_app' }, AGORA)!;
+  assert.equal(ev.identidade, 'robô do gestao ti (agendador da vercel)');
+  assert.equal(ev.identidade_origem, 'sessao_app');
+  // pelo passe a identidade é sempre o e-mail de quem fez login: nome de robô cai, e a origem junto
+  ev = sanearEvento({ ...base(), identidade: ROBO, identidade_origem: 'passe' }, AGORA)!;
+  assert.equal(ev.identidade, null);
+  assert.equal(ev.identidade_origem, null);
+  // sem origem, ou origem que o guarda não manda: cai
+  for (const origem of [undefined, null, 'provavel', 'SESSAO_APP', 'sessao_app ', 'portal']) {
+    ev = sanearEvento({ ...base(), identidade: ROBO, identidade_origem: origem }, AGORA)!;
+    assert.equal(ev.identidade, null, String(origem));
+    assert.equal(ev.identidade_origem, null, String(origem));
+  }
+});
+
+test('sanearEvento: nome de robô com "|", e-mail ou caractere fora da lista é recusado', () => {
+  const ruins = [
+    'robo do gestao ti | agendador', // "|" é o separador do selo
+    'robo|do gestao ti',
+    'robo do gestao ti (agendador)|passe',
+    'robo julio@lube.com.br', // e-mail de pessoa não vira robô
+    'robo de julio.alves@lube',
+    'robo ab', // curto demais (mínimo 3 depois de "robo ")
+    'robo ' + 'a'.repeat(81), // longo demais (máximo 80)
+    'robo ' + 'a'.repeat(200),
+    'robozinho do ti', // precisa de espaço depois de "robo"
+    'roboo do ti',
+    'rob do gestao ti',
+    'o robo do gestao ti',
+    'julio alves',
+    'robo do gestão ti', // acento só no "robô"
+    'robo do gestao\tti', // controle não vira espaço aqui
+    'robo do gestao\u0000ti',
+    'robo do gestao\nti',
+    'robo do gestao ti',
+    'robo <script>alert(1)</script>',
+    "robo'; drop table x;--",
+    'robo do ti; rm -rf',
+    'robo do Kelvin', // K de Kelvin não passa por "k"
+    'robo do ſistema', // s longo não passa por "s"
+    'robo do İti', // I com ponto não passa por "i"
+    'robo do gestao ti \ud800',
+  ];
+  for (const r of ruins) {
+    const ev = sanearEvento({ ...base(), identidade: r, identidade_origem: 'sessao_app' }, AGORA)!;
+    assert.equal(ev.identidade, null, JSON.stringify(r));
+    assert.equal(ev.identidade_origem, null, JSON.stringify(r));
+    assert.equal(nomeRoboValido(r), null, JSON.stringify(r));
+  }
+  assert.equal(nomeRoboValido(42), null);
+  assert.equal(nomeRoboValido(null), null);
+  assert.equal(nomeRoboValido({ toString: () => ROBO }), null);
+  assert.equal(nomeRoboValido([ROBO]), null);
+  assert.equal(nomeRoboValido(ROBO), ROBO);
+  assert.equal(nomeRoboValido('robo ' + 'a'.repeat(80)), 'robo ' + 'a'.repeat(80));
+  assert.equal(nomeRoboValido('robô abc'), 'robô abc');
+  assert.equal(nomeRoboValido('ROBO a.b_c-d (1)'), 'robo a.b_c-d (1)');
+});
+
+test('sanearEvento: e-mail continua valendo nas duas origens', () => {
+  for (const origem of ['passe', 'sessao_app']) {
+    const ev = sanearEvento({ ...base(), identidade: ' Julio.Alves@Lube.com.br ', identidade_origem: origem }, AGORA)!;
+    assert.equal(ev.identidade, 'julio.alves@lube.com.br', origem);
+    assert.equal(ev.identidade_origem, origem);
+  }
+  // texto que não é e-mail nem robô continua caindo, nas duas origens
+  for (const origem of ['passe', 'sessao_app']) {
+    const ev = sanearEvento({ ...base(), identidade: 'julio alves', identidade_origem: origem }, AGORA)!;
+    assert.equal(ev.identidade, null, origem);
+    assert.equal(ev.identidade_origem, null, origem);
+  }
 });
 
 test('sanearEvento: lat/lon numéricos em faixa (ou os dois null)', () => {
