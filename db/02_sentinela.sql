@@ -1735,7 +1735,9 @@ begin
     return 0;
   end if;
 
-  delete from sentinela.tor_saidas;
+  -- "where true": o Supabase liga o safeupdate na API, que recusa DELETE sem WHERE
+  -- ("21000 DELETE requires a WHERE clause"); sem isto a lista Tor nunca carregava
+  delete from sentinela.tor_saidas where true;
   insert into sentinela.tor_saidas (ip, atualizado_em) select u, now() from unnest(v_ips) as u;
   update sentinela.config c set tor_atualizado_em = now() where c.id;
   return cardinality(v_ips);
