@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { criarCentral, MAX_TENTATIVAS_MIN, precisaAtualizarTor, TEAM_ID, URL_TOR } from '../central.ts';
 import type { Dependencias } from '../central.ts';
 import { assinarHmac } from '../hmac.ts';
-import { URL_ANTHROPIC } from '../ia.ts';
+import { URL_ANTHROPIC, URL_MODELO } from '../ia.ts';
 import { verificarJwt } from '../jwt.ts';
 import type { JwkPublica } from '../jwt.ts';
 
@@ -95,6 +95,8 @@ function montar(opcoes: { chaveIa?: string; chaveHmac?: string; tempoIaMs?: numb
         input: { veredito: 'malicioso', confianca: 0.95, motivo: 'Varredura de arquivos sensíveis.', acao: 'bloquear_24h' } }],
       stop_reason: 'tool_use', usage: { input_tokens: 500, output_tokens: 40 },
     }), { status: 200 }),
+    /** GET do modelo na conferência da chave; null = rede fora */
+    respostaModelo: (): Response | null => new Response(JSON.stringify({ id: 'claude-haiku-4-5-20251001', type: 'model' }), { status: 200 }),
     respostaTor: () => new Response(Array.from({ length: 150 }, (_, i) => `185.220.${Math.floor(i / 250)}.${i % 250}`).join('\n'), { status: 200 }),
   };
 
@@ -190,6 +192,11 @@ function montar(opcoes: { chaveIa?: string; chaveHmac?: string; tempoIaMs?: numb
       const url = String(entrada);
       fetches.push({ url, init });
       if (url === URL_ANTHROPIC) return estado.respostaIA(JSON.parse(String(init?.body)), init);
+      if (url === URL_MODELO) {
+        const r = estado.respostaModelo();
+        if (!r) throw new TypeError('fetch failed');
+        return r;
+      }
       if (url === URL_TOR) return estado.respostaTor();
       throw new Error('fetch inesperado ' + url);
     }) as typeof fetch,
@@ -927,4 +934,76 @@ test('IA: status reflete a última troca entre instâncias e é regravado quando
   s.estado.agora += 5 * 60_000;
   await enviarEvento(s); await s.esperarFundo();
   assert.equal(s.de('sentinela_srv_ia_status').length, 3);
+});
+
+// ---------------------------------------------------------
+// Conferência da chave da IA (o painel mostrava "sem chave" de horas atrás)
+const pedirLista = (c: ReturnType<typeof montar>) => c.chamar('lista', { headers: guarda('oidc.compras.ok') });
+
+test('IA: /lista confere a chave com GET do modelo (sem gastar token) e grava "ligada"; 1x a cada 5 min', async () => {
+  const c = montar({ chaveIa: CHAVE_IA });
+  assert.equal((await pedirLista(c)).status, 200);
+  await c.esperarFundo();
+  const conf = c.fetches.filter((f) => f.url === URL_MODELO);
+  assert.equal(conf.length, 1);
+  assert.equal(conf[0].init!.method, 'GET');
+  const h = conf[0].init!.headers as Record<string, string>;
+  assert.equal(h['x-api-key'], CHAVE_IA);
+  assert.equal(h['anthropic-version'], '2023-06-01');
+  assert.ok(conf[0].init!.signal instanceof AbortSignal);
+  assert.equal(c.fetches.filter((f) => f.url === URL_ANTHROPIC).length, 0, 'nenhuma mensagem: não gasta token');
+  assert.deepEqual(c.de('sentinela_srv_ia_status').map((x) => x.params), [
+    { p_status: 'ligada', p_detalhe: 'claude-haiku-4-5-20251001 · chave conferida' }]);
+  assert.ok(!JSON.stringify(c.chamadas).includes(CHAVE_IA), 'a chave nunca vai para o banco');
+  // dentro da janela: não confere de novo
+  c.estado.agora += 4 * 60_000;
+  await pedirLista(c); await c.esperarFundo();
+  assert.equal(c.fetches.filter((f) => f.url === URL_MODELO).length, 1);
+  // passou a janela: confere, mas o mesmo resultado não regrava antes de 1 h
+  c.estado.agora += 2 * 60_000;
+  await pedirLista(c); await c.esperarFundo();
+  assert.equal(c.fetches.filter((f) => f.url === URL_MODELO).length, 2);
+  assert.equal(c.de('sentinela_srv_ia_status').length, 1);
+  c.estado.agora += 60 * 60_000;
+  await pedirLista(c); await c.esperarFundo();
+  assert.equal(c.de('sentinela_srv_ia_status').length, 2, 'regrava 1x por hora (o painel vê que está viva)');
+});
+
+test('IA: conferência sem chave → sem_chave; chave recusada (401), sem crédito (402) e modelo indisponível (404) → erro explicado', async () => {
+  const s = montar();
+  await pedirLista(s); await s.esperarFundo();
+  assert.deepEqual(s.de('sentinela_srv_ia_status').map((x) => x.params.p_status), ['sem_chave']);
+  assert.equal(s.fetches.filter((f) => f.url === URL_MODELO).length, 0);
+
+  const casos: [number, RegExp][] = [[401, /recusou a chave/], [402, /sem crédito/], [403, /não tem permissão/], [404, /não está disponível/]];
+  for (const [status, re] of casos) {
+    const c = montar({ chaveIa: CHAVE_IA });
+    c.estado.respostaModelo = () => new Response(JSON.stringify({ type: 'error', error: { type: 'x', message: 'y' } }), { status });
+    await pedirLista(c); await c.esperarFundo();
+    const st = c.de('sentinela_srv_ia_status');
+    assert.equal(st.length, 1, 'status ' + status);
+    assert.equal(st[0].params.p_status, 'erro');
+    assert.match(String(st[0].params.p_detalhe), re);
+  }
+});
+
+test('IA: chave corrigida depois → na próxima janela o status sai de "erro" para "ligada"', async () => {
+  const c = montar({ chaveIa: CHAVE_IA });
+  c.estado.respostaModelo = () => new Response('{}', { status: 401 });
+  await pedirLista(c); await c.esperarFundo();
+  c.estado.respostaModelo = () => new Response('{}', { status: 200 });
+  c.estado.agora += 5 * 60_000;
+  await pedirLista(c); await c.esperarFundo();
+  assert.deepEqual(c.de('sentinela_srv_ia_status').map((x) => x.params.p_status), ['erro', 'ligada']);
+});
+
+test('IA: Anthropic fora (5xx) ou rede caída na conferência não mexe no status', async () => {
+  const c = montar({ chaveIa: CHAVE_IA });
+  c.estado.respostaModelo = () => new Response('{}', { status: 529 });
+  await pedirLista(c); await c.esperarFundo();
+  c.estado.agora += 5 * 60_000;
+  c.estado.respostaModelo = () => null;
+  await pedirLista(c); await c.esperarFundo();
+  assert.equal(c.de('sentinela_srv_ia_status').length, 0);
+  assert.equal(c.fetches.filter((f) => f.url === URL_MODELO).length, 2);
 });

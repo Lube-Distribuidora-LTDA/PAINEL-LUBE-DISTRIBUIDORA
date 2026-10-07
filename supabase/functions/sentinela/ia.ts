@@ -8,6 +8,23 @@ import { texto } from './saneamento.ts';
 export const URL_ANTHROPIC = 'https://api.anthropic.com/v1/messages';
 export const VERSAO_ANTHROPIC = '2023-06-01';
 export const MODELO = 'claude-haiku-4-5-20251001';
+/** GET deste endereço confere a chave e o acesso ao modelo sem gastar token. */
+export const URL_MODELO = 'https://api.anthropic.com/v1/models/' + MODELO;
+
+/**
+ * Resposta da conferência da chave → status do painel.
+ * null = não mexe no status (Anthropic instável: tenta de novo depois).
+ */
+export function explicarConferencia(status: number, corpo: unknown): { status: 'ligada' | 'erro'; detalhe: string } | null {
+  if (status >= 200 && status < 300) return { status: 'ligada', detalhe: MODELO + ' · chave conferida' };
+  if (status === 429) return { status: 'ligada', detalhe: MODELO + ' · chave conferida (Anthropic limitando o uso agora)' };
+  if (status === 401) return { status: 'erro', detalhe: 'A Anthropic recusou a chave (inválida ou apagada). Confira o valor de ANTHROPIC_API_KEY.' };
+  if (status === 402) return { status: 'erro', detalhe: 'Conta da Anthropic sem crédito: confira o faturamento no console da Anthropic.' };
+  if (status === 403) return { status: 'erro', detalhe: 'A chave não tem permissão nesta conta da Anthropic.' };
+  if (status === 404) return { status: 'erro', detalhe: 'O modelo ' + MODELO + ' não está disponível para esta conta da Anthropic.' };
+  if (status >= 500) return null;
+  return { status: 'erro', detalhe: descreverErroHttp(status, corpo) };
+}
 export const MAX_TOKENS = 400;
 export const TEMPO_IA_MS = 15_000;
 /** Teto do JSON de contexto enviado (caracteres); acima disso corta eventos antigos. */

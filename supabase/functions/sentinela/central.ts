@@ -8,7 +8,7 @@ import { ambienteValido, emailValido, ipValido, lerListaTor, rotulo, sanearLote,
 import { assinarJwt, gerarChave, importarPrivada, jwkPublicaValida, verificarJwt } from './jwt.ts';
 import type { JwkPublica, Payload } from './jwt.ts';
 import { TAMANHO_MIN_CHAVE, verificarHmac } from './hmac.ts';
-import { descreverErroHttp, lerRespostaIA, montarCorpoIA, MODELO, TEMPO_IA_MS, URL_ANTHROPIC, VERSAO_ANTHROPIC } from './ia.ts';
+import { descreverErroHttp, explicarConferencia, lerRespostaIA, montarCorpoIA, MODELO, TEMPO_IA_MS, URL_ANTHROPIC, URL_MODELO, VERSAO_ANTHROPIC } from './ia.ts';
 import {
   bearer, cabecalhosCors, chaveLimite, criarLimitador, ehJson, erro, ipCliente, json, lerCorpoLimitado, lerJson,
   montarUrlPasse, origemPermitida, RE_SLUG, RE_UUID, rotaDe, ROTAS,
@@ -24,6 +24,8 @@ export const URL_TOR = 'https://check.torproject.org/torbulkexitlist';
 const MIN = 60_000;
 const HORA = 60 * MIN;
 const MAX_IA_LOTE = 3;
+/** de quanto em quanto tempo cada instância confere a chave da IA */
+export const CONFERIR_IA_MS = 5 * MIN;
 /** chamadas à Anthropic em voo ao mesmo tempo nesta instância */
 export const MAX_IA_SIMULTANEAS = 3;
 /** teto de POST /tentativa por instância, somando todos os IPs */
@@ -285,6 +287,43 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
     semChaveEm = status === 'sem_chave' ? agora() : 0;
   }
 
+  // Conferência da chave. Antes o status só mudava quando aparecia um IP para
+  // analisar: com a chave já cadastrada, o painel seguia mostrando "sem chave"
+  // de horas atrás. A cada 5 min por instância (puxada pela /lista dos guardas)
+  // confere de verdade com um GET do modelo, que não gasta token.
+  let conferidaEm = 0;
+  let ultimoConferido = '';
+  let ultimoConferidoEm = 0;
+  async function conferirChaveIA() {
+    if (agora() - conferidaEm < CONFERIR_IA_MS) return;
+    conferidaEm = agora();
+    const chave = d.chaveAnthropic();
+    if (!chave) {
+      await marcarStatus('sem_chave', 'Cadastre ANTHROPIC_API_KEY em Supabase › Edge Functions › Secrets');
+      return;
+    }
+    let r: { status: 'ligada' | 'erro'; detalhe: string } | null;
+    try {
+      const resp = await d.fetch(URL_MODELO, {
+        method: 'GET',
+        headers: { 'x-api-key': chave, 'anthropic-version': VERSAO_ANTHROPIC },
+        signal: AbortSignal.timeout(10_000),
+      });
+      let corpo: unknown = null;
+      try { corpo = JSON.parse(await resp.text()); } catch { corpo = null; }
+      r = explicarConferencia(resp.status, corpo);
+    } catch {
+      return; // rede: fica para a próxima janela, sem mexer no status
+    }
+    if (!r) return;
+    // o mesmo resultado não precisa ir ao banco a cada 5 min: grava se mudou ou 1x por hora
+    const k = r.status + '|' + r.detalhe;
+    if (k === ultimoConferido && agora() - ultimoConferidoEm < HORA) return;
+    await marcarStatus(r.status, r.detalhe);
+    ultimoConferido = k;
+    ultimoConferidoEm = agora();
+  }
+
   async function registrarErroIA(ip: string, msg: string) {
     await d.rpc('sentinela_srv_registrar_analise', {
       p_ip: ip,
@@ -437,6 +476,7 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
     ]);
     if (!ehObj(lista)) throw new Error('srv_lista sem resposta');
     if (g.lista === undefined) guardarSistema(g.projeto, lista);
+    d.depois(conferirChaveIA());
     return json({ ...lista, chaves });
   }
 
