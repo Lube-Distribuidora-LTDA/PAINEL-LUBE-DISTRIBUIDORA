@@ -79,6 +79,15 @@ JavaScript — não dá para burlar pelo navegador. As tabelas usam Row Level
 Security: sem sessão válida a API não devolve nada, e um usuário comum só
 enxerga o próprio perfil e os próprios sistemas.
 
+### SAQ — chamado do RCA, sem login
+
+Abaixo do formulário de login há um atalho **"SAQ · Abrir chamado ao SAC"** que leva ao
+[SAQ](https://saq-lube.vercel.app/), um sistema à parte (repositório e projeto próprios). Decisão do
+Júlio (2026-10-07): os RCAs abrem chamado **sem precisar de conta no portal**. O portal só
+leva até lá: não passa sessão, passe nem nada do login. Quem protege o SAQ é ele mesmo — só manda
+comprovante para o e-mail de um RCA ativo no WinThor — e o guarda da Sentinela dele, com
+`exige_login = false`. Mudou o endereço do SAQ? Troque o `href` da `.gate__saq` no `index.html`.
+
 ### Painel administrativo
 
 Conta administradora: **cpd@lube.com.br** (na tela de login basta digitar `cpd`).
