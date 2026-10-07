@@ -456,6 +456,30 @@
     ids.slice(MAX_FEED).forEach(function (id) { delete est.feed[id]; });
   }
 
+  // O guarda grava "liberado" para tudo o que passou, mas sem login só passa o que é público
+  // (tela de login do Painel Lube, arquivo público, rota pública): "LIBERADO" fica só para quem
+  // veio com login; o resto diz o que de fato foi. Cor e texto valem para o feed e para a gaveta.
+  var DICA_PUBLICO = 'Só a tela de login do Painel Lube ou um arquivo público: sem acesso a sistema nem a dados';
+  function rotuloEvento(e) {
+    var d = e.decisao;
+    if (d !== 'liberado') {
+      return { cls: d || 'cinza', txt: d || '—', dica: '', chip: { bloqueado: 'vermelho', observado: 'ambar' }[d] || 'cinza' };
+    }
+    if (e.identidade && e.regra === 'cron') {
+      return { cls: 'verificado', txt: 'ROBÔ VERIFICADO', dica: 'Agendador da Vercel com o segredo conferido', chip: 'azul' };
+    }
+    if (e.identidade) return { cls: 'liberado', txt: 'LIBERADO', dica: 'Entrou com login: ' + e.identidade, chip: 'verde' };
+    if (e.regra === 'cron') {
+      return { cls: 'robo', txt: 'ROBÔ', chip: 'cinza',
+               dica: 'Diz ser o agendador da Vercel, mas sem o segredo conferido: só alcançou rota pública, sem login' };
+    }
+    if (e.regra === 'previa_link') {
+      return { cls: 'robo', txt: 'ROBÔ', chip: 'cinza',
+               dica: 'Prévia de link (WhatsApp, Telegram…): só lê a página pública para montar a miniatura, sem acesso a sistema nem a dados' };
+    }
+    return { cls: 'publico', txt: 'PÚBLICO', dica: DICA_PUBLICO, chip: 'neutro' };
+  }
+
   function pintarFeed() {
     var ids = Object.keys(est.feed).map(Number).sort(function (a, b) { return b - a; });
     var ol = $('[data-feed]');
@@ -466,12 +490,13 @@
       est.feedVisto[id] = true;
       var sis = e.sistema_nome || est.nomes[e.projeto] || e.projeto || '';
       var dica = [e.motivo, e.regra ? 'regra: ' + U.regra(e.regra) : '', 'risco ' + (e.risco || 0), e.identidade || ''].filter(Boolean).join(' · ');
-      return '<li class="' + esc(e.decisao) + (novo ? ' novo' : '') + '" data-ip="' + esc(e.ip) + '" title="' + esc(dica) + '">' +
+      var rot = rotuloEvento(e);
+      return '<li class="' + esc(rot.cls) + (novo ? ' novo' : '') + '" data-ip="' + esc(e.ip) + '" title="' + esc(dica) + '">' +
         '<span class="h">' + U.horaSeg(e.criado_em) + '</span>' +
         '<div class="o"><div class="o1"><span class="met">' + esc(e.metodo || 'GET') + '</span>' + esc(U.corta(e.caminho || '/', 80)) + '</div>' +
         '<div class="o2"><span class="flag">' + U.bandeira(e.pais) + '</span> ' + esc(e.cidade || U.nomePais(e.pais)) +
         ' · <span class="mono">' + esc(e.ip) + '</span> · ' + esc(sis) + '</div></div>' +
-        '<span class="d ' + esc(e.decisao) + '">' + esc(e.decisao) + '</span></li>';
+        '<span class="d ' + esc(rot.cls) + '"' + (rot.dica ? ' title="' + esc(rot.dica) + '"' : '') + '>' + esc(rot.txt) + '</span></li>';
     }).join('');
     est.feedPintado = true;
     var vistos = {};
@@ -537,8 +562,18 @@
     return (v.bloqueio && v.bloqueio.regra) || null;
   }
 
+  // "seguro" sem login e fora de rede confiável: nada contra, mas também nada além do público
+  // (o guarda barra sem login tudo o que não é tela de login, arquivo ou rota pública)
+  var ST_PUBLICO = { icone: '🌐', nome: 'Público' };
+  function ehPublico(v) { return (v.status || 'seguro') === 'seguro' && !v.identidade && !v.confiavel; }
+  function estadoVis(v) { return ehPublico(v) ? 'publico' : (v.status || 'seguro'); }
+  function infoEstado(s) { return s === 'publico' ? ST_PUBLICO : U.status(s); }
+  // identidade de robô que o próprio sistema entrega só depois de conferir o segredo do agendador
+  function roboVerificado(v) { return !!v.identidade && v.identidade_origem === 'sessao_app' && /vercel-cron\//i.test(v.ua || ''); }
+
   function pilula(v) {
-    var st = U.status(v.status), sub;
+    var pub = ehPublico(v);
+    var st = infoEstado(estadoVis(v)), sub;
     var confirmado = v.identidade_origem === 'passe' || v.identidade_origem === 'sessao_app';
     var cod = codigoRegra(v);
     var livre = v.status_motivo && !/^[a-z_]+$/.test(v.status_motivo) ? v.status_motivo : null;
@@ -549,18 +584,26 @@
       sub = cod === 'buscador' ? 'buscador · sem bloqueio' : (cod ? 'seria bloqueado: ' + U.regra(cod) : (livre || 'seria bloqueado'));
     } else if (v.status === 'analise') {
       sub = 'IA analisando';
+    } else if (pub) {
+      sub = U.dispositivo(v.ua).robo ? 'robô · só o que é público' : 'só viu a tela de login';
+    } else if (roboVerificado(v)) {
+      sub = 'HTTPS · TLS · segredo ✓';
     } else {
       sub = 'HTTPS · TLS' + (confirmado ? ' · login ES256 ✓' : '');
     }
     var dica = v.bloqueio ? 'Bloqueio #' + v.bloqueio.id + ' (' + v.bloqueio.nivel + '): ' + (v.bloqueio.motivo || '') : '';
+    if (pub) dica = DICA_PUBLICO;
     if (v.veredito) dica += (dica ? ' · ' : '') + 'IA: ' + v.veredito.veredito + ' ' + U.pct01(v.veredito.confianca) + ' — ' + (v.veredito.motivo || '');
-    return '<span class="pilula ' + esc(v.status || 'seguro') + '"' + (dica ? ' title="' + esc(dica) + '"' : '') + '>' +
+    return '<span class="pilula ' + esc(estadoVis(v)) + '"' + (dica ? ' title="' + esc(dica) + '"' : '') + '>' +
       '<b><span class="em">' + st.icone + '</span>' + st.nome + '</b><small>' + esc(sub) + '</small></span>';
   }
 
   function quem(v) {
     var h = '';
-    if (v.identidade && (v.identidade_origem === 'passe' || v.identidade_origem === 'sessao_app')) {
+    if (roboVerificado(v)) {
+      h = '<span class="em" title="' + esc(v.identidade) + '">' + esc(v.identidade) + '</span>' +
+          '<small class="verif" title="Agendador da Vercel com o segredo conferido">✓ robô verificado</small>';
+    } else if (v.identidade && (v.identidade_origem === 'passe' || v.identidade_origem === 'sessao_app')) {
       h = '<span class="em" title="' + esc(v.identidade) + '">' + esc(v.identidade) + '</span>' +
           '<small class="ok" title="' + (v.identidade_origem === 'passe' ? 'Entrou pelo Painel Lube (passe ES256)' : 'Sessão do próprio sistema') + '">✓ confirmado pelo login</small>';
     } else if (v.identidade) {
@@ -610,7 +653,7 @@
     var nomes = (v.projetos || []).map(function (p) { return est.nomes[p] || p; });
     var sis = nomes.slice(0, 2).map(function (n) { return '<span class="sch">' + esc(n) + '</span>'; }).join('') +
       (nomes.length > 2 ? '<span class="sch mais" title="' + esc(nomes.join(' · ')) + '">+' + (nomes.length - 2) + '</span>' : '');
-    return '<tr class="' + esc(v.status || 'seguro') + '" data-ip="' + esc(v.ip) + '" tabindex="0" aria-label="' + esc('Detalhe de ' + v.ip) + '">' +
+    return '<tr class="' + esc(estadoVis(v)) + '" data-ip="' + esc(v.ip) + '" tabindex="0" aria-label="' + esc('Detalhe de ' + v.ip) + '">' +
       '<td data-c="local"><div class="c-local"><span class="flag">' + U.bandeira(v.pais) + '</span><div><b>' + esc(U.local(v)) + '</b><small>' +
         esc(br ? 'Brasil' : U.nomePais(v.pais)) + '</small></div></div></td>' +
       '<td data-c="ip"><span class="c-ip">' + esc(v.ip) + '</span></td>' +
@@ -642,17 +685,18 @@
 
   function montarFiltros() {
     var vs = est.visitantes, f = est.filtros;
-    var cont = { bloqueado: 0, observado: 0, analise: 0, seguro: 0 };
+    var cont = { bloqueado: 0, observado: 0, analise: 0, seguro: 0, publico: 0 };
     var paises = {};
     vs.forEach(function (v) {
-      cont[v.status] = (cont[v.status] || 0) + 1;
+      var s = estadoVis(v);
+      cont[s] = (cont[s] || 0) + 1;
       var cc = (v.pais || '??').toUpperCase();
       paises[cc] = (paises[cc] || 0) + 1;
     });
     var selS = $('[data-f-status]');
     opcoes(selS, '<option value="">Todos os status (' + U.num(vs.length) + ')</option>' +
-      ['bloqueado', 'observado', 'analise', 'seguro'].map(function (s) {
-        var st = U.status(s);
+      ['bloqueado', 'observado', 'analise', 'seguro', 'publico'].map(function (s) {
+        var st = infoEstado(s);
         return '<option value="' + s + '">' + st.icone + ' ' + st.nome + ' (' + U.num(cont[s] || 0) + ')</option>';
       }).join(''));
     selS.value = f.status;
@@ -676,7 +720,7 @@
   function filtrar(vs) {
     var f = est.filtros, q = f.busca.toLowerCase();
     return vs.filter(function (v) {
-      if (f.status && v.status !== f.status) return false;
+      if (f.status && estadoVis(v) !== f.status) return false;
       if (f.sistema && (v.projetos || []).indexOf(f.sistema) < 0) return false;
       if (f.pais && (v.pais || '??').toUpperCase() !== f.pais) return false;
       if (q) {
@@ -1032,11 +1076,12 @@
     var evs = d.eventos || [];
     h += '<h4>Últimos acessos <span class="qtd">' + evs.length + '</span></h4>';
     h += evs.length ? '<div class="lista-mini">' + evs.map(function (e) {
+      var rot = rotuloEvento(e);
       return '<div title="' + esc([e.regra ? 'regra: ' + U.regra(e.regra) : '', 'risco ' + (e.risco || 0), e.idioma ? 'idioma ' + e.idioma : 'sem idioma', e.sec_fetch_mode ? 'sec-fetch ' + e.sec_fetch_mode : 'sem sec-fetch'].filter(Boolean).join(' · ')) + '">' +
         '<span class="h" title="' + esc(U.dataHora(e.criado_em)) + '">' + esc(U.curta(e.criado_em)) + '</span>' +
         '<span class="t"><span class="mono fraco">' + esc(e.metodo || '') + '</span> ' + esc(U.corta((e.caminho || '') + (e.consulta || ''), 90)) +
         ' <span class="fraco">· ' + esc(est.nomes[e.projeto] || e.projeto) + '</span></span>' +
-        '<span class="chip ' + ({ bloqueado: 'vermelho', observado: 'ambar', liberado: 'verde' }[e.decisao] || 'cinza') + '">' + esc(e.decisao) + '</span></div>';
+        '<span class="chip ' + rot.chip + '"' + (rot.dica ? ' title="' + esc(rot.dica) + '"' : '') + '>' + esc(rot.txt.toLowerCase()) + '</span></div>';
     }).join('') + '</div>' : '<div class="vazio">Sem acessos registrados.</div>';
 
     corpo.innerHTML = h;
@@ -1833,7 +1878,7 @@
   if (DEMO) {
     document.body.classList.add('demo');
     $('[data-tarja-demo]').hidden = false;
-    carregarScript('demo.js?v=20261005e').then(function () {
+    carregarScript('demo.js?v=20261007a').then(function () {
       abrirPainel(SNT.demo.usuario.email);
     }).catch(function () {
       tela('entrada');

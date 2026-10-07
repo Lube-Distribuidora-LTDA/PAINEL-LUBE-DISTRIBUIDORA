@@ -72,23 +72,32 @@
   var MAC_CHROME = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
   var FIREFOX_LINUX = 'Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0';
   var PAGINAS = ['/', '/', '/index.html', '/api/dados', '/api/dados', '/app.js', '/dados.json'];
+  // sem login, o guarda só deixa passar o que é público: a tela de login e arquivos públicos
+  var PUBLICAS = ['/login', '/login', '/favicon.ico', '/app.js', '/logo.svg'];
+  var CRON = 'vercel-cron/1.0';
   var VARREDURA = ['/.env', '/wp-login.php', '/.git/config', '/phpmyadmin/', '/xmlrpc.php', '/config.yml', '/actuator/health', '/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php'];
 
   // [ip, cidade, regiao, pais, lat, lon, ua, idioma, sistemas, eventos/24h, extras]
   var ATORES = [
     ['203.0.113.10', 'Cariacica', 'ES', 'BR', -20.2632, -40.4165, CHROME_WIN, 'pt-BR,pt;q=0.9', ['demo-portal', 'demo-compras', 'demo-comercial'], 160, { identidade: 'compras.demo@lube.com.br', origem: 'passe' }],
     ['203.0.113.11', 'Cariacica', 'ES', 'BR', -20.2650, -40.4180, EDGE_WIN, 'pt-BR,pt;q=0.9', ['demo-financeiro', 'demo-ti', 'demo-portal'], 120, { identidade: 'financeiro.demo@lube.com.br', origem: 'sessao_app' }],
-    ['203.0.113.12', 'Cariacica', 'ES', 'BR', -20.2620, -40.4150, CHROME_WIN, 'pt-BR,pt;q=0.9', ['demo-rh', 'demo-saidas', 'demo-portal'], 70, { provavel: 'rh.demo@lube.com.br' }],
+    ['203.0.113.12', 'Cariacica', 'ES', 'BR', -20.2620, -40.4150, CHROME_WIN, 'pt-BR,pt;q=0.9', ['demo-rh', 'demo-saidas', 'demo-portal'], 70, { provavel: 'rh.demo@lube.com.br', caminhos: PUBLICAS }],
     ['203.0.113.25', 'Vitória', 'ES', 'BR', -20.3155, -40.3128, ANDROID, 'pt-BR', ['demo-comercial', 'demo-portal'], 55, { identidade: 'vendas.demo@lube.com.br', origem: 'passe' }],
-    ['203.0.113.31', 'Vila Velha', 'ES', 'BR', -20.3297, -40.2925, IPHONE, 'pt-BR', ['demo-compras'], 22, {}],
+    ['203.0.113.31', 'Vila Velha', 'ES', 'BR', -20.3297, -40.2925, IPHONE, 'pt-BR', ['demo-compras'], 22, { caminhos: PUBLICAS }],
     ['203.0.113.40', 'Serra', 'ES', 'BR', -20.1286, -40.3078, CHROME_WIN, 'pt-BR,pt;q=0.9', ['demo-saidas', 'demo-portal'], 40, { identidade: 'logistica.demo@lube.com.br', origem: 'sessao_app' }],
     ['203.0.113.52', 'Linhares', 'ES', 'BR', -19.3911, -40.0722, ANDROID, 'pt-BR', ['demo-comercial'], 26, { identidade: 'rca.norte.demo@lube.com.br', origem: 'passe' }],
     ['2001:db8:4f2a::17', 'São Paulo', 'SP', 'BR', -23.5505, -46.6333, MAC_CHROME, 'pt-BR,pt;q=0.9,en;q=0.8', ['demo-compras', 'demo-comercial', 'demo-portal'], 34, { identidade: 'diretoria.demo@lube.com.br', origem: 'passe' }],
-    ['203.0.113.77', 'Belo Horizonte', 'MG', 'BR', -19.9167, -43.9345, FIREFOX_LINUX, 'pt-BR', ['demo-portal'], 9, {}],
-    ['203.0.113.88', 'Rio de Janeiro', 'RJ', 'BR', -22.9068, -43.1729, IPHONE, 'pt-BR', ['demo-comercial'], 12, {}],
+    ['203.0.113.77', 'Belo Horizonte', 'MG', 'BR', -19.9167, -43.9345, FIREFOX_LINUX, 'pt-BR', ['demo-portal'], 9, { caminhos: ['/', '/', '/index.html', '/app.js'] }],
+    ['203.0.113.88', 'Rio de Janeiro', 'RJ', 'BR', -22.9068, -43.1729, IPHONE, 'pt-BR', ['demo-comercial'], 12, { caminhos: PUBLICAS }],
     ['203.0.113.95', 'Colatina', 'ES', 'BR', -19.5389, -40.6306, ANDROID, 'pt-BR', ['demo-comercial', 'demo-portal'], 18, { identidade: 'rca.colatina.demo@lube.com.br', origem: 'passe' }],
     ['203.0.113.120', 'Lisboa', 'LIS', 'PT', 38.7223, -9.1393, MAC_SAFARI, 'pt-PT,pt;q=0.9', ['demo-compras', 'demo-portal'], 14, { identidade: 'diretoria.demo@lube.com.br', origem: 'passe' }],
     ['203.0.113.140', 'Miami', 'FL', 'US', 25.7617, -80.1918, CHROME_WIN, '', ['demo-portal'], 5, { semFetch: true, caminhos: ['/', '/index.html'] }],
+    // robôs aceitos: o agendador do Gestão TI chega com o segredo conferido pelo próprio sistema
+    // (identidade de robô); o do Financeiro e a prévia de link só alcançam rota/página pública
+    ['198.51.100.30', 'Ashburn', 'VA', 'US', 39.0438, -77.4874, CRON, '', ['demo-ti'], 24,
+      { identidade: 'robo do gestao ti (agendador da vercel)', origem: 'sessao_app', caminhos: ['/api/cron/ler-emails', '/api/cron/cobrar', '/api/cron/resumo'] }],
+    ['198.51.100.33', 'Ashburn', 'VA', 'US', 39.0438, -77.4874, CRON, '', ['demo-financeiro'], 6, { caminhos: ['/api/cron/fechamento'] }],
+    ['203.0.113.97', 'Vitória', 'ES', 'BR', -20.3155, -40.3128, 'WhatsApp/2.24.19.86 A', '', ['demo-portal'], 7, { caminhos: ['/'] }],
     // robôs e ataques
     ['198.51.100.23', 'Amsterdã', 'NH', 'NL', 52.3676, 4.9041, CHROME_WIN, '', ['demo-portal', 'demo-compras'], 16, { caminhos: VARREDURA, desde: 3.2 * HORA }],
     ['198.51.100.47', 'Frankfurt', 'HE', 'DE', 50.1109, 8.6821, 'sqlmap/1.8.3#stable (https://sqlmap.org)', '', ['demo-comercial'], 30, { caminhos: ['/api/dados'], consulta: '?id=1', desde: 55 * MIN, rajada: true }],
@@ -124,6 +133,8 @@
   var RE_INJECAO = /\.\.\/|<script|javascript:|union(\s|\+|\/\*.*\*\/)+select|information_schema|\bsleep\(\s*\d|benchmark\(|\$\{jndi:|\/etc\/passwd|cmd\.exe|'\s*or\s*'?1'?\s*=\s*'?1|\bor\s+1\s*=\s*1\b/i;
   var RE_ROBO = /curl|wget|python-requests|python-urllib|aiohttp|httpx|go-http-client|okhttp|java\/|libwww|axios|node-fetch|undici|postmanruntime|insomnia|headlesschrome|phantomjs|scrapy|httpclient|powershell/i;
   var RE_BUSCADOR = /googlebot|bingbot|duckduckbot|yandexbot|baiduspider|applebot/i;
+  var RE_CRON = /vercel-cron\//i;
+  var RE_PREVIA = /whatsapp|telegrambot|slackbot|facebookexternalhit|twitterbot|linkedinbot|discordbot|skypeuripreview|microsoftpreview/i;
   var BASE = { ferramenta: 95, injecao: 95, varredura: 90, lista: 80, rajada: 70, arquivo_proibido: 60, tor: 60,
                forca_bruta: 70, robo: 50, sem_login: 30, buscador: 10 };
 
@@ -145,6 +156,10 @@
   var proximoAtaque = Date.now() + 9000;
   var iaMiamiEm = Date.now() + 40000;
   var novosUsados = 0;
+  // robôs aceitos chegam em horário marcado (como um agendamento), não sorteados com o tráfego
+  var ROBOS_AGENDA = ['198.51.100.30', '203.0.113.97', '198.51.100.33', '198.51.100.30'];
+  var proximoRobo = Date.now() + 5000;
+  var robosUsados = 0;
   var redeLigada = true;
   var seloAtual = hex(64);
 
@@ -227,6 +242,9 @@
     if (sis && sis.arquivos_proibidos.some(function (r) { try { return new RegExp(r).test(ev.caminho); } catch (e) { return false; } })) {
       return suspeito('arquivo_proibido', 'arquivo proibido: ' + ev.caminho);
     }
+    // exceções do guarda: só depois das regras de ataque, antes da de robô
+    if (RE_CRON.test(ua)) return { decisao: 'liberado', regra: 'cron', motivo: 'agendamento da Vercel' };
+    if (RE_PREVIA.test(ua)) return { decisao: 'liberado', regra: 'previa_link', motivo: 'prévia de link' };
     if ((!ua || RE_ROBO.test(ua)) && (ev.tipo === 'pagina' || ev.tipo === 'api')) {
       var m = ua.match(RE_ROBO);
       return suspeito('robo', 'robô: ' + (m ? m[0].toLowerCase() : 'sem user-agent'));
@@ -400,7 +418,9 @@
     var dt = Math.min(20000, agora - ultimaGeracao);
     ultimaGeracao = agora;
     var n = Math.round((dt / 4000) * (0.6 + Math.random() * 1.6));
-    var vivos = ATORES.filter(function (a) { return a.ip !== '198.51.100.23' && a.ip !== '198.51.100.95'; });
+    var vivos = ATORES.filter(function (a) {
+      return a.ip !== '198.51.100.23' && a.ip !== '198.51.100.95' && ROBOS_AGENDA.indexOf(a.ip) < 0;
+    });
     var pesos = vivos.map(function (a) { return a.pais === 'BR' ? a.n : a.n * 0.3; });
     var soma = pesos.reduce(function (s, x) { return s + x; }, 0);
     for (var i = 0; i < n; i++) {
@@ -410,6 +430,12 @@
       var projetos = a.sistemas.filter(function (p) { return p !== 'demo-rh'; });
       if (!projetos.length) continue;
       registrar(a, agora - Math.random() * dt * 0.5, null, sorteia(projetos));
+    }
+    if (agora >= proximoRobo) {
+      proximoRobo = agora + 14000 + Math.random() * 8000;
+      var ipRobo = ROBOS_AGENDA[robosUsados++ % ROBOS_AGENDA.length];
+      var robo = ATORES.filter(function (a) { return a.ip === ipRobo; })[0];
+      if (robo) registrar(robo, agora - 600);
     }
     if (agora >= proximoAtaque) {
       proximoAtaque = agora + 22000 + Math.random() * 18000;

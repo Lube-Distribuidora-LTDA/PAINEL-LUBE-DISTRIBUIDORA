@@ -14,6 +14,8 @@
   --amber:#ffb340; --amber-dim:rgba(255,179,64,.15); --amber-line:rgba(255,179,64,.48);
   --red-dim:rgba(229,32,44,.17); --red-line:rgba(255,107,116,.5);
   --info:#5fb2ff; --info-dim:rgba(95,178,255,.15); --info-line:rgba(95,178,255,.48);
+  /* neutro (cinza-azulado do texto secundário): acesso só ao que é público, sem login */
+  --neutro:#aec0e2; --neutro-dim:rgba(174,192,226,.11); --neutro-line:rgba(174,192,226,.36);
   --laranja:#ff8a3d; --laranja-dim:rgba(255,138,61,.15); --laranja-line:rgba(255,138,61,.5);
   --roxo:#a78bfa; --roxo-dim:rgba(167,139,250,.14); --roxo-line:rgba(167,139,250,.45);
   --r:14px; --shadow:0 26px 70px -32px rgba(0,0,0,.9);
@@ -407,6 +409,9 @@ body.demo .faixa-erro{top:37px;}
 .feed li.bloqueado::before{background:var(--brand-red-lt);}
 .feed li.observado::before{background:var(--amber);}
 .feed li.liberado::before{background:rgba(52,232,158,.5);}
+.feed li.verificado::before{background:var(--info);}
+.feed li.publico::before{background:var(--neutro-line);}
+.feed li.robo::before{background:var(--line-2);}
 .feed .h{font-family:"JetBrains Mono";font-size:11.5px;color:var(--txt-3);font-weight:600;padding-top:1px;}
 .feed .o{min-width:0;}
 .feed .o1{font-size:13px;font-weight:700;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -417,6 +422,10 @@ body.demo .faixa-erro{top:37px;}
 .feed .d.liberado{color:var(--green);background:var(--green-dim);}
 .feed .d.observado{color:var(--amber);background:var(--amber-dim);}
 .feed .d.bloqueado{color:var(--brand-red-lt);background:var(--red-dim);}
+.feed .d.verificado{color:var(--info);background:var(--info-dim);}
+.feed .d.publico{color:var(--neutro);background:var(--neutro-dim);}
+.feed .d.robo{color:var(--txt-3);background:var(--surface-2);}
+.feed .d[title]{cursor:help;}
 
 /* ---------- acessos por hora (barras empilhadas, sem rótulo) ---------- */
 .horas{display:flex;align-items:flex-end;gap:3px;height:150px;padding:16px 20px 30px;position:relative;}
@@ -464,6 +473,7 @@ body.demo .faixa-erro{top:37px;}
 .tv tr.observado{--linha-cor:var(--amber);}
 .tv tr.analise{--linha-cor:var(--info);}
 .tv tr.seguro{--linha-cor:rgba(52,232,158,.35);}
+.tv tr.publico{--linha-cor:var(--neutro-line);}
 th.r,td.r{text-align:right;}
 .tv tr{cursor:pointer;}
 .tv th:last-child,.tv td[data-c="acoes"],.tbl th.col-acao,.tbl td.col-acao{position:sticky;right:0;z-index:1;background:var(--surface-1);box-shadow:-10px 0 12px -10px rgba(0,0,0,.8);}
@@ -479,6 +489,7 @@ th.r,td.r{text-align:right;}
 .c-quem small{font-size:11.5px;color:var(--txt-3);font-weight:600;}
 .c-quem small.ok{color:var(--green);}
 .c-quem small.prov{color:var(--info);}
+.c-quem small.verif{color:var(--info);}
 .etq{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:2px 7px;border-radius:6px;
   background:var(--green-dim);color:var(--green);border:1px solid var(--green-line);}
 .etq.azul{background:var(--info-dim);color:var(--info);border-color:var(--info-line);}
@@ -507,6 +518,7 @@ th.r,td.r{text-align:right;}
 .pilula.observado{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-line);}
 .pilula.bloqueado{background:var(--red-dim);color:var(--brand-red-lt);border-color:var(--red-line);}
 .pilula.analise{background:var(--info-dim);color:var(--info);border-color:var(--info-line);}
+.pilula.publico{background:var(--neutro-dim);color:var(--neutro);border-color:var(--neutro-line);}
 
 /* chips genéricos */
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:99px;white-space:nowrap;border:1px solid var(--line-2);background:var(--surface-2);color:var(--txt-2);}
@@ -518,6 +530,7 @@ th.r,td.r{text-align:right;}
 .chip.laranja{background:var(--laranja-dim);color:var(--laranja);border-color:var(--laranja-line);}
 .chip.roxo{background:var(--roxo-dim);color:var(--roxo);border-color:var(--roxo-line);}
 .chip.cinza{color:var(--txt-3);}
+.chip.neutro{background:var(--neutro-dim);color:var(--neutro);border-color:var(--neutro-line);}
 .chip.tracejado{border-style:dashed;}
 .tbl .alvo{font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--txt-1);white-space:nowrap;}
 .tbl .fraco{color:var(--txt-3);font-size:12px;}
