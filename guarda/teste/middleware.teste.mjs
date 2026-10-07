@@ -2,7 +2,7 @@
    Rodar na raiz do repositório:  node guarda/teste/middleware.teste.mjs */
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
-import { lista, centralFalsa, req, novoCtx, caso, conta, executar } from './apoio.mjs';
+import { lista, centralFalsa, req, novoCtx, caso, conta, executar, avancar, dormir, UAS_REAIS, SEM_NAVEGADOR } from './apoio.mjs';
 
 // Na Vercel o bundler resolve './sentinela-guarda' sem extensão; no Node puro, não.
 registerHooks({
@@ -62,6 +62,32 @@ caso('sem context e com central quebrada → segue', async () => {
   const r = await mw.default(req('rh-absentismo.vercel.app', '/', { ip: '177.2.2.2' }));
   assert.equal(r.headers.get('x-middleware-next'), '1');
   conta();
+});
+
+caso('1.1.0 no proteger: robô genérico, buscador e página sem cabeçalhos de navegador → 403; navegador → segue', async () => {
+  // o envio "dispara e esquece" do caso anterior (central quebrada) termina antes de mexer no relógio;
+  // depois, a lista dos casos anteriores (observar) fica velha demais e o guarda busca a nova
+  await dormir(30);
+  avancar(2 * 3600000);
+  const c = centralFalsa(lista({ modo: 'proteger', projeto: 'painel-lube-distribuidora', slug: null }));
+  const H = 'painel-lube-distribuidora.vercel.app';
+  let i = 0;
+  for (const [o, regra] of [[{ ua: 'Mozilla/5.0 (compatible)' }, 'robo'], [{ ua: 'RecordedFuture Global Inventory Crawler' }, 'robo'],
+    [{ ua: 'NoMoreVibe/1.0 (+https://nomorevibe.app)' }, 'robo'], [{ ua: 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)' }, 'buscador'],
+    [{ headers: SEM_NAVEGADOR }, 'nao_navegador']]) {
+    const ctx = novoCtx();
+    const r = await mw.default(req(H, '/', { ...o, ip: '45.60.0.' + (++i) }), ctx);
+    await ctx.esperar();
+    assert.equal(r.status, 403);
+    assert.equal(r.headers.get('x-middleware-next'), null);
+    assert.equal(c.eventos.at(-1).regra, regra);
+    conta(3);
+  }
+  for (const ua of UAS_REAIS) {
+    const r = await mw.default(req(H, '/', { ua, ip: '189.62.0.' + (++i) }), novoCtx());
+    assert.equal(r.headers.get('x-middleware-next'), '1', ua);
+    conta();
+  }
 });
 
 const falhas = await executar('Sentinela · guarda · middleware.ts (estático)');

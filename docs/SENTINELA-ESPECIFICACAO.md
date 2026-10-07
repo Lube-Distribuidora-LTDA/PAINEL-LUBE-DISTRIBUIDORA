@@ -70,16 +70,36 @@ Repositório do portal (onde ficam painel, central, SQL e o guarda canônico):
 | `ferramenta` | guarda | certo | user-agent de ferramenta ofensiva: `sqlmap|nikto|nmap|masscan|zgrab|nuclei|wpscan|dirbuster|gobuster|ffuf|feroxbuster|hydra|acunetix|nessus|openvas|w3af|arachni|jaeles|zmeu|morfeus|l9explore|fuzz faster|commix|xsstrike|whatweb|wfuzz` (case-insensitive) | banco: bloqueio certo 24 h |
 | `varredura` | guarda | certo | pathname casa com `^/\.(env|git|svn|hg|aws|ssh|DS_Store|htaccess|htpasswd)`, `^/wp-(admin|login|content|includes|json)`, `xmlrpc\.php`, `\.(php\d?|asp|aspx|jsp|cgi|pl)$`, `^/phpmyadmin`, `^/pma/`, `^/cgi-bin/`, `^/vendor/phpunit`, `^/server-status`, `^/actuator`, `^/boaform`, `^/HNAP1`, `^/owa/`, `^/autodiscover`, `^/solr/`, `^/_ignition`, `^/telescope`, `^/\.well-known/(?!acme-challenge|security\.txt)`, `^/(config|credentials|secrets?)\.(ya?ml|ini|bak|old)$`, `\.(bak|old|swp|save)$` (case-insensitive) | banco: bloqueio certo 24 h; 3 ou mais bloqueios certos do mesmo IP em 7 dias → 7 dias |
 | `injecao` | guarda | certo | (pathname + search) decodificado casa com `\.\./`, `\.\.\\`, `<script`, `javascript:`, `union(\s|\+|/\*.*\*/)+select`, `information_schema`, `\bsleep\(\s*\d`, `benchmark\(`, `\$\{jndi:`, `/etc/passwd`, `cmd\.exe`, `'\s*or\s*'?1'?\s*=\s*'?1`, `\bor\s+1\s*=\s*1\b` (case-insensitive) | banco: bloqueio certo 24 h |
-| `lista` | guarda | o do bloqueio | IP (exato/CIDR) ou JA4 com bloqueio ativo | — |
+| `lista` | guarda | o do bloqueio | IP (exato/CIDR) ou JA4 com bloqueio ativo. **(guarda 1.1.0)** Bloqueio suspeito não barra quem tem identidade: segue, decisão `observado`, motivo `... · com login: não barrado` | — |
 | `arquivo_proibido` | guarda | suspeito | pathname casa com `sistema.arquivos_proibidos` | banco: nenhum bloqueio de IP (só registra) |
-| `robo` | guarda (marca) / banco (bloqueia) | suspeito | UA vazio ou `curl|wget|python-requests|python-urllib|aiohttp|httpx|go-http-client|okhttp|java/|libwww|axios|node-fetch|undici|postmanruntime|insomnia|headlesschrome|phantomjs|scrapy|httpclient|powershell` em `tipo` pagina ou api | banco: ≥ 20 eventos `robo` do IP em 10 min → bloqueio suspeito 1 h |
+| `buscador` **(guarda 1.1.0)** | guarda | suspeito | UA `googlebot|bingbot|duckduckbot|yandexbot|baiduspider|applebot` em `tipo` pagina ou api (arquivo, como `robots.txt`, segue). Antes da 1.1.0 era exceção observada | banco: nenhum bloqueio de IP |
+| `robo` | guarda (marca) / banco (bloqueia) | suspeito | `tipo` pagina ou api e UA: vazio; cliente HTTP/automação `curl|wget|python-requests|python-urllib|python/|aiohttp|httpx|go-http-client|okhttp|java/|libwww-perl|lwp::|axios|node-fetch|undici|postmanruntime|insomnia|headlesschrome|headless|phantomjs|slimerjs|puppeteer|playwright|selenium|webdriver|lighthouse|scrapy|httpclient|powershell|guzzlehttp|httpie|fasthttp|go-resty|deno/|\bbun/|dalvik/|^node$`. **(guarda 1.1.0)** Também: varredor conhecido `censys|shodan|zoomeye|netcraft|leakix|l9scan|l9tcpid|expanse|paloaltonetworks|recordedfuture|recorded future|nomorevibe|internet-?measurement|researchscan|onyphe|binaryedge|criminalip|stretchoid|shadowserver|project sonar|modatscanner|chatgpt-user|claude-user|perplexity|mistralai-user|meta-externalagent|anthropic-ai|cohere-ai|googleother|google-inspectiontool|ia_archiver|slurp`; palavra de rastreador `bot(?![a-z])|crawl|spider|scanner|inventory|monitor|probe|fetch|scraper|harvest|indexer|archiver|checker|validator` e endereço no UA `https?://|www\.|@dominio.tld|(+` ou `;+`, as duas testadas no UA sem os dados do aparelho e do app (`semAparelho`: sai todo parêntese, com um nível aninhado, que contém `android|iphone|ipad|ipod` ou vem depois de `Android `; todo colchete `[...]`; e as marcas `cubot|fossibot`); `Mozilla/...` sem motor `applewebkit|gecko|trident|presto|khtml|goanna` (ex.: `Mozilla/5.0 (compatible)`); e, só em pagina, UA que não começa com `Mozilla/` nem `Opera/` (case-insensitive) | banco: ≥ 20 eventos `robo` do IP em 10 min → bloqueio suspeito 1 h |
+| `nao_navegador` **(guarda 1.1.0)** | guarda | suspeito | `tipo` pagina, método GET ou HEAD, sem `sec-fetch-mode` **e** sem `accept-language` (vazio conta como ausente). Não vale para api, arquivo, outros métodos nem IP confiável | banco: nenhum bloqueio de IP |
 | `rajada` | banco | suspeito | > `config.limite_rajada_min` (padrão 120) eventos do IP nos últimos 60 s | bloqueio suspeito 15 min |
 | `tor` | banco | suspeito | IP em `sentinela.tor_saidas` | bloqueio suspeito 24 h |
 | `forca_bruta` | banco | suspeito | ≥ 5 tentativas de login falhas do IP em 10 min | bloqueio suspeito 1 h |
 | `ia` | central/banco | suspeito | IA: veredito `malicioso`, confiança ≥ `config.ia_confianca_min` (0,85), ação `bloquear_*` | bloqueio suspeito com a duração pedida (1h/24h/7d) |
 | `sem_login` | guarda | — (sempre aplicado quando `sistema.exige_login`) | sistema com `exige_login=true`, sem sessão válida, caminho fora de `rotas_publicas` | — (página → 302 para o portal; resto → 401 JSON). Registrado com decisão `bloqueado`, regra `sem_login` |
 
-Exceções do guarda (antes das regras de robô): UA `vercel-cron/` → liberado, regra `cron`; UA de prévia de link (`whatsapp|telegrambot|slackbot|facebookexternalhit|twitterbot|linkedinbot|discordbot|skypeuripreview|microsoftpreview`) → liberado, regra `previa_link`; buscadores (`googlebot|bingbot|duckduckbot|yandexbot|baiduspider|applebot`) → observado, regra `buscador` (sem bloqueio). **(v1.1)** As exceções valem só a partir da regra `robo`: um UA falsificado (Googlebot, WhatsApp, vercel-cron) não escapa de ferramenta/varredura/injecao/lista/arquivo_proibido e nunca dispensa `sem_login` (rota de cron num sistema com login vai em `rotas_publicas`).
+Exceções do guarda (antes das regras de user-agent): UA que **começa** com `vercel-cron/<dígito>` → liberado, regra `cron`; UA de prévia de link (`whatsapp|telegrambot|slackbot|facebookexternalhit|twitterbot|linkedinbot|discordbot|skypeuripreview|microsoftpreview`) → liberado, regra `previa_link`; **(guarda 1.1.0)** Office (`^Microsoft Office (Existence|Protocol) Discovery`, `^Microsoft Office (Word|Excel|PowerPoint|OneNote|Outlook|Access|Visio|Publisher|Project) \d{4}`, `\bms-office\b`, `^Microsoft Office/\d+\.\d+ (`) → liberado, regra `office`; navegador simples ou leitor de pessoa (`^w3m/`, `^Lynx/`, `^Links (`, `^ELinks/`, `^Dillo/`, `NetSurf/`, `^UCWEB/`, `UCBrowser/`, `Google-Read-Aloud`, `^AndroidDownloadManager/`) → liberado, regra `navegador_simples`. **(guarda 1.1.0)** UA que também casa com a lista de cliente HTTP da regra `robo` (fora o `Apache-HttpClient` do `LinkedInBot/`), com varredor conhecido ou com buscador não é exceção. **(guarda 1.1.0)** Buscadores deixaram de ser exceção: são a regra suspeita `buscador` (tabela acima), que barra no modo proteger. **(v1.1)** As exceções valem só a partir das regras de user-agent: um UA falsificado (WhatsApp, vercel-cron) não escapa de ferramenta/varredura/injecao/lista/arquivo_proibido e nunca dispensa `sem_login` (rota de cron num sistema com login vai em `rotas_publicas`).
+
+**(guarda 1.1.0, 2026-10-07) Regras de user-agent do nível suspeito.** Decisão do Júlio: só entra quem acessa
+pelo login do Painel Lube, e robô não chega nem à tela de login. Ordem no guarda, depois de `arquivo_proibido` e
+das exceções: `buscador` → `robo` → `nao_navegador` (a primeira que casar). As três:
+- valem só para quem **não tem identidade** (cookie de sessão válido da Sentinela ou `opcoes.identidade` do app):
+  pessoa logada não é robô, seja qual for o UA ou os cabeçalhos. Ataque certo, `lista` e `arquivo_proibido`
+  continuam valendo para quem tem identidade;
+- seguem a regra do nível suspeito: proteger → 403; observar → `observado`; IP confiável → ignorado (liberado,
+  motivo "rede confiável: ... (ignorado)"); `nao_navegador` nem é avaliado para IP confiável;
+- não pegam navegador de verdade (Chrome, Edge, Firefox, Safari, Samsung Internet, Opera, WebView do Android,
+  navegador dentro do Instagram/Threads/Facebook/LinkedIn/TikTok/Telegram/Snapchat, celular Cubot e FOSSiBOT): a suíte passa 36 UAs reais com os
+  cabeçalhos de navegação que eles mandam, mais Safari antigo e IE 11 (sem `sec-fetch-*`, com
+  `accept-language`), e todas as expressões são lineares no tamanho do UA (UA hostil de 16 KB < 5 ms).
+Motivos gravados: `buscador: <nome>`, `user-agent vazio`, `user-agent de robô: <lib>`, `varredor conhecido: <nome>`,
+`user-agent de rastreador: <palavra>`, `user-agent com endereço de contato (marca de robô)`, `user-agent genérico:
+Mozilla sem motor de navegador`, `user-agent sem cara de navegador`, `não é navegador: página pedida sem
+sec-fetch-mode e sem accept-language`. O banco ainda não tem risco base para `nao_navegador` (cai no `else 0`, mais
+os modificadores de página sem `sec_fetch_mode` e sem idioma) e a regra automática de IP do banco conta só `robo`.
 
 **(v1.1) Exceção cross-site — varredura e injeção pedidas por outro site (pendência B, 2026-10-06).**
 Um site malicioso pode fazer o navegador de um funcionário pedir `/.env` ou `/?id=1 UNION SELECT` (por
@@ -437,7 +457,10 @@ projeto, que também precisa de `SENTINELA_PROJETO` (sugestão: 48 hex aleatóri
 Saneamento na Central: ip válido (IPv4/IPv6) ou descarta; strings cortadas (caminho 300, consulta 300, ua 300, idioma 60, referer 120 — só a origem, motivo 200, cidade/regiao 80); lat/lon numéricos em faixa; enums validados (valor desconhecido → null/'outro'); `ts` inválido → agora. Campos extras ignorados.
 **(v1.1)** IPv6 normalizado (RFC 5952; `::ffff:x.x.x.x` vira IPv4). `decisao` desconhecida descarta o evento (conta em
 `invalidos`). `regra` validada por formato (`^[a-z][a-z0-9_]*$`, até 40), não por lista fechada. `identidade` só com
-e-mail válido e `identidade_origem` passe|sessao_app (senão os dois viram null; `provavel` nunca vem do guarda). Cortes
+e-mail válido e `identidade_origem` passe|sessao_app (senão os dois viram null; `provavel` nunca vem do guarda).
+**(Central, 2026-10-07)** Exceção: com `identidade_origem` `sessao_app`, também vale nome de robô no formato
+`^rob[oô] [a-z0-9 ()._-]{3,80}$` (sem `|`, `@` nem controle), gravado em minúsculas, para o app marcar o próprio
+agendador já conferido (ex.: `robo do gestao ti (agendador da vercel)`). Cortes
 a mais: host 120, fuso 60, ja4 100, vercel_id 120, sec_fetch_* 30 (`[a-z-]`), metodo 10 (`[A-Z]`), pais 2 letras,
 identidade 120. NUL, controles e surrogates soltos são removidos. `ts` mais de 5 min no futuro ou mais de 24 h no
 passado vira agora; lat/lon fora de faixa viram os dois null.
@@ -505,7 +528,7 @@ Comportamento do núcleo:
 7. Aplicação: certo → 403; suspeito → 403 só se `lista.modo==='proteger'`, senão `observado` e segue; `sem_login` → página (`tipo==='pagina'` e método GET): 302 para `${lista.portal}/?abrir=${sistema_slug}`; demais: 401 JSON `{"erro":"login_necessario","portal":..}`. `sem_login` só vale se `lista.sistema.exige_login && lista.sistema.sistema_slug` e o caminho não começa com nenhum de `rotas_publicas`.
 8. Resposta de bloqueio: `tipo api` → JSON `{"erro":"bloqueado","incidente":<código>}`; senão HTML curto no visual da Lube (fundo #050b1c, "Acesso bloqueado pela Sentinela Lube", código do incidente = 8 primeiros hex de SHA-256 de `vercel_id||ts`, "Se você é da Lube, envie este código ao TI: cpd@lube.com.br"). Headers: `Cache-Control: no-store`, `X-Robots-Tag: noindex`, `x-sentinela: bloqueado`. Status 403.
 9. Registro: `ctx.waitUntil(fetch(CENTRAL + '/evento', {method:'POST', headers:{authorization:'Bearer '+oidc, 'content-type':'application/json', 'x-sentinela-guarda': VERSAO, 'x-sentinela-runtime': runtime}, body: JSON.stringify({eventos:[ev]})}))` com timeout 2500 ms; sem `waitUntil` → não espera (dispara e esquece). Deduplicar: mesma (ip, caminho, decisao) em 5 s não é reenviada (mapa limitado a 500 chaves). Sem token OIDC e sem `SENTINELA_CHAVE` → não registra, mas continua aplicando regras locais.
-10. Constantes: `CENTRAL = 'https://wkkdcsqwlxjxorutrbnx.supabase.co/functions/v1/sentinela'`, `VERSAO = 'sentinela-guarda/1.0.0'`. Nada de segredo no código (repos podem ser públicos).
+10. Constantes: `CENTRAL = 'https://wkkdcsqwlxjxorutrbnx.supabase.co/functions/v1/sentinela'`, `VERSAO = 'sentinela-guarda/1.0.0'` (**1.1.0 desde 2026-10-07**: regras `buscador`, `robo` ampliada e `nao_navegador`, §1). Nada de segredo no código (repos podem ser públicos).
 
 **(v1.1) Como o núcleo ficou, passo a passo** (o que mudou em relação aos itens 0–10):
 - **Credenciais (item 9 e §0):** ordem = token que a Central já aceitou → `VERCEL_OIDC_TOKEN` → HMAC do plano B →
@@ -524,7 +547,7 @@ Comportamento do núcleo:
   próximo `sem_login` de página vai para `${portal}/` sem `?abrir`, quebrando o laço portal↔sistema; o sucesso apaga a
   marca. `consulta` do evento nunca leva `sentinela_passe`.
 - **Ordem (item 6):** ataque certo (ferramenta → varredura → injecao) → lista (+ mapa local) → arquivo_proibido →
-  exceções → robo → sem_login → liberado. Confiável: ignora o nível suspeito (decisão liberado, motivo "rede confiável:
+  exceções (cron, previa_link, office, navegador_simples) → sem identidade: buscador → robo → nao_navegador (guarda 1.1.0, §1) → sem_login → liberado. Lista suspeita com identidade: segue `observado`. Confiável: ignora o nível suspeito (decisão liberado, motivo "rede confiável:
   ... (ignorado)"); bloqueio certo da lista vale mesmo para confiável (só manual, porque o banco não deixa bloqueio
   automático em confiável); ataque certo de confiável → 403 com o motivo de alerta e sem bloqueio local. O mapa local
   `ip → até` (24 h) só é preenchido com lista presente e IP não confiável, e **nunca** para varredura/injeção

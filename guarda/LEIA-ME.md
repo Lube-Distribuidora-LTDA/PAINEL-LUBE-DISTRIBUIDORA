@@ -13,6 +13,50 @@ valendo. Contrato completo: `docs/SENTINELA-ESPECIFICACAO.md` §4.
 
 Nada de segredo nestes arquivos: eles podem ficar públicos.
 
+## Regras (guarda 1.1.0, 2026-10-07)
+
+Ordem: ataque certo → lista → arquivo proibido → exceções → regras de user-agent → `sem_login` → liberado.
+O nível **certo** barra (403) em qualquer modo e para todos. O nível **suspeito** barra só no modo
+**proteger**; no **observar** só registra (`observado`); de IP **confiável** é ignorado (liberado, motivo
+"rede confiável: ... (ignorado)").
+
+| regra | nível | quando |
+|---|---|---|
+| `ferramenta`, `varredura`, `injecao` | certo | UA de ferramenta de ataque, caminho de varredura, injeção na URL. Vale também para quem tem sessão e para rede confiável |
+| `lista` | o do bloqueio | IP, faixa ou JA4 bloqueado na central (e o mapa local de 24 h depois de um ataque). Bloqueio **suspeito** (robô, rajada, força bruta, Tor, IA) não barra quem tem identidade: a pessoa logada segue e o evento sai `observado`, motivo "... · com login: não barrado" (o bloqueio pega o IP inteiro, e no CGNAT do 4G ou no Wi-Fi de filial isso é muita gente). Bloqueio **certo** barra todo mundo |
+| `arquivo_proibido` | suspeito | caminho em `arquivos_proibidos` do sistema |
+| `cron`, `previa_link`, `office`, `navegador_simples` | exceção (liberado) | `vercel-cron/` **no começo** do UA (o agendador manda só `vercel-cron/1.0`); prévia de link (`whatsapp`, `telegrambot`, `slackbot`, `facebookexternalhit`, `twitterbot`, `linkedinbot`, `discordbot`, `skypeuripreview`, `microsoftpreview`); sondagem e link do Office (`Microsoft Office Existence/Protocol Discovery`, `Microsoft Office Word/Excel/... 2014`, `ms-office`, `Microsoft Office/16.0 (`); navegador simples ou leitor de pessoa (`w3m`, `Lynx`, `Links`, `ELinks`, `Dillo`, `NetSurf`, `UCWEB`/`UCBrowser`, `Google-Read-Aloud`, `AndroidDownloadManager`). UA que também traz cliente HTTP, varredor conhecido ou buscador **não** é exceção (`curl/8 WhatsApp/2`, `python-requests vercel-cron/1.0`, `Googlebot ... Slackbot` caem em `robo`/`buscador`); só o LinkedIn declara `Apache-HttpClient` no próprio UA. Só veem a tela de login ou o redirect: nunca dispensam o `sem_login` |
+| `buscador` | suspeito (**novo na 1.1.0**; antes era exceção observada) | `googlebot`, `bingbot`, `duckduckbot`, `yandexbot`, `baiduspider`, `applebot` em página ou API. Arquivo (`robots.txt`, `manifest.json`) segue |
+| `robo` | suspeito (**ampliado na 1.1.0**) | página ou API com UA: vazio; cliente HTTP ou automação (`curl`, `wget`, `python-requests`, `python/`, `httpx`, `aiohttp`, `go-http-client`, `okhttp`, `axios`, `node-fetch`, `undici`, `node`, `Deno/`, `Bun/`, `Dalvik/`, `libwww-perl`, `HeadlessChrome`, `Lighthouse`, `Puppeteer`, `Playwright`...); varredor conhecido (`censys`, `shodan`, `zoomeye`, `netcraft`, `leakix`, `expanse`, `recordedfuture`, `nomorevibe`, `internet-measurement`, `onyphe`, `binaryedge`, `ChatGPT-User`, `Claude-User`...); palavra de rastreador (`bot` no fim da palavra, `crawl`, `spider`, `scanner`, `inventory`, `monitor`, `probe`, `fetch`, `scraper`, `checker`...) e endereço no UA (`http://`, `www.`, `+contato`, `@dominio`), as duas testadas no UA **sem os dados do aparelho e do app** (ver abaixo); `Mozilla/...` sem motor de navegador (`Mozilla/5.0 (compatible)`); e, **só em página**, UA que não começa com `Mozilla/` nem `Opera/` |
+| `nao_navegador` | suspeito (**novo na 1.1.0**) | GET ou HEAD de **página** sem `sec-fetch-mode` **e** sem `accept-language` (navegador de verdade sempre manda os dois numa navegação; o Safari antigo e o IE 11 mandam pelo menos o `accept-language`). Não vale para API, arquivo, POST nem IP confiável |
+| `sem_login` | — | sistema com "exige login", sem sessão válida, fora de `rotas_publicas` |
+
+- **Quem tem identidade** (cookie de sessão válido da Sentinela, ou `opcoes.identidade` do app Next) nunca
+  cai em `buscador`, `robo` nem `nao_navegador`: pessoa logada não é robô. Ataque certo, `lista` e
+  `arquivo_proibido` continuam valendo para ela. Sessão de outra chave ou vencida não é identidade.
+- **Navegador de verdade não cai em nenhuma**: os testes passam 36 UAs reais (Chrome, Edge, Firefox,
+  Safari, Samsung Internet, Opera, MIUI, app do Google, WebView do Android, navegador dentro do
+  Instagram, Threads, Facebook, LinkedIn, TikTok, Telegram e Snapchat, celular Cubot e FOSSiBOT) com os
+  cabeçalhos que eles mandam, mais Safari antigo e IE 11 (sem `sec-fetch-*`, com `accept-language`).
+- **Marca e modelo do celular saem antes das palavras de rastreador.** Fabricante, modelo e codinome
+  aparecem no parêntese do Android (`(Linux; Android 13; FOSSiBOT F102 ...)`), na cauda do Instagram e do
+  Threads (`Android (33/13; ...; FOSSiBOT; F102; ...)`), no parêntese do Telegram e do Snapchat
+  (`(Fossibot F102; Android 13; ...)`) e no colchete do Facebook/Messenger (`[FB_IAB/...;FBMF/FOSSiBOT;...]`).
+  O guarda tira todo parêntese que fala de Android/iPhone/iPad ou vem depois de `Android `, todo colchete e
+  as marcas `cubot`/`fossibot`; `(compatible; XBot/1.0; +http://...)` fica. Na primeira versão da 1.1.0 (não
+  publicada) a pessoa com FOSSiBOT levava 403 no Instagram, Facebook e Telegram, até na volta do portal.
+- **No modo proteger, fora da rede confiável, levam 403:** monitor de disponibilidade (UptimeRobot,
+  check_http), buscadores, ferramentas de teste (inclusive o "Vercel MCP Fetch" que o Claude usa) e a
+  prévia do Google Chat (não está entre as prévias liberadas). Office, navegadores simples e o leitor em
+  voz alta do Google são exceção: no portal veem a tela de login; no sistema fechado vão para o portal.
+  Para conferir um sistema publicado, use um navegador de verdade ou a rede confiável.
+- **Ainda não coberto:** pessoa **sem login** que divide o IP (CGNAT) com um robô bloqueado como suspeito
+  leva 403 até o bloqueio vencer (robô 1 h, rajada 15 min), inclusive na tela de login do portal. O guarda
+  não sabe a origem do bloqueio; o ajuste fica na central (não criar bloqueio automático de `robo`/`rajada`
+  em IPv4 que teve evento com identidade nas últimas horas).
+- No banco, `nao_navegador` ainda não tem risco base (vale 0 + os modificadores de página sem
+  `sec_fetch_mode` e sem idioma) e o bloqueio automático de IP conta só eventos `robo`.
+
 ## Projeto estático (portal, Compras, RH, Financeiro, Comercial, Saída de Veículos)
 
 1. Copie `sentinela-guarda.ts` e `middleware.ts` para a **raiz do projeto na Vercel** (a pasta do
@@ -120,9 +164,10 @@ lê `process.env.X` escrito por extenso, que é como o Next entrega variáveis a
 ## Antes de ligar o modo proteger
 
 - Deixe todos os sistemas pelo menos alguns dias em **observar** e olhe no painel os eventos
-  `observado`. Chamadas de servidor para servidor (user-agent `undici`, `node-fetch`, `axios`,
-  `python-requests`) aparecem como `robo` e seriam barradas. Coloque a origem em **Confiáveis** ou
-  resolva antes.
+  `observado`. Chamadas de servidor para servidor (user-agent `undici`, `node`, `node-fetch`, `axios`,
+  `python-requests`, `Deno/`) aparecem como `robo` e seriam barradas; página pedida por script sem
+  cabeçalhos de navegador aparece como `nao_navegador`. Coloque a origem em **Confiáveis** ou resolva
+  antes.
 - **Sistema com "exige login":** cron da Vercel e prévias de link (WhatsApp, Teams) **não** passam sem
   login, porque o user-agent é falsificável. Ponha a rota do cron em `rotas_publicas` (ex.
   `/api/cron/`); o próprio app continua protegendo a rota com `CRON_SECRET`.

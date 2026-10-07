@@ -16,6 +16,52 @@ export const UAS_NAVEGADOR = [
 ];
 export const UA = UAS_NAVEGADOR[0];
 
+// Navegadores de verdade (desktop, celular, WebView do Android e navegador dentro de app), como
+// mandam o user-agent hoje. Nenhum pode cair em robo/buscador/nao_navegador (1.1.0).
+export const UAS_REAIS = [
+  ...UAS_NAVEGADOR,
+  // desktop
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 OPR/124.0.0.0',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0',
+  // celular
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.41 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/141.0.3537.71 Version/18.0 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 EdgA/141.0.0.0',
+  'Mozilla/5.0 (Android 14; Mobile; rv:143.0) Gecko/143.0 Firefox/143.0',
+  'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36 OPR/91.0.0.0',
+  'Mozilla/5.0 (Linux; U; Android 13; pt-br; 23021RAA2Y Build/TKQ1.221114.001) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/112.0.5615.136 Mobile Safari/537.36 XiaoMi/MiuiBrowser/14.10.1-gn',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/385.0.799442386 Mobile/15E148 Safari/604.1',
+  // WebView do Android e navegador dentro de app (Instagram, Facebook, LinkedIn, TikTok)
+  'Mozilla/5.0 (Linux; Android 13; SM-A536E Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36',
+  'Mozilla/5.0 (Linux; Android 14; moto g54 5G Build/U1TDS34.94-12-9-10; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36',
+  'Mozilla/5.0 (Linux; Android 14; SM-A546E Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 Instagram 400.0.0.40.81 Android (34/14; 450dpi; 1080x2340; samsung; SM-A546E; a54x; s5e8835; pt_BR; 812345678)',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/22G86 Instagram 400.0.0.27.80 (iPhone15,3; iOS 18_6; pt_BR; pt; scale=3.00; 1290x2796; 812345679; IABMV/1)',
+  'Mozilla/5.0 (Linux; Android 13; SM-A536E Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/530.0.0.47.68;]',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS;FBAV/530.0.0.38.105;FBBV/812345680;FBDV/iPhone15,3;FBMD/iPhone;FBSN/iOS;FBSV/18.6;FBSS/3;FBID/phone;FBLC/pt_BR;FBOP/5;FBRV/0]',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [LinkedInApp]/9.31.1426',
+  'Mozilla/5.0 (Linux; Android 14; SM-A155M Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 trill_370504 JsSdk/1.0 NetType/WIFI Channel/googleplay AppName/trill app_version/37.5.4 ByteLocale/pt-BR ByteFullLocale/pt-BR Region/BR BytedanceWebview/d8a21c6',
+  // celular Cubot: "CUBOT" termina em "bot" e não é robô (no aparelho e no FBMF do Facebook)
+  'Mozilla/5.0 (Linux; Android 12; CUBOT X50 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36',
+  'Mozilla/5.0 (Linux; Android 12; CUBOT X50 Build/SP1A.210812.016; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 [FBAN/EMA;FBLC/pt_BR;FBAV/440.0.0.11.110;FBMF/CUBOT;FBDV/CUBOT X50;]',
+  // celular FOSSiBOT: a marca vai na cauda do app, fora do parêntese do Android (Instagram, Threads,
+  // Facebook, Telegram, Snapchat). Na 1.1.0 inicial levavam 403 "rastreador: bot" (regressão).
+  'Mozilla/5.0 (Linux; Android 13; F102 Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 Instagram 400.0.0.40.81 Android (33/13; 480dpi; 1080x2408; FOSSiBOT; F102; F102; mt6789; pt_BR; 812345678)',
+  'Mozilla/5.0 (Linux; Android 13; F102 Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 Barcelona 360.0.0.40.81 Android (33/13; 480dpi; 1080x2408; FOSSiBOT; F102; F102; mt6789; pt_BR; 812345678)',
+  'Mozilla/5.0 (Linux; Android 13; F102 Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/530.0.0.47.68;FBBV/812345;FBDM/{density=3.0,width=1080,height=2408};FBLC/pt_BR;FBRV/0;FBCR/Claro BR;FBMF/FOSSiBOT;FBBD/FOSSiBOT;FBPN/com.facebook.katana;FBDV/F102;FBSV/13;FBOP/1;FBCA/arm64-v8a:;]',
+  'Mozilla/5.0 (Linux; Android 13; F102 Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 Telegram-Android/11.14.1 (Fossibot F102; Android 13; SDK 33; HIGH)',
+  'Mozilla/5.0 (Linux; Android 13; F102 Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36Snapchat/13.60.0.42 (FOSSiBOT F102; Android 13#20240501#33; gzip; )',
+  // a mesma família com palavras de rastreador no aparelho ou no app (só ilustra a classe: marca/modelo/app fora do parêntese)
+  'Mozilla/5.0 (Linux; Android 14; RoboBot Probe X1 Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 Instagram 400.0.0.40.81 Android (34/14; 450dpi; 1080x2340; RoboBot; Probe X1; monitor; mt6789; pt_BR; 812345678)',
+  'Mozilla/5.0 (Linux; Android 12; moto g(60) Build/S2RIS32.32-20-5; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.43 Mobile Safari/537.36 Instagram 400.0.0.40.81 Android (31/12; 400dpi; 1080x2460; motorola; moto g(60); hanoip; qcom; pt_BR; 812345678)',
+];
+
+// Cabeçalhos que navegador sempre manda numa navegação, tirados (null remove do req)
+export const SEM_NAVEGADOR = { 'accept-language': null, 'sec-fetch-site': null, 'sec-fetch-mode': null, 'sec-fetch-dest': null };
+
 /* ---------- relógio controlável (o guarda usa Date.now) ---------- */
 const agoraReal = Date.now.bind(Date);
 let desloc = 0;
@@ -138,6 +184,7 @@ export function req(host, caminho, o = {}) {
   if (o.oidc !== false) h['x-vercel-oidc-token'] = o.oidc || oidcFalso();
   if (o.cookie) h.cookie = o.cookie;
   if (!h['x-real-ip']) delete h['x-real-ip'];
+  for (const k of Object.keys(h)) if (h[k] === null) delete h[k];   // headers: { x: null } tira o cabeçalho
   return new Request('https://' + host + caminho, { method: o.metodo || 'GET', headers: h });
 }
 
