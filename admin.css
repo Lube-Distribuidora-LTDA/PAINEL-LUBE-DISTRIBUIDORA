@@ -14,6 +14,12 @@
   --adm-fraco:   #8E97B8;
 }
 
+/* O styles.css do portal trava a rolagem enquanto o login não passou
+   (body:not(.autenticado){overflow:hidden;height:100vh}). O admin tem a própria
+   porteira e nunca ganha essa classe — sem este override a página não rola
+   quando a lista passa de uma tela. */
+html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
+
 .adm-body{
   background:var(--adm-fundo); color:var(--adm-texto);
   overflow-x:hidden;
@@ -313,15 +319,52 @@
 .criador__erro{ color:#FF7B82; font-size:.84rem; }
 .criador__erro:empty{ display:none; }
 
+/* ---------- filtro dos acessos ---------- */
+.filtro{ margin-bottom:1rem; }
+.filtro__linha{ display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; }
+.filtro__campo{ display:flex; flex-direction:column; gap:.4rem; min-width:160px; }
+.filtro__campo--usuario{ flex:1 1 300px; }
+.filtro__campo > span{ color:var(--adm-fraco); font-size:.62rem; }
+.filtro__campo input,
+.filtro__campo select{
+  font-family:inherit; font-size:.9rem; color:#fff; width:100%;
+  padding:.65rem .8rem; border:1px solid var(--adm-borda);
+  background:rgba(255,255,255,.04); outline:0;
+  transition:border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+.filtro__campo input::placeholder{ color:rgba(255,255,255,.3); }
+.filtro__campo select option{ background:var(--adm-painel); color:#fff; }
+.filtro__campo input:focus,
+.filtro__campo select:focus{ border-color:var(--red); box-shadow:0 0 0 3px rgba(238,27,36,.16); }
+
+.filtro__chips{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.75rem; }
+.filtro__chips:empty{ display:none; }
+.filtro__chip{
+  display:inline-flex; align-items:center; gap:.55rem; cursor:pointer;
+  padding:.35rem .6rem; color:#C7CEEA;
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.64rem; letter-spacing:.06em;
+  background:rgba(143,160,240,.14); border:1px solid rgba(143,160,240,.3);
+  transition:border-color .3s var(--ease), color .3s var(--ease);
+}
+.filtro__chip b{ color:var(--red); font-weight:400; font-size:.9rem; line-height:1; }
+.filtro__chip:hover{ border-color:var(--red); color:#fff; }
+
+.filtro__rodape{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.9rem 0 0;
+}
+.filtro__rodape .mono{ color:var(--adm-fraco); font-size:.66rem; }
+
 /* ---------- toast ---------- */
 .toast{
   position:fixed; left:50%; bottom:2rem; transform:translate(-50%,140%);
   background:var(--blue-bright); color:#fff; padding:1rem 1.4rem;
   font-size:.9rem; z-index:300; max-width:min(92vw,440px);
   box-shadow:0 20px 50px -20px rgba(0,0,0,.8);
-  transition:transform .6s var(--ease);
+  /* escondido de verdade: só deslocar deixava uma tira azul aparecendo no rodapé */
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:transform .6s var(--ease), opacity .4s var(--ease), visibility 0s linear .6s;
 }
-.toast.is-on{ transform:translate(-50%,0); }
+.toast.is-on{ transform:translate(-50%,0); opacity:1; visibility:visible; transition-delay:0s; }
 .toast.is-erro{ background:var(--red); }
 
 @media (max-width:700px){

@@ -696,31 +696,165 @@
       }, 'Excluir');
   }
 
-  /* ---------------- acessos ---------------- */
-  function carregarAcessos() {
-    var tb = $('[data-tbody-acessos]');
-    tb.innerHTML = '<tr><td colspan="4" class="adm__vazio">Carregando…</td></tr>';
-    return sb.from('acessos')
-      .select('id,email,acao,criado_em,sistema_id')
-      .order('criado_em', { ascending: false })
-      .limit(200)
-      .then(function (r) {
-        var linhas = r.data || [];
-        if (!linhas.length) {
-          tb.innerHTML = '<tr><td colspan="4" class="adm__vazio">Nenhum acesso registrado ainda.</td></tr>';
+  /* ---------------- acessos (com filtro) ----------------
+     Barra de filtros + tabela paginada, usada nos acessos do painel e do SAC.
+     O filtro roda no banco (não só nos 200 mais recentes): usuários (vários, por
+     parte do e-mail), ação e sistema. "Carregar mais" busca os próximos 200. */
+  var POR_PAGINA = 200;
+
+  function criarListaAcessos(cfg) {
+    var tb = $(cfg.tbody);
+    var wrap = tb.closest('.adm__tablewrap');
+    var est = { termos: [], acao: '', sistema: '', linhas: [], total: 0, req: 0 };
+
+    var opcoesAcao = '<option value="">Todas</option>' + cfg.acoes.map(function (a) {
+      return '<option value="' + a[0] + '">' + a[1] + '</option>';
+    }).join('');
+
+    wrap.insertAdjacentHTML('beforebegin',
+      '<div class="filtro">' +
+        '<div class="filtro__linha">' +
+          '<label class="filtro__campo filtro__campo--usuario"><span class="mono">' + cfg.rotuloPessoa + '</span>' +
+            '<input type="text" list="dl-' + cfg.chave + '" autocomplete="off" data-f-usuario ' +
+              'placeholder="Digite parte do e-mail e tecle Enter (pode adicionar vários)" />' +
+            '<datalist id="dl-' + cfg.chave + '" data-f-lista></datalist></label>' +
+          '<label class="filtro__campo"><span class="mono">Ação</span><select data-f-acao>' + opcoesAcao + '</select></label>' +
+          (cfg.sistemas ? '<label class="filtro__campo"><span class="mono">Sistema</span><select data-f-sistema></select></label>' : '') +
+          '<button type="button" class="adm__link" data-f-limpar hidden>Limpar filtros</button>' +
+        '</div>' +
+        '<div class="filtro__chips" data-f-chips></div>' +
+      '</div>');
+    wrap.insertAdjacentHTML('afterend',
+      '<div class="filtro__rodape"><span class="mono" data-f-info></span>' +
+      '<button type="button" class="adm__link" data-f-mais hidden>Carregar mais</button></div>');
+
+    var barra = wrap.previousElementSibling;
+    var rodape = wrap.nextElementSibling;
+    var campo = $('[data-f-usuario]', barra), selAcao = $('[data-f-acao]', barra),
+        selSis = $('[data-f-sistema]', barra), chips = $('[data-f-chips]', barra),
+        limpar = $('[data-f-limpar]', barra), info = $('[data-f-info]', rodape),
+        mais = $('[data-f-mais]', rodape);
+
+    function filtrando() { return !!(est.termos.length || est.acao || est.sistema); }
+
+    function normalizar(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9._@+\-]/g, ''); }
+
+    function pintarChips() {
+      chips.innerHTML = est.termos.map(function (t) {
+        return '<button type="button" class="filtro__chip" data-f-rem="' + esc(t) + '" title="Tirar do filtro">' +
+               esc(t) + ' <b>×</b></button>';
+      }).join('');
+      limpar.hidden = !filtrando();
+    }
+
+    // sugestões (e-mails conhecidos) e lista de sistemas — atualizadas a cada abertura da aba
+    function atualizarOpcoes() {
+      var vistos = {};
+      $('[data-f-lista]', barra).innerHTML = cfg.sugestoes().filter(function (e) {
+        if (!e || vistos[e]) return false; vistos[e] = true; return true;
+      }).sort().map(function (e) { return '<option value="' + esc(e) + '"></option>'; }).join('');
+      if (selSis) {
+        selSis.innerHTML = '<option value="">Todos</option>' + sistemas.map(function (s) {
+          return '<option value="' + s.id + '">' + esc(s.nome) + '</option>';
+        }).join('');
+        selSis.value = est.sistema;
+      }
+    }
+
+    function pintarTabela() {
+      if (!est.linhas.length) {
+        tb.innerHTML = '<tr><td colspan="' + cfg.colspan + '" class="adm__vazio">' +
+          (filtrando() ? 'Nenhum registro com esses filtros.' : cfg.vazio) + '</td></tr>';
+      } else {
+        tb.innerHTML = est.linhas.map(cfg.linha).join('');
+      }
+      info.textContent = est.linhas.length
+        ? 'Mostrando ' + est.linhas.length + ' de ' + est.total + (est.total === 1 ? ' registro' : ' registros')
+        : '';
+      mais.hidden = est.linhas.length >= est.total;
+    }
+
+    function buscar(anexar) {
+      var minha = ++est.req;
+      if (!anexar) tb.innerHTML = '<tr><td colspan="' + cfg.colspan + '" class="adm__vazio">Carregando…</td></tr>';
+      var q = sb.from(cfg.tabela).select(cfg.colunas, { count: 'exact' })
+        .order('criado_em', { ascending: false });
+      if (est.termos.length) {
+        q = q.or(est.termos.map(function (t) { return 'email.ilike.*' + t + '*'; }).join(','));
+      }
+      if (est.acao) q = q.eq('acao', est.acao);
+      if (cfg.sistemas && est.sistema) q = q.eq('sistema_id', est.sistema);
+      var ini = anexar ? est.linhas.length : 0;
+      return q.range(ini, ini + POR_PAGINA - 1).then(function (r) {
+        if (minha !== est.req) return;                       // chegou depois de outro filtro: ignora
+        if (r.error) {
+          tb.innerHTML = '<tr><td colspan="' + cfg.colspan + '" class="adm__vazio">Não foi possível carregar: ' +
+            esc(r.error.message) + '</td></tr>';
           return;
         }
-        var nomeSis = {};
-        sistemas.forEach(function (s) { nomeSis[s.id] = s.nome; });
-        var rotulo = { login: 'Entrou', logout: 'Saiu', abriu_sistema: 'Abriu sistema' };
-        tb.innerHTML = linhas.map(function (a) {
-          return '<tr><td class="mono">' + data(a.criado_em) + '</td>' +
-                 '<td>' + esc(a.email || '—') + '</td>' +
-                 '<td>' + (rotulo[a.acao] || esc(a.acao)) + '</td>' +
-                 '<td>' + esc(nomeSis[a.sistema_id] || '—') + '</td></tr>';
-        }).join('');
+        est.linhas = anexar ? est.linhas.concat(r.data || []) : (r.data || []);
+        est.total = r.count == null ? est.linhas.length : r.count;
+        pintarTabela();
       });
+    }
+
+    function filtrar() { pintarChips(); return buscar(false); }
+
+    function adicionar(texto) {
+      var novos = String(texto || '').split(/[\s,;]+/).map(normalizar).filter(Boolean);
+      var mudou = false;
+      novos.forEach(function (t) { if (est.termos.indexOf(t) < 0) { est.termos.push(t); mudou = true; } });
+      campo.value = '';
+      if (mudou) filtrar();
+    }
+
+    campo.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); adicionar(campo.value); }
+    });
+    // escolher uma sugestão da lista adiciona na hora (digitar só preenche o campo)
+    campo.addEventListener('input', function (ev) {
+      if (ev.inputType && ev.inputType !== 'insertReplacementText') return;
+      if (campo.value.indexOf('@') > 0) adicionar(campo.value);
+    });
+    campo.addEventListener('change', function () { if (campo.value.trim()) adicionar(campo.value); });
+    selAcao.addEventListener('change', function () { est.acao = selAcao.value; filtrar(); });
+    if (selSis) selSis.addEventListener('change', function () { est.sistema = selSis.value; filtrar(); });
+    chips.addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('[data-f-rem]') : null;
+      if (!b) return;
+      est.termos = est.termos.filter(function (t) { return t !== b.getAttribute('data-f-rem'); });
+      filtrar();
+    });
+    limpar.addEventListener('click', function () {
+      est.termos = []; est.acao = ''; est.sistema = '';
+      selAcao.value = ''; if (selSis) selSis.value = ''; campo.value = '';
+      filtrar();
+    });
+    mais.addEventListener('click', function () { buscar(true); });
+
+    return {
+      carregar: function () { atualizarOpcoes(); pintarChips(); return buscar(false); },
+      opcoes: atualizarOpcoes
+    };
   }
+
+  var listaAcessos = criarListaAcessos({
+    chave: 'painel', tbody: '[data-tbody-acessos]', tabela: 'acessos',
+    colunas: 'id,email,acao,criado_em,sistema_id', colspan: 4, rotuloPessoa: 'Usuário', sistemas: true,
+    acoes: [['login', 'Entrou'], ['logout', 'Saiu'], ['abriu_sistema', 'Abriu sistema']],
+    sugestoes: function () { return usuarios.map(function (u) { return u.email; }); },
+    vazio: 'Nenhum acesso registrado ainda.',
+    linha: function (a) {
+      var nome = '—';
+      sistemas.forEach(function (s) { if (s.id === a.sistema_id) nome = s.nome; });
+      var rotulo = { login: 'Entrou', logout: 'Saiu', abriu_sistema: 'Abriu sistema' };
+      return '<tr><td class="mono">' + data(a.criado_em) + '</td>' +
+             '<td>' + esc(a.email || '—') + '</td>' +
+             '<td>' + (rotulo[a.acao] || esc(a.acao)) + '</td>' +
+             '<td>' + esc(nome) + '</td></tr>';
+    }
+  });
+  function carregarAcessos() { return listaAcessos.carregar(); }
 
 
   /* ---------------- SAC · contas externas (2026-10-09) ----------------
@@ -745,6 +879,7 @@
       sacUsuarios = r.data || [];
       pintarSac();
       avisarSac();
+      listaSacAcessos.opcoes();                 // sugestões do filtro de acessos do SAC
     });
   }
 
@@ -821,29 +956,22 @@
     }, textos[2]);
   }
 
-  function carregarSacAcessos() {
-    var tb = $('[data-tbody-sac-acessos]');
-    tb.innerHTML = '<tr><td colspan="4" class="adm__vazio">Carregando…</td></tr>';
-    return sb.from('sac_acessos')
-      .select('id,email,acao,detalhe,criado_em')
-      .order('criado_em', { ascending: false })
-      .limit(200)
-      .then(function (r) {
-        var linhas = r.data || [];
-        if (!linhas.length) {
-          tb.innerHTML = '<tr><td colspan="4" class="adm__vazio">Nenhum acesso ao SAC registrado ainda.</td></tr>';
-          return;
-        }
-        var rotulo = { cadastro: 'Primeiro acesso', pedido: 'Pediu acesso', login: 'Entrou', logout: 'Saiu', chamado: 'Enviou chamado' };
-        tb.innerHTML = linhas.map(function (a) {
-          var det = a.acao === 'cadastro' ? (a.detalhe === 'supervisor' ? 'supervisor' : 'RCA') : (a.detalhe || '—');
-          return '<tr><td class="mono">' + data(a.criado_em) + '</td>' +
-                 '<td>' + esc(a.email || '—') + '</td>' +
-                 '<td>' + (rotulo[a.acao] || esc(a.acao)) + '</td>' +
-                 '<td class="mono">' + esc(det) + '</td></tr>';
-        }).join('');
-      });
-  }
+  var SAC_ACOES = { cadastro: 'Primeiro acesso', pedido: 'Pediu acesso', login: 'Entrou', logout: 'Saiu', chamado: 'Enviou chamado' };
+  var listaSacAcessos = criarListaAcessos({
+    chave: 'sac', tbody: '[data-tbody-sac-acessos]', tabela: 'sac_acessos',
+    colunas: 'id,email,acao,detalhe,criado_em', colspan: 4, rotuloPessoa: 'Pessoa', sistemas: false,
+    acoes: Object.keys(SAC_ACOES).map(function (k) { return [k, SAC_ACOES[k]]; }),
+    sugestoes: function () { return sacUsuarios.map(function (u) { return u.email; }); },
+    vazio: 'Nenhum acesso ao SAC registrado ainda.',
+    linha: function (a) {
+      var det = a.acao === 'cadastro' ? (a.detalhe === 'supervisor' ? 'supervisor' : 'RCA') : (a.detalhe || '—');
+      return '<tr><td class="mono">' + data(a.criado_em) + '</td>' +
+             '<td>' + esc(a.email || '—') + '</td>' +
+             '<td>' + (SAC_ACOES[a.acao] || esc(a.acao)) + '</td>' +
+             '<td class="mono">' + esc(det) + '</td></tr>';
+    }
+  });
+  function carregarSacAcessos() { return listaSacAcessos.carregar(); }
 
   function irParaSac() {
     var aba = $('[data-aba="sac"]');
