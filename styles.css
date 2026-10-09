@@ -435,37 +435,37 @@ body:not(.autenticado) .nav{ display:none; }
 
 .gate__rodape{ margin-top:2rem; color:var(--muted-d); font-size:.62rem; line-height:1.9; }
 
-/* SAQ — chamado do RCA para o SAC, aberto sem login */
+/* SAC — chamado do RCA, aberto sem login */
 .gate__ou{
   display:flex; align-items:center; gap:1rem; margin:2.25rem 0 1rem;
   color:var(--muted-d); font-size:.6rem;
 }
 .gate__ou::before,.gate__ou::after{ content:''; flex:1; height:1px; background:rgba(255,255,255,.12); }
-.gate__saq{
+.gate__sac{
   position:relative; display:flex; align-items:center; gap:1rem;
   padding:1rem 1.1rem;
   border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.04);
   transition:border-color .4s var(--ease), background .4s var(--ease),
              transform .45s var(--ease), box-shadow .45s var(--ease);
 }
-.gate__saq::before{
+.gate__sac::before{
   content:''; position:absolute; left:-1px; top:-1px; bottom:-1px; width:3px; background:var(--red);
 }
-.gate__saq:hover, .gate__saq:focus-visible{
+.gate__sac:hover, .gate__sac:focus-visible{
   border-color:rgba(255,255,255,.32); background:rgba(44,63,196,.16); outline:none;
   transform:translateY(-2px); box-shadow:0 22px 55px -28px rgba(44,63,196,.9);
 }
-.gate__saq-sigla{
+.gate__sac-sigla{
   flex:none; display:grid; place-items:center; width:3.1rem; height:3.1rem;
   background:linear-gradient(135deg, var(--blue-bright), var(--blue));
   color:#fff; font-weight:900; font-size:.95rem; letter-spacing:.08em;
 }
-.gate__saq-texto{ flex:1; min-width:0; display:flex; flex-direction:column; gap:.35rem; }
-.gate__saq-texto strong{ color:#fff; font-weight:700; font-size:1rem; letter-spacing:-.01em; }
-.gate__saq-texto .mono{ color:var(--muted); font-size:.6rem; }
-.gate__saq-seta{ flex:none; width:22px; color:var(--red); transition:transform .45s var(--ease); }
-.gate__saq-seta svg{ width:100%; height:auto; display:block; }
-.gate__saq:hover .gate__saq-seta{ transform:translateX(4px); }
+.gate__sac-texto{ flex:1; min-width:0; display:flex; flex-direction:column; gap:.35rem; }
+.gate__sac-texto strong{ color:#fff; font-weight:700; font-size:1rem; letter-spacing:-.01em; }
+.gate__sac-texto .mono{ color:var(--muted); font-size:.6rem; }
+.gate__sac-seta{ flex:none; width:22px; color:var(--red); transition:transform .45s var(--ease); }
+.gate__sac-seta svg{ width:100%; height:auto; display:block; }
+.gate__sac:hover .gate__sac-seta{ transform:translateX(4px); }
 
 /* ---------- barra da conta na navbar ---------- */
 .conta{ display:flex; align-items:center; gap:1rem; font-size:.66rem; }
