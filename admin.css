@@ -332,3 +332,31 @@
   .criador__grade{ flex-direction:column; }
   .criador__previa{ width:100%; align-items:flex-start; }
 }
+
+/* ---------- SAC · contas externas (2026-10-09) ---------- */
+.adm__badge{
+  display:inline-grid; place-items:center; min-width:1.3rem; height:1.3rem; padding:0 .35rem;
+  margin-left:.5rem; border-radius:999px; background:var(--red); color:#fff; vertical-align:middle;
+  font-family:'JetBrains Mono','Consolas',monospace; font-size:.62rem; font-weight:700; letter-spacing:0;
+  animation:pulsoSac 2s infinite;
+}
+.adm__badge[hidden]{ display:none; }
+@keyframes pulsoSac{
+  0%{ box-shadow:0 0 0 0 rgba(238,27,36,.55); }
+  70%{ box-shadow:0 0 0 8px rgba(238,27,36,0); }
+  100%{ box-shadow:0 0 0 0 rgba(238,27,36,0); }
+}
+.adm__aviso{
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1.25rem;
+  padding:.9rem 1.1rem; border:1px solid rgba(245,196,81,.45); background:rgba(245,196,81,.08);
+  color:#FBE3A6; font-size:.92rem; animation:admIn .5s var(--ease) both;
+}
+.adm__aviso[hidden]{ display:none; }
+.adm__aviso strong{ color:#fff; }
+.adm__aviso .adm__link--destaque{ margin-left:auto; }
+.adm__aviso-ponto{ flex:none; width:8px; height:8px; border-radius:50%; background:#F5C451; animation:pulsoSac 2s infinite; }
+.adm__nota{ margin:-.75rem 0 1.25rem; color:var(--adm-fraco); font-size:.86rem; font-weight:300; }
+.adm__nota a{ color:#C7CEEA; text-decoration:underline; }
+.adm__nota strong{ color:#D4DAEC; font-weight:600; }
+.adm__head--sub{ margin-top:2.75rem; }
+.adm__h3{ font-size:1.25rem; font-weight:800; letter-spacing:-.03em; text-transform:uppercase; color:#fff; }

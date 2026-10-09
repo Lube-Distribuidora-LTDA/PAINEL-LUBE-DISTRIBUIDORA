@@ -366,12 +366,27 @@
     });
   }
 
+  // Conta sem perfil do painel: em geral é conta do SAC (RCA/supervisor), que
+  // só abre chamado no SAC. Sai da sessão e diz para onde ir (2026-10-09).
+  function contaSemPerfil() {
+    return sb.rpc('sac_meu_acesso').then(function (s) {
+      var doSac = !!(s && s.data && s.data.situacao && s.data.situacao !== 'sem_cadastro');
+      return sb.auth.signOut().then(function () {
+        mostrarGate();
+        erro(doSac
+          ? 'Esta conta é do SAC. Para abrir chamado, use o atalho “SAC · Abrir chamado” logo abaixo.'
+          : 'Não foi possível carregar seu perfil.');
+      });
+    });
+  }
+
   function carregarSessao(sessao) {
     if (!sessao) { mostrarGate(); return Promise.resolve(); }
 
-    return sb.from('profiles').select('*').eq('id', sessao.user.id).single()
+    return sb.from('profiles').select('*').eq('id', sessao.user.id).maybeSingle()
       .then(function (r) {
-        if (r.error || !r.data) throw new Error('Perfil não encontrado');
+        if (r.error) throw new Error('Perfil não encontrado');
+        if (!r.data) return contaSemPerfil();
         perfil = r.data;
         if (!perfil.ativo) {
           var pendente = !perfil.aprovado_em;

@@ -101,6 +101,7 @@
       excecoes   = r[4].data || [];
       pintarUsuarios();
       pintarSistemas();
+      return carregarSac().catch(function () { /* aba do SAC fica vazia; o resto segue */ });
     });
   }
 
@@ -361,7 +362,7 @@
   }
 
   function trocarSenha(id) {
-    var u = usuarios.filter(function (x) { return x.id === id; })[0];
+    var u = usuarios.concat(sacUsuarios).filter(function (x) { return x.id === id; })[0];
     if (!u) return;
     abrirModal('Nova senha — ' + u.email,
       '<label class="campo"><span>Nova senha</span><input type="text" name="senha" minlength="8" required />' +
@@ -376,11 +377,15 @@
   }
 
   function removerUsuario(id) {
-    var u = usuarios.filter(function (x) { return x.id === id; })[0];
+    var u = usuarios.concat(sacUsuarios).filter(function (x) { return x.id === id; })[0];
     if (!u) return;
-    abrirModal('Remover usuário',
-      '<p>Isto apaga <strong>' + esc(u.email) + '</strong> em definitivo, junto com as permissões dele. ' +
-      'Se a ideia é só suspender o acesso, use <em>Editar</em> e desmarque “Acesso ativo”.</p>',
+    var doSac = !usuarios.some(function (x) { return x.id === id; });
+    abrirModal(doSac ? 'Remover conta do SAC' : 'Remover usuário',
+      doSac
+        ? '<p>Isto apaga a conta do SAC de <strong>' + esc(u.email) + '</strong> em definitivo. ' +
+          'Se a ideia é só suspender, use <em>Bloquear</em>.</p>'
+        : '<p>Isto apaga <strong>' + esc(u.email) + '</strong> em definitivo, junto com as permissões dele. ' +
+          'Se a ideia é só suspender o acesso, use <em>Editar</em> e desmarque “Acesso ativo”.</p>',
       function () {
         return fn({ acao: 'remover', user_id: id }).then(function () {
           toast('Usuário removido.');
@@ -717,6 +722,134 @@
       });
   }
 
+
+  /* ---------------- SAC · contas externas (2026-10-09) ----------------
+     RCAs e supervisores que abrem chamado no SAC (sac-lube.vercel.app).
+     Ficam em sac_usuarios, separados de profiles: nunca entram no painel.
+     O "Primeiro acesso" do SAC cria a conta como "pendente" e avisa aqui
+     (selo na aba, faixa no topo e o número no título da aba do navegador). */
+  var sacUsuarios = [], sacPendentesAntes = null;
+  var SAC_SITUACAO = {
+    pendente:  ['Aguardando', 'tag--pendente'],
+    liberado:  ['Liberado', 'tag--ok'],
+    recusado:  ['Recusado', 'tag--off'],
+    bloqueado: ['Bloqueado', 'tag--admin']
+  };
+
+  function sacPendentes() { return sacUsuarios.filter(function (u) { return u.situacao === 'pendente'; }); }
+  function tipoSac(u) { return u.tipo === 'supervisor' ? 'Supervisor' : 'RCA' + (u.codusur ? ' ' + u.codusur : ''); }
+
+  function carregarSac() {
+    return sb.from('sac_usuarios').select('*').order('criado_em', { ascending: false }).then(function (r) {
+      if (r.error) throw r.error;
+      sacUsuarios = r.data || [];
+      pintarSac();
+      avisarSac();
+    });
+  }
+
+  function avisarSac() {
+    var pend = sacPendentes(), n = pend.length;
+    var badge = $('[data-sac-badge]');
+    badge.textContent = n;
+    badge.hidden = !n;
+    $('[data-sac-aviso]').hidden = !n;
+    if (n) {
+      $('[data-sac-aviso-texto]').innerHTML = '<strong>' + n + (n === 1 ? ' cadastro novo' : ' cadastros novos') +
+        ' no SAC</strong> esperando liberação' + (n === 1 ? ': ' + esc(pend[0].nome || pend[0].email) + ' (' + esc(tipoSac(pend[0])) + ').' : '.');
+    }
+    document.title = (n ? '(' + n + ') ' : '') + 'Painel Administrativo — Lube Distribuidora';
+    if (sacPendentesAntes !== null && n > sacPendentesAntes) toast('Novo cadastro no SAC esperando liberação.');
+    sacPendentesAntes = n;
+  }
+
+  function pintarSac() {
+    var tb = $('[data-tbody-sac]');
+    var lib = sacUsuarios.filter(function (u) { return u.situacao === 'liberado'; }).length;
+    var pend = sacPendentes().length;
+    $('[data-resumo-sac]').textContent = sacUsuarios.length + (sacUsuarios.length === 1 ? ' conta' : ' contas') +
+      ' · ' + lib + ' liberada' + (lib === 1 ? '' : 's') + (pend ? ' · ' + pend + ' aguardando liberação' : '');
+    var lista = sacUsuarios.slice().sort(function (a, b) {
+      return (b.situacao === 'pendente' ? 1 : 0) - (a.situacao === 'pendente' ? 1 : 0);
+    });
+    if (!lista.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="adm__vazio">Nenhuma conta ainda. O primeiro acesso de um RCA ou supervisor aparece aqui.</td></tr>';
+      return;
+    }
+    tb.innerHTML = lista.map(function (u) {
+      var s = SAC_SITUACAO[u.situacao] || [u.situacao, 'tag--off'];
+      var acoes = u.situacao === 'pendente'
+        ? '<button class="adm__link adm__link--destaque" data-sac-liberar="' + u.id + '">Liberar</button>' +
+          '<button class="adm__link adm__link--perigo" data-sac-recusar="' + u.id + '">Recusar</button>'
+        : u.situacao === 'liberado'
+          ? '<button class="adm__link adm__link--perigo" data-sac-bloquear="' + u.id + '">Bloquear</button>'
+          : '<button class="adm__link" data-sac-liberar="' + u.id + '">Liberar</button>';
+      acoes += '<button class="adm__link" data-senha="' + u.id + '">Senha</button>' +
+               '<button class="adm__link adm__link--perigo" data-remover="' + u.id + '">Remover</button>';
+      return '<tr>' +
+        '<td><span class="cel-nome">' + esc(u.nome || '—') + '</span><span class="cel-email">' + esc(u.email) + '</span></td>' +
+        '<td><span class="tag ' + (u.tipo === 'supervisor' ? 'tag--admin' : 'tag--user') + '">' + esc(tipoSac(u)) + '</span></td>' +
+        '<td><span class="tag ' + s[1] + '">' + s[0] + '</span></td>' +
+        '<td class="mono">' + data(u.criado_em) + '</td>' +
+        '<td><div class="cel-acoes">' + acoes + '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function decidirSac(id, situacao) {
+    var u = sacUsuarios.filter(function (x) { return x.id === id; })[0];
+    if (!u) return;
+    var quem = '<strong>' + esc(u.nome || u.email) + '</strong> (' + esc(u.email) + ', ' + esc(tipoSac(u)) + ')';
+    var conferido = u.tipo === 'supervisor'
+      ? '<p class="campo__dica">Supervisor: o e-mail <strong>não</strong> é conferido no WinThor (o cadastro de supervisor, rotina 516, não tem e-mail). Confirme quem é antes de liberar.</p>'
+      : (u.codusur ? '<p class="campo__dica">E-mail conferido no cadastro do RCA ' + u.codusur + ' no WinThor, na hora do cadastro.</p>' : '');
+    var textos = {
+      liberado:  ['Liberar no SAC', '<p>' + quem + ' passa a entrar no SAC com o e-mail e a senha que criou. Não ganha acesso ao painel.</p>' + conferido, 'Liberar', 'Acesso ao SAC liberado.'],
+      recusado:  ['Recusar cadastro', '<p>' + quem + ' não vai conseguir entrar no SAC. A conta fica registrada como recusada; para apagar de vez, use “Remover”.</p>', 'Recusar', 'Cadastro recusado.'],
+      bloqueado: ['Bloquear no SAC', '<p>' + quem + ' deixa de entrar no SAC na próxima tentativa. Dá para liberar de novo depois.</p>', 'Bloquear', 'Acesso ao SAC bloqueado.']
+    }[situacao];
+    abrirModal(textos[0], textos[1], function () {
+      return sb.from('sac_usuarios')
+        .update({ situacao: situacao, decidido_em: new Date().toISOString(), decidido_por: eu.id })
+        .eq('id', id).select('id')
+        .then(function (r) {
+          if (r.error) throw r.error;
+          if (!r.data || !r.data.length) throw new Error('Não foi possível alterar esta conta.');
+          toast(textos[3]);
+          return Promise.all([carregarSac(), carregarSacAcessos()]);
+        });
+    }, textos[2]);
+  }
+
+  function carregarSacAcessos() {
+    var tb = $('[data-tbody-sac-acessos]');
+    tb.innerHTML = '<tr><td colspan="4" class="adm__vazio">Carregando…</td></tr>';
+    return sb.from('sac_acessos')
+      .select('id,email,acao,detalhe,criado_em')
+      .order('criado_em', { ascending: false })
+      .limit(200)
+      .then(function (r) {
+        var linhas = r.data || [];
+        if (!linhas.length) {
+          tb.innerHTML = '<tr><td colspan="4" class="adm__vazio">Nenhum acesso ao SAC registrado ainda.</td></tr>';
+          return;
+        }
+        var rotulo = { cadastro: 'Primeiro acesso', pedido: 'Pediu acesso', login: 'Entrou', logout: 'Saiu', chamado: 'Enviou chamado' };
+        tb.innerHTML = linhas.map(function (a) {
+          var det = a.acao === 'cadastro' ? (a.detalhe === 'supervisor' ? 'supervisor' : 'RCA') : (a.detalhe || '—');
+          return '<tr><td class="mono">' + data(a.criado_em) + '</td>' +
+                 '<td>' + esc(a.email || '—') + '</td>' +
+                 '<td>' + (rotulo[a.acao] || esc(a.acao)) + '</td>' +
+                 '<td class="mono">' + esc(det) + '</td></tr>';
+        }).join('');
+      });
+  }
+
+  function irParaSac() {
+    var aba = $('[data-aba="sac"]');
+    if (aba) aba.click();
+  }
+
   /* ---------------- eventos ---------------- */
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest ? ev.target.closest('button,a') : null;
@@ -728,11 +861,19 @@
     if (g('data-remover'))  { removerUsuario(g('data-remover')); }
     if (g('data-edit-sis')) { editarSistema(g('data-edit-sis')); }
     if (g('data-del-sis'))  { excluirSistema(g('data-del-sis')); }
+    if (g('data-sac-liberar'))  { decidirSac(g('data-sac-liberar'), 'liberado'); }
+    if (g('data-sac-recusar'))  { decidirSac(g('data-sac-recusar'), 'recusado'); }
+    if (g('data-sac-bloquear')) { decidirSac(g('data-sac-bloquear'), 'bloqueado'); }
+    if (t.hasAttribute('data-ir-sac')) { irParaSac(); }
   });
 
   $('[data-novo-usuario]').addEventListener('click', novoUsuario);
   $('[data-novo-sistema]').addEventListener('click', novoSistema);
   $('[data-recarregar-acessos]').addEventListener('click', carregarAcessos);
+  $('[data-recarregar-sac]').addEventListener('click', function () {
+    carregarSac().catch(function (e) { toast((e && e.message) || 'Não foi possível carregar o SAC.', true); });
+    carregarSacAcessos();
+  });
 
   $$('[data-aba]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -742,6 +883,7 @@
         p.classList.toggle('is-on', p.getAttribute('data-painel') === alvo);
       });
       if (alvo === 'acessos') carregarAcessos();
+      if (alvo === 'sac') { carregarSac().catch(function () {}); carregarSacAcessos(); }
     });
   });
 
@@ -762,6 +904,9 @@
       $('[data-adm-quem]').textContent = eu.email;
       $('[data-carregando]').classList.add('is-off');
       $('[data-adm]').hidden = false;
+      setInterval(function () {
+        if (!document.hidden) carregarSac().catch(function () {});
+      }, 60000);
       return carregarTudo();
     });
   }).catch(function () { location.href = 'index.html'; });

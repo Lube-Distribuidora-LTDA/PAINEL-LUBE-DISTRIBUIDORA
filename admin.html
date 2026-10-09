@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css?v=20261006" />
-<link rel="stylesheet" href="admin.css?v=20261006" />
+<link rel="stylesheet" href="admin.css?v=20261009" />
 </head>
 <body class="adm-body">
 
@@ -36,8 +36,16 @@
   <nav class="adm__tabs">
     <button class="adm__tab is-on" type="button" data-aba="usuarios">Usuários</button>
     <button class="adm__tab" type="button" data-aba="sistemas">Sistemas</button>
-    <button class="adm__tab" type="button" data-aba="acessos">Acessos</button>
+    <button class="adm__tab" type="button" data-aba="acessos">Acessos do painel</button>
+    <button class="adm__tab" type="button" data-aba="sac">SAC · externos<span class="adm__badge" data-sac-badge hidden></span></button>
   </nav>
+
+  <!-- aviso de cadastro novo no SAC (o "primeiro acesso" dos RCAs) -->
+  <div class="adm__aviso" data-sac-aviso hidden>
+    <span class="adm__aviso-ponto" aria-hidden="true"></span>
+    <span data-sac-aviso-texto></span>
+    <button class="adm__link adm__link--destaque" type="button" data-ir-sac>Ver cadastros</button>
+  </div>
 
   <!-- ============ USUÁRIOS ============ -->
   <section class="adm__painel is-on" data-painel="usuarios">
@@ -91,8 +99,8 @@
   <section class="adm__painel" data-painel="acessos">
     <div class="adm__head">
       <div>
-        <h2 class="adm__h2">Acessos</h2>
-        <p class="adm__sub">Últimos 200 registros de entrada e abertura de sistemas.</p>
+        <h2 class="adm__h2">Acessos do painel</h2>
+        <p class="adm__sub">Últimos 200 registros de entrada e abertura de sistemas. Os do SAC ficam na aba “SAC · externos”.</p>
       </div>
       <button class="adm__link" type="button" data-recarregar-acessos>Atualizar</button>
     </div>
@@ -101,6 +109,40 @@
       <table class="adm__table">
         <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Sistema</th></tr></thead>
         <tbody data-tbody-acessos></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ SAC (sistema de fora: RCAs e supervisores) ============ -->
+  <section class="adm__painel" data-painel="sac">
+    <div class="adm__head">
+      <div>
+        <h2 class="adm__h2">SAC · contas externas</h2>
+        <p class="adm__sub" data-resumo-sac></p>
+      </div>
+      <button class="adm__link" type="button" data-recarregar-sac>Atualizar</button>
+    </div>
+    <p class="adm__nota">RCAs e supervisores que abrem chamado no
+      <a href="https://sac-lube.vercel.app/" target="_blank" rel="noopener">SAC</a>. Estas contas
+      <strong>não entram no painel</strong>: só abrem chamado no SAC, depois de liberadas aqui.</p>
+
+    <div class="adm__tablewrap">
+      <table class="adm__table">
+        <thead><tr><th>Pessoa</th><th>Tipo</th><th>Situação</th><th>Cadastro</th><th></th></tr></thead>
+        <tbody data-tbody-sac></tbody>
+      </table>
+    </div>
+
+    <div class="adm__head adm__head--sub">
+      <div>
+        <h3 class="adm__h3">Acessos do SAC</h3>
+        <p class="adm__sub">Últimos 200: primeiros acessos, entradas, saídas e chamados enviados.</p>
+      </div>
+    </div>
+    <div class="adm__tablewrap">
+      <table class="adm__table">
+        <thead><tr><th>Quando</th><th>Pessoa</th><th>Ação</th><th>Detalhe</th></tr></thead>
+        <tbody data-tbody-sac-acessos></tbody>
       </table>
     </div>
   </section>
@@ -134,6 +176,6 @@
 <script src="config.js?v=20261006"></script>
 <script src="icones.js?v=20261006"></script>
 <script src="marca.js?v=20261006"></script>
-<script src="admin.js?v=20261006"></script>
+<script src="admin.js?v=20261009"></script>
 </body>
 </html>

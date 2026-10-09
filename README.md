@@ -79,7 +79,7 @@ JavaScript — não dá para burlar pelo navegador. As tabelas usam Row Level
 Security: sem sessão válida a API não devolve nada, e um usuário comum só
 enxerga o próprio perfil e os próprios sistemas.
 
-### SAC — chamado do RCA, sem login
+### SAC — chamado do RCA (sistema de fora)
 
 Abaixo do formulário de login há um atalho **"SAC · Abrir chamado"** que leva ao
 [SAC](https://sac-lube.vercel.app/), um sistema à parte (repositório e projeto próprios). Decisão do
@@ -87,6 +87,16 @@ Júlio (2026-10-07): os RCAs abrem chamado **sem precisar de conta no portal**. 
 leva até lá: não passa sessão, passe nem nada do login. Quem protege o SAC é ele mesmo — só manda
 comprovante para o e-mail de um RCA ativo no WinThor — e o guarda da Sentinela dele, com
 `exige_login = false`. Mudou o endereço do SAC? Troque o `href` da `.gate__sac` no `index.html`.
+
+**Contas do SAC (2026-10-09).** O SAC ganhou login próprio ("Entrar" / "Primeiro acesso") **nesta mesma base de
+login**, mas as contas são do SAC, não do painel: o gatilho `handle_new_user` desvia quem chega com
+`raw_user_meta_data->>'sistema' = 'sac'` para `public.sac_usuarios` (**pendente**), **sem** criar `profiles` — por
+isso uma conta do SAC nunca abre o painel (e, se tentar entrar aqui, `portal.js` sai da sessão e aponta o atalho
+do SAC). O resto da regra do domínio (@lube.com.br ou `emails_externos`) continua igual. Migração
+`sac_acesso_v1` = `db/03_sac_acesso.sql` (15 testes numa transação desfeita antes de aplicar). No painel admin,
+a aba **"SAC · externos"** mostra as contas (Liberar, Recusar, Bloquear, Senha, Remover) e os acessos do SAC
+(`sac_acessos`); cadastro novo aparece com selo na aba, faixa no topo e o número no título da página, e o
+admin confere de minuto em minuto. "Acessos do painel" continua só com o painel.
 
 ### Painel administrativo
 
