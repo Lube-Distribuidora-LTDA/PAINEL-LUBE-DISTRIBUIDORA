@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261006" />
+<link rel="stylesheet" href="styles.css?v=20261020" />
 </head>
 <body class="is-loading">
 
@@ -268,9 +268,28 @@
     </div>
   </header>
 
-  <!-- carrossel -->
+  <!-- barra de visualização: filtro por área + formato da lista -->
+  <div class="tools" data-tools>
+    <div class="chips" data-chips role="group" aria-label="Filtrar por área"></div>
+    <div class="views" role="group" aria-label="Formato da lista">
+      <button class="views__btn" type="button" data-vista-btn="area" aria-pressed="true" title="Agrupados por área">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h7M14 12h6M4 18h7M14 18h6"/></svg>
+        <span>Por área</span>
+      </button>
+      <button class="views__btn" type="button" data-vista-btn="grade" aria-pressed="false" title="Todos os cartões numa grade">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+        <span>Grade</span>
+      </button>
+      <button class="views__btn" type="button" data-vista-btn="compacta" aria-pressed="false" title="Cartões pequenos, cabem mais na tela">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v4H4zM4 11h16v4H4zM4 17h16v3H4z"/></svg>
+        <span>Compacta</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- sistemas -->
   <div class="rail">
-    <div class="rail__track" data-track data-stagger tabindex="0" aria-label="Carrossel de sistemas"></div>
+    <div class="rail__track" data-track data-stagger data-vista="area" aria-label="Sistemas"></div>
 
     <p class="rail__empty" data-empty hidden>
       <span class="mono">Nenhum sistema encontrado</span>
@@ -279,18 +298,6 @@
       <button type="button" data-suggest="fiscal">fiscal</button> ou
       <button type="button" data-suggest="frota">frota</button>.
     </p>
-  </div>
-
-  <div class="rail__ctrl">
-    <div class="rail__bar"><i data-rail-bar></i></div>
-    <div class="rail__btns">
-      <button class="cbtn" type="button" data-prev aria-label="Sistema anterior">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
-      </button>
-      <button class="cbtn" type="button" data-next aria-label="Próximo sistema">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </button>
-    </div>
   </div>
 </section>
 
@@ -371,7 +378,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=20261006"></script>
 <script src="icones.js?v=20261006"></script>
-<script src="app.js?v=20261006"></script>
-<script src="portal.js?v=20261009"></script>
+<script src="app.js?v=20261020"></script>
+<script src="portal.js?v=20261020"></script>
 </body>
 </html>

@@ -287,6 +287,7 @@
     return '' +
       '<' + tag + ' class="card' + (liberado ? '' : ' card--bloqueado') + '"' + abre +
          ' data-card data-surface="dark" data-sistema="' + esc(s.id) + '"' +
+         ' data-cat="' + esc(s.categoria || '') + '" title="' + esc(s.nome + (s.descricao ? ' — ' + s.descricao : '')) + '"' +
          ' data-keys="' + esc([s.nome, s.categoria, s.descricao, s.slug].join(' ')) + '">' +
         '<div class="card__visual">' +
           '<span class="card__num mono">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' +

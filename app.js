@@ -298,82 +298,100 @@
   }
 
   /* ---------------------------------------------------------
-     9. CARROSSEL DE SISTEMAS
+     9. LISTA DE SISTEMAS (por área / grade / compacta)
      --------------------------------------------------------- */
-  var track   = $('[data-track]');
-  var railBar = $('[data-rail-bar]');
-  var btnPrev = $('[data-prev]');
-  var btnNext = $('[data-next]');
-  var cards   = [];
+  var track    = $('[data-track]');
+  var chipsEl  = $('[data-chips]');
+  var cards    = [];
+  var VISTAS   = ['area', 'grade', 'compacta'];
+  var vista    = 'area';
+  var areaSel  = '';
 
-  function gapPx() {
-    return parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 24;
-  }
-  function stepPx() {
-    var visible = cards.filter(function (c) { return !c.classList.contains('is-hidden'); });
-    var c = visible[0];
-    return c ? c.getBoundingClientRect().width + gapPx() : track.clientWidth * 0.8;
+  try {
+    var salva = localStorage.getItem('lube_vista');
+    if (VISTAS.indexOf(salva) > -1) vista = salva;
+  } catch (e) {}
+
+  function aplicarVista(v) {
+    vista = v;
+    try { localStorage.setItem('lube_vista', v); } catch (e) {}
+    if (track) track.setAttribute('data-vista', v);
+    $$('[data-vista-btn]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-vista-btn') === v ? 'true' : 'false');
+    });
+    layout();
   }
 
-  function updateRail() {
+  /* Reordena (por área, se for o caso), renumera e põe os títulos de área. */
+  function layout() {
     if (!track) return;
-    var max = track.scrollWidth - track.clientWidth;
-    var frac = track.scrollWidth > 0 ? track.clientWidth / track.scrollWidth : 1;
-    frac = clamp(frac, 0.15, 1);
-    var ratio = max > 1 ? track.scrollLeft / max : 0;
+    $$('.grp', track).forEach(function (g) { g.remove(); });
 
-    if (railBar) {
-      railBar.style.width = (frac * 100).toFixed(2) + '%';
-      railBar.style.transform = 'translateX(' + (ratio * (1 - frac) / frac * 100).toFixed(2) + '%)';
-    }
-    if (btnPrev) btnPrev.disabled = max <= 1 || track.scrollLeft <= 1;
-    if (btnNext) btnNext.disabled = max <= 1 || track.scrollLeft >= max - 1;
+    var rank = {}, n = 0;
+    cards.forEach(function (c) { if (!(c._cat in rank)) rank[c._cat] = n++; });
+    var ordem = cards.slice().sort(function (a, b) {
+      if (vista === 'area' && rank[a._cat] !== rank[b._cat]) return rank[a._cat] - rank[b._cat];
+      return a._i - b._i;
+    });
+    var mudou = ordem.some(function (c, i) { return track.children[i] !== c; });
+    if (mudou) ordem.forEach(function (c) { track.appendChild(c); });
+
+    var visiveis = ordem.filter(function (c) { return !c.classList.contains('is-hidden'); });
+    var porArea = {};
+    visiveis.forEach(function (c) { porArea[c._cat] = (porArea[c._cat] || 0) + 1; });
+
+    var ultima = null;
+    visiveis.forEach(function (c, i) {
+      var num = $('.card__num', c);
+      if (num) num.textContent = (i < 9 ? '0' : '') + (i + 1);
+      if (vista === 'area' && c._cat !== ultima) {
+        var g = document.createElement('div');
+        g.className = 'grp';
+        g.innerHTML = '<span class="grp__nome"></span><span class="grp__qtd mono"></span>';
+        g.firstChild.textContent = c._cat || 'Outros';
+        g.lastChild.textContent = porArea[c._cat] + (porArea[c._cat] === 1 ? ' sistema' : ' sistemas');
+        track.insertBefore(g, c);
+      }
+      ultima = c._cat;
+    });
   }
 
-  if (track) {
-    var smooth = reduced ? 'auto' : 'smooth';
-    if (btnNext) btnNext.addEventListener('click', function () {
-      track.scrollBy({ left: stepPx(), behavior: smooth });
+  function montarChips() {
+    if (!chipsEl) return;
+    var cats = [], cont = {};
+    cards.forEach(function (c) {
+      if (!(c._cat in cont)) { cont[c._cat] = 0; cats.push(c._cat); }
+      cont[c._cat]++;
     });
-    if (btnPrev) btnPrev.addEventListener('click', function () {
-      track.scrollBy({ left: -stepPx(), behavior: smooth });
+    if (areaSel && !(areaSel in cont)) areaSel = '';
+    chipsEl.innerHTML = '';
+    chipsEl.hidden = cats.length < 2;
+    [''].concat(cats).forEach(function (cat) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip' + (cat === areaSel ? ' is-on' : '');
+      b.setAttribute('data-area', cat);
+      b.appendChild(document.createTextNode(cat || 'Todas'));
+      var em = document.createElement('em');
+      em.textContent = cat ? cont[cat] : cards.length;
+      b.appendChild(em);
+      chipsEl.appendChild(b);
     });
-
-    track.addEventListener('scroll', updateRail, { passive: true });
-    window.addEventListener('resize', updateRail);
-
-    track.addEventListener('keydown', function (ev) {
-      if (ev.key === 'ArrowRight') { ev.preventDefault(); track.scrollBy({ left: stepPx(), behavior: smooth }); }
-      if (ev.key === 'ArrowLeft')  { ev.preventDefault(); track.scrollBy({ left: -stepPx(), behavior: smooth }); }
-    });
-
-    /* arrastar com o mouse */
-    var down = false, startX = 0, startScroll = 0, moved = 0;
-    track.addEventListener('pointerdown', function (ev) {
-      if (ev.pointerType === 'touch') return;      // toque já rola nativamente
-      down = true; moved = 0;
-      startX = ev.clientX; startScroll = track.scrollLeft;
-      track.classList.add('is-dragging');
-    });
-    window.addEventListener('pointermove', function (ev) {
-      if (!down) return;
-      var dx = ev.clientX - startX;
-      moved = Math.max(moved, Math.abs(dx));
-      track.scrollLeft = startScroll - dx;
-    });
-    window.addEventListener('pointerup', function () {
-      if (!down) return;
-      down = false;
-      track.classList.remove('is-dragging');
-    });
-    track.addEventListener('click', function (ev) {
-      if (moved > 8) { ev.preventDefault(); ev.stopPropagation(); }
-      moved = 0;
-    }, true);
-
-    updateRail();
-    window.addEventListener('load', updateRail);
   }
+
+  if (chipsEl) chipsEl.addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('[data-area]') : null;
+    if (!b) return;
+    areaSel = b.getAttribute('data-area');
+    $$('.chip', chipsEl).forEach(function (c) {
+      c.classList.toggle('is-on', c.getAttribute('data-area') === areaSel);
+    });
+    filter(input ? input.value : '');
+  });
+
+  $$('[data-vista-btn]').forEach(function (b) {
+    b.addEventListener('click', function () { aplicarVista(b.getAttribute('data-vista-btn')); });
+  });
 
   /* ---------------------------------------------------------
      10. BUSCA / FILTRO
@@ -393,12 +411,13 @@
   }
 
 
-  function filter(raw) {
+  function filter(raw, quieto) {
     var term = norm(raw).trim();
     var hits = 0;
 
     cards.forEach(function (c) {
-      var hit = !term || term.split(/\s+/).every(function (w) { return c._hay.indexOf(w) > -1; });
+      var hit = (!term || term.split(/\s+/).every(function (w) { return c._hay.indexOf(w) > -1; })) &&
+                (!areaSel || c._cat === areaSel);
       c.classList.toggle('is-hidden', !hit);
       if (hit) hits++;
     });
@@ -407,7 +426,7 @@
     if (emptyEl) emptyEl.hidden = hits > 0;
     if (track) track.style.display = hits > 0 ? '' : 'none';
 
-    if (hits > 0 && !reduced) {                   // re-anima os cartões que sobraram
+    if (hits > 0 && !reduced && !quieto) {        // re-anima os cartões que sobraram
       cards.filter(function (c) { return !c.classList.contains('is-hidden'); })
         .forEach(function (c, i) {
           c.classList.remove('is-new');
@@ -416,7 +435,7 @@
           c.classList.add('is-new');
         });
     }
-    if (track) { track.scrollLeft = 0; updateRail(); }
+    layout();
   }
 
   if (input) {
@@ -464,18 +483,28 @@
   /* Relê os cartões depois que o portal.js os monta a partir do banco. */
   function indexCards() {
     cards = track ? $$('.card', track) : [];
-    cards.forEach(function (c) {
+    cards.forEach(function (c, i) {
+      c._i = i;
+      c._cat = c.getAttribute('data-cat') || '';
       c._hay = norm((c.getAttribute('data-keys') || '') + ' ' + c.textContent.replace(/\s+/g, ' '));
+      c.style.transitionDelay = (Math.min(i, 12) * 55) + 'ms';
     });
     magnetico();
+    montarChips();
     if (track) {
-      track.scrollLeft = 0;
-      requestAnimationFrame(function () { track.classList.add('in'); updateRail(); });
+      track.setAttribute('data-vista', vista);
+      requestAnimationFrame(function () { track.classList.add('in'); });
+      setTimeout(function () {                    // o atraso só vale para a entrada, não para o hover
+        cards.forEach(function (c) { c.style.transitionDelay = ''; });
+      }, 1600);
     }
-    if (input && input.value) filter(input.value);
+    $$('[data-vista-btn]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-vista-btn') === vista ? 'true' : 'false');
+    });
+    filter(input ? input.value : '', true);
   }
 
-  window.LubePainel = { indexCards: indexCards, updateRail: updateRail };
+  window.LubePainel = { indexCards: indexCards };
 
   /* ---------------------------------------------------------
      12. CONTATOS DO TI (WhatsApp)
