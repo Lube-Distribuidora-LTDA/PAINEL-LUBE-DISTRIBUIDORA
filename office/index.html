@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LUBE OFFICE</title>
+<meta name="description" content="Documentos, planilhas e apresentações da Lube Distribuidora, editados juntos dentro do painel.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#030616">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 112'%3E%3Cg transform='translate(20,0) skewX(-10)'%3E%3Cpath fill='%231E2B8C' d='M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z'/%3E%3Cpath fill='%23EE1B24' d='M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="office.css?v=20261021">
+</head>
+<body class="carregando">
+
+<div class="grao" aria-hidden="true"></div>
+<div class="tarja-demo" data-tarja-demo hidden>DEMONSTRAÇÃO · dados sintéticos, nada aqui é real</div>
+
+<div class="carga" aria-hidden="true">
+  <div class="carga__caixa">
+    <span class="carga__marca" data-marca-branca></span>
+    <div class="carga__barra"><i></i></div>
+    <span class="mono">Abrindo o LUBE OFFICE</span>
+  </div>
+</div>
+
+<div class="bloqueio" data-bloqueio hidden>
+  <div class="bloqueio__caixa">
+    <span class="carga__marca" data-marca-branca style="animation:none"></span>
+    <h1 data-bloqueio-titulo>Entre pelo painel</h1>
+    <p data-bloqueio-texto>O LUBE OFFICE abre com o mesmo login do Painel de Sistemas.</p>
+    <a class="btn btn--prim" href="../?voltar=office" data-bloqueio-botao>Ir para o login</a>
+  </div>
+</div>
+
+<!-- ============ TOPO ============ -->
+<header class="topo">
+  <button class="topo__menu" type="button" data-abrir-lateral aria-label="Abrir menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+  </button>
+  <a class="topo__marca" href="./" aria-label="LUBE OFFICE — início">
+    <span class="topo__l" data-marca-branca></span>
+    <span class="topo__nome">LUBE<b>OFFICE</b></span>
+  </a>
+
+  <label class="busca">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input type="search" data-busca placeholder="Buscar em todos os seus arquivos" autocomplete="off" spellcheck="false" aria-label="Buscar arquivos">
+    <button class="busca__limpar" type="button" data-busca-limpar aria-label="Limpar busca" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <kbd>/</kbd>
+  </label>
+
+  <div class="topo__acoes">
+    <button class="sino" type="button" data-sino aria-label="Avisos" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="sino__n" data-sino-n hidden>0</span>
+    </button>
+    <div class="avisos suspenso" data-avisos hidden>
+      <div class="avisos__topo">
+        <h2>Avisos</h2>
+        <button type="button" data-avisos-lidos>Marcar todos como lidos</button>
+      </div>
+      <div class="avisos__lista" data-avisos-lista></div>
+    </div>
+
+    <button class="eu" type="button" data-eu aria-haspopup="menu" aria-expanded="false">
+      <span class="av" data-eu-av>··</span>
+      <span class="eu__nome" data-eu-nome></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="menu suspenso" data-menu-eu hidden role="menu" style="top:52px;right:0">
+      <a href="../" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Painel de sistemas
+      </a>
+      <hr>
+      <button type="button" class="perigo" data-sair role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sair
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="corpo">
+  <!-- ============ LATERAL ============ -->
+  <aside class="lateral" data-lateral>
+    <div class="novo">
+      <button class="btn-novo" type="button" data-novo aria-haspopup="menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Novo</span>
+        <kbd>N</kbd>
+      </button>
+      <div class="menu menu-novo suspenso" data-menu-novo hidden role="menu">
+        <button type="button" data-criar="docx" role="menuitem"><span class="menu__ico" data-ico="docx"></span>Documento</button>
+        <button type="button" data-criar="xlsx" role="menuitem"><span class="menu__ico" data-ico="xlsx"></span>Planilha</button>
+        <button type="button" data-criar="pptx" role="menuitem"><span class="menu__ico" data-ico="pptx"></span>Apresentação</button>
+        <hr>
+        <button type="button" data-ir-visao="modelos" role="menuitem"><span class="menu__ico" data-ico="modelo"></span>De um modelo da Lube</button>
+        <button type="button" data-criar="pasta" role="menuitem"><span class="menu__ico" data-ico="pasta"></span>Pasta</button>
+        <button type="button" data-enviar role="menuitem"><span class="menu__ico" data-ico="envio"></span>Enviar do computador</button>
+      </div>
+    </div>
+
+    <nav class="visoes" aria-label="Seções">
+      <a class="visao" href="?v=meus" data-visao="meus">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+        Meus arquivos
+      </a>
+      <a class="visao" href="?v=compartilhados" data-visao="compartilhados">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 20a6.5 6.5 0 0 0-3-5.5"/></svg>
+        Compartilhados comigo
+      </a>
+      <a class="visao" href="?v=recentes" data-visao="recentes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Recentes
+      </a>
+      <a class="visao" href="?v=modelos" data-visao="modelos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Modelos da Lube
+      </a>
+      <a class="visao" href="?v=lixeira" data-visao="lixeira">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+        Lixeira
+      </a>
+    </nav>
+
+    <div class="lateral__pe">
+      <div class="uso">
+        <span class="mono">Seu espaço</span>
+        <strong data-uso-arquivos>—</strong>
+        <span data-uso-bytes>&nbsp;</span>
+      </div>
+      <div class="motor" data-motor>
+        <i></i><span data-motor-txt>Conferindo o editor…</span>
+      </div>
+      <a class="voltar" href="../">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        Painel de sistemas
+      </a>
+    </div>
+  </aside>
+
+  <!-- ============ PRINCIPAL ============ -->
+  <main class="principal" data-principal>
+    <section class="ola" data-ola>
+      <p class="mono">LUBE OFFICE</p>
+      <h1><span data-saudacao>Olá</span>, <em data-primeiro-nome></em>.</h1>
+      <p>Documentos, planilhas e apresentações da Lube, editados juntos e guardados no painel.</p>
+      <div class="atalhos">
+        <button class="atalho" type="button" data-criar="docx"><span class="ico" data-ico="docx"></span><strong>Documento</strong><span>Proposta, ata, comunicado</span></button>
+        <button class="atalho atalho--plan" type="button" data-criar="xlsx"><span class="ico ico--plan" data-ico="xlsx"></span><strong>Planilha</strong><span>Metas, listas, controles</span></button>
+        <button class="atalho atalho--apre" type="button" data-criar="pptx"><span class="ico ico--apre" data-ico="pptx"></span><strong>Apresentação</strong><span>Reunião, resultado do mês</span></button>
+        <button class="atalho atalho--env" type="button" data-enviar><span class="ico ico--env" data-ico="envio"></span><strong>Enviar arquivo</strong><span>Word, Excel, PowerPoint, PDF</span></button>
+      </div>
+    </section>
+
+    <section data-secao-modelos>
+      <div class="secao__topo">
+        <div class="secao__titulo">
+          <span class="mono">Com a marca da Lube</span>
+          <h2>Comece de um modelo</h2>
+        </div>
+        <a class="link-mais" href="?v=modelos" data-ir-visao="modelos">Ver todos
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+      <div class="modelos" data-modelos></div>
+    </section>
+
+    <section data-secao-lista>
+      <div class="lista__topo">
+        <nav class="trilha" data-trilha aria-label="Caminho"></nav>
+        <div class="ferr">
+          <button class="btn" type="button" data-nova-pasta>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M12 11v5M9.5 13.5h5"/></svg>
+            Nova pasta
+          </button>
+          <div class="alternar" role="group" aria-label="Formato">
+            <button type="button" data-formato="lista" aria-pressed="true" title="Lista">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            </button>
+            <button type="button" data-formato="grade" aria-pressed="false" title="Grade">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="tabela" data-tabela role="table" aria-label="Arquivos"></div>
+      <div class="vazio" data-vazio hidden></div>
+    </section>
+  </main>
+</div>
+
+<div class="veu" data-veu hidden></div>
+<aside class="gaveta" data-gaveta hidden aria-modal="true" role="dialog"></aside>
+<dialog class="dialogo" data-dialogo></dialog>
+<div class="menu suspenso" data-menu-item hidden role="menu"></div>
+<div class="soltar" data-soltar hidden>
+  <div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>
+    <strong>Solte para enviar ao LUBE OFFICE</strong>
+    <span data-soltar-onde>Vai para Meus arquivos</span>
+  </div>
+</div>
+<div class="toasts" data-toasts aria-live="polite"></div>
+<input type="file" data-arquivo-input multiple hidden accept=".docx,.xlsx,.pptx,.pdf,.doc,.xls,.ppt,.odt,.ods,.odp,.csv,.txt,.rtf">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="../config.js?v=20261006"></script>
+<script src="../marca.js?v=20261006"></script>
+<script src="comum.js?v=20261021"></script>
+<script src="office.js?v=20261021"></script>
+</body>
+</html>

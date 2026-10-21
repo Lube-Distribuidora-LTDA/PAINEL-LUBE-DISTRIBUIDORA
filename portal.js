@@ -231,6 +231,36 @@
     } catch (e) { return null; }
   })();
 
+  /* ---------- ?voltar=office: o LUBE OFFICE mandou entrar por aqui ---------- */
+  var voltarPara = (function () {
+    try {
+      var u = new URL(location.href);
+      if (!u.searchParams.has('voltar')) return null;
+      var v = u.searchParams.get('voltar');
+      u.searchParams.delete('voltar');
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+      return v === 'office' ? 'office/' : null;
+    } catch (e) { return null; }
+  })();
+
+  /* ---------- LUBE OFFICE: avisos não lidos ao lado do link do menu ----------
+     Falha em silêncio: sem a função no ar, o link só fica sem número. */
+  function avisosOffice(token) {
+    var el = $('[data-office-n]');
+    if (!el || !token || typeof fetch !== 'function') return;
+    var pedido = fetch(CFG.url + '/functions/v1/office', {
+      method: 'POST', credentials: 'omit', cache: 'no-store',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({ acao: 'eu' })
+    }).then(function (r) { return r.ok ? r.json() : null; });
+    limite(pedido, 5000).then(function (j) {
+      var n = j && typeof j.avisos_nao_lidos === 'number' ? j.avisos_nao_lidos : 0;
+      el.textContent = n > 99 ? '99+' : String(n);
+      el.hidden = !n;
+      el.parentNode.setAttribute('title', n ? n + (n > 1 ? ' avisos novos' : ' aviso novo') + ' no LUBE OFFICE' : 'LUBE OFFICE');
+    }, function () {});
+  }
+
   // evita vaivém portal ↔ sistema se a entrada falhar: uma ida automática
   // por sistema a cada 30 s nesta aba
   function idaRecente(slug) {
@@ -399,9 +429,16 @@
           });
         }
         window.LUBE_PERFIL = perfil;
+        if (voltarPara) {
+          var destino = voltarPara;
+          voltarPara = null;
+          location.assign(destino);
+          return;
+        }
         mostrarPortal();
         barraConta();
         informarIdentidade(sessao.access_token);
+        avisosOffice(sessao.access_token);
 
         return Promise.all([
           sb.from('sistemas').select('*').eq('ativo', true).order('ordem', { ascending: true }),

@@ -22,10 +22,11 @@ marca.js        marca "L" em SVG para páginas que não carregam o app.js
 config.js       URL e chave pública do Supabase
 middleware.ts   guarda da Sentinela na porta do portal (FECHADO = null)
 sentinela-guarda.ts  núcleo do guarda (cópia de guarda/sentinela-guarda.ts)
+office/         LUBE OFFICE: Drive, editor, modelos (todo usuário ativo)
 sentinela/      painel da Sentinela Lube (só administrador)
 guarda/         núcleo, modelo de middleware, testes e guia de instalação
 db/             SQL completo do banco (tabelas, gatilhos e políticas)
-supabase/       Edge Functions admin-users e sentinela (central)
+supabase/       Edge Functions admin-users, sentinela (central) e office
 docs/           especificação da Sentinela
 assets/         imagens
 ```
@@ -149,6 +150,48 @@ schema `sentinela` neste mesmo Supabase). Especificação em
   (`oidc`) e se a lista da central chegou (`lista.ok`).
 - Mudou o núcleo em `guarda/`? Copie para a raiz (`sentinela-guarda.ts`) e rode
   `node guarda/teste/guarda.teste.mjs`.
+
+## LUBE OFFICE (documentos, planilhas e apresentações)
+
+Desde 2026-10-21, em `/office/`. Todo usuário ativo do painel tem o seu, sem
+liberação por sistema: o link **Office** fica no menu do portal, com o número de
+avisos não lidos.
+
+- **Drive** (`office/index.html`): Meus arquivos, Compartilhados comigo,
+  Recentes, Modelos da Lube e Lixeira; criar documento, planilha, apresentação
+  ou pasta; enviar do computador (botão ou arrastar); renomear, mover, baixar;
+  compartilhar com uma pessoa ou com **todos da Lube**, como ver, comentar ou
+  editar (a pasta passa o acesso para tudo o que está dentro); versões com quem e
+  quando, e voltar a qualquer uma; atividade do arquivo; sino de avisos
+  (compartilhamento e @menção em comentário).
+- **Editor** (`office/editor.html?id=`): abre o **ONLYOFFICE Docs** com a
+  configuração assinada pela função. Enquanto o motor não estiver instalado, a
+  página mostra o arquivo com os detalhes e o download.
+- **Banco**: schema `office` neste Supabase (`db/04_office.sql`), separado das
+  tabelas do portal. RLS ligado e sem políticas: o navegador **nunca** fala com o
+  schema. Tudo passa pela Edge Function `office`, que chama as funções
+  `public.office_srv_*` com a chave de serviço; cada função confere o papel de
+  quem pediu (dono 4 · editar 3 · comentar 2 · ver 1). Nada se apaga: excluir
+  manda para a lixeira.
+- **Arquivos**: bucket privado `office`, um objeto por versão
+  (`arquivos/<id>/<carimbo>.<ext>`). O envio vai direto do navegador ao Storage
+  por um link assinado que a função gera para o caminho reservado.
+- **Edge Function `office`** (`supabase/functions/office`, sem `verify_jwt`
+  porque tem duas portas e confere sozinha): `POST /office` recebe as ações do
+  navegador com o JWT da sessão; `POST /office/motor` recebe o arquivo salvo pelo
+  ONLYOFFICE, com o token JWT da chave do motor, e grava a versão nova.
+  Segredos (cadastrados pelo TI em Supabase › Edge Functions › Secrets):
+  `OFFICE_MOTOR_URL` (endereço do ONLYOFFICE) e `OFFICE_JWT_SECRET` (a mesma
+  chave JWT do ONLYOFFICE). Sem eles o Drive funciona e o editor avisa que o
+  motor ainda não foi instalado. Testes: `node --test supabase/functions/office/teste/motor.test.mjs`.
+- **Modelos** (`office/modelos/`): em branco e com a marca da Lube (proposta,
+  ata, relatório mensal, apresentação). Gerados por
+  `python office/ferramentas/gerar_modelos.py` (precisa de python-docx,
+  python-pptx, openpyxl e Pillow).
+- **Demonstração**: `http://localhost:4321/office/?demo=1` com dados sintéticos
+  (`office/demo.js`, só na máquina; fica fora do site pelo `.vercelignore`).
+- Quem chega ao Office sem sessão vai para `/?voltar=office` e, depois do login,
+  volta para `/office/`.
 
 ## Banco de dados
 

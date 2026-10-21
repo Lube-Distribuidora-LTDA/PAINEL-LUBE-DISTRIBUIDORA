@@ -1,0 +1,42 @@
+/* LUBE OFFICE — página do editor */
+.editor-pg{ height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+.ed-topo{
+  position:relative; z-index:5; flex:none; height:54px; display:flex; align-items:center; gap:.9rem; padding:0 1rem 0 .6rem;
+  background:#030616; border-bottom:1px solid var(--line);
+}
+.ed-voltar{ display:flex; align-items:center; gap:.35rem; height:40px; padding:0 .55rem; border-radius:10px; color:var(--muted); }
+.ed-voltar:hover{ background:rgba(255,255,255,.06); color:var(--off); }
+.ed-voltar svg{ width:18px; }
+.ed-l{ width:30px; display:block; }
+.ed-ico .ico{ width:30px; height:30px; }
+.ed-titulo{ display:grid; min-width:0; flex:1; line-height:1.15; }
+.ed-titulo strong{ font-size:.98rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ed-titulo .mono{ color:var(--muted); font-size:.58rem; margin-top:.2rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ed-acoes{ display:flex; align-items:center; gap:.6rem; }
+.ed-acoes .btn{ height:36px; }
+.ed-area{ flex:1; position:relative; min-height:0; }
+.ed-motor{ position:absolute; inset:0; }
+.ed-motor iframe{ border:0; }
+
+.ed-espera{ position:absolute; inset:0; overflow:auto; display:grid; place-items:center; padding:2rem 1rem; }
+.ed-cartao{
+  width:min(620px, 100%); display:grid; gap:1.4rem; padding:2rem; border-radius:24px;
+  background:linear-gradient(160deg, rgba(44,63,196,.18), rgba(6,11,41,.9) 55%); border:1px solid var(--line-2);
+  box-shadow:0 40px 100px rgba(0,0,0,.45);
+}
+.ed-cartao__ico .ico{ width:72px; height:72px; }
+.ed-cartao__txt{ display:grid; gap:.5rem; }
+.ed-cartao__txt .mono{ color:var(--red); }
+.ed-cartao__txt h1{ font-size:clamp(1.4rem, 3vw, 2rem); font-weight:900; letter-spacing:-.035em; line-height:1.1; word-break:break-word; }
+.ed-cartao__txt p{ color:var(--muted); line-height:1.5; }
+.ed-cartao .detalhes{ padding:1rem 1.1rem; border-radius:14px; background:rgba(3,6,22,.5); border:1px solid var(--line); }
+.ed-cartao__acoes{ display:flex; gap:.6rem; flex-wrap:wrap; }
+.ed-cartao__acoes .btn{ height:44px; padding:0 1.2rem; }
+.ed-nota{ color:var(--muted-d); font-size:.8rem; line-height:1.5; }
+
+@media (max-width:640px){
+  .ed-acoes .btn span{ display:none; }
+  .ed-acoes .btn{ padding:0 .7rem; }
+  .ed-titulo .mono{ display:none; }
+  .ed-cartao{ padding:1.4rem; }
+}

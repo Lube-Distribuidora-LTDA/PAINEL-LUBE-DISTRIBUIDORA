@@ -9,3 +9,6 @@ docs/
 README.md
 # modo demonstração do painel da Sentinela: só roda em localhost (?demo=1)
 sentinela/demo.js
+# LUBE OFFICE: demonstração (só localhost, ?demo=1) e o gerador dos modelos
+office/demo.js
+office/ferramentas/

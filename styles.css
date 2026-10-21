@@ -238,6 +238,12 @@ body.loaded .curtain{ transform:translateY(-101%); }
   transition:transform .6s var(--ease);
 }
 .nav__links a:hover::after{ transform:scaleX(1); transform-origin:left; }
+/* LUBE OFFICE (2026-10-21): link com o número de avisos não lidos */
+.nav__office{ display:inline-flex; align-items:center; gap:.45rem; }
+.nav__badge{
+  min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--red); color:#fff;
+  font:700 .6rem/18px 'JetBrains Mono',monospace; letter-spacing:0; text-align:center;
+}
 
 .nav__burger{ display:none; width:30px; height:18px; position:relative; }
 .nav__burger span{

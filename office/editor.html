@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LUBE OFFICE</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#030616">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 112'%3E%3Cg transform='translate(20,0) skewX(-10)'%3E%3Cpath fill='%231E2B8C' d='M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z'/%3E%3Cpath fill='%23EE1B24' d='M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="office.css?v=20261021">
+<link rel="stylesheet" href="editor.css?v=20261021">
+</head>
+<body class="carregando editor-pg">
+
+<div class="tarja-demo" data-tarja-demo hidden>DEMONSTRAÇÃO · dados sintéticos, nada aqui é real</div>
+
+<div class="carga" aria-hidden="true">
+  <div class="carga__caixa">
+    <span class="carga__marca" data-marca-branca></span>
+    <div class="carga__barra"><i></i></div>
+    <span class="mono" data-carga-txt>Abrindo o arquivo</span>
+  </div>
+</div>
+
+<div class="bloqueio" data-bloqueio hidden>
+  <div class="bloqueio__caixa">
+    <span class="carga__marca" data-marca-branca style="animation:none"></span>
+    <h1 data-bloqueio-titulo>Entre pelo painel</h1>
+    <p data-bloqueio-texto></p>
+    <a class="btn btn--prim" href="./" data-bloqueio-botao>Voltar ao LUBE OFFICE</a>
+  </div>
+</div>
+
+<header class="ed-topo">
+  <a class="ed-voltar" href="./" data-voltar aria-label="Voltar ao LUBE OFFICE">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    <span class="ed-l" data-marca-branca></span>
+  </a>
+  <span class="ed-ico" data-ed-ico></span>
+  <div class="ed-titulo">
+    <strong data-ed-nome>…</strong>
+    <span class="mono" data-ed-sub></span>
+  </div>
+  <div class="ed-acoes">
+    <span class="selo-papel" data-ed-papel hidden></span>
+    <a class="btn" href="#" data-ed-compartilhar>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>
+      <span>Compartilhar</span>
+    </a>
+  </div>
+</header>
+
+<main class="ed-area">
+  <div id="editor-onlyoffice" class="ed-motor" data-ed-motor hidden></div>
+
+  <section class="ed-espera" data-ed-espera hidden>
+    <div class="ed-cartao">
+      <span class="ed-cartao__ico" data-ed-cartao-ico></span>
+      <div class="ed-cartao__txt">
+        <span class="mono">LUBE OFFICE</span>
+        <h1 data-ed-cartao-nome></h1>
+        <p data-ed-motivo></p>
+      </div>
+      <dl class="detalhes" data-ed-detalhes></dl>
+      <div class="ed-cartao__acoes">
+        <button class="btn btn--prim" type="button" data-ed-baixar>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          Baixar o arquivo
+        </button>
+        <a class="btn" href="./" data-voltar>Voltar ao LUBE OFFICE</a>
+      </div>
+      <p class="ed-nota">Assim que o motor de edição estiver no ar, este mesmo endereço abre o arquivo para editar junto, com o nome e o cursor de cada pessoa.</p>
+    </div>
+  </section>
+</main>
+
+<div class="toasts" data-toasts aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="../config.js?v=20261006"></script>
+<script src="../marca.js?v=20261006"></script>
+<script src="comum.js?v=20261021"></script>
+<script src="editor.js?v=20261021"></script>
+</body>
+</html>
