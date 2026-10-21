@@ -202,6 +202,16 @@ avisos não lidos.
   e sem domínio), avisa o endereço ao painel e repete o aviso de 5 em 5 minutos;
   sem aviso por 15 minutos, o painel mostra o editor fora do ar.
   `DIAGNOSTICO MOTOR.bat` diz numa frase o que está errado.
+  **No ar desde 2026-10-21** (ONLYOFFICE 10.0 na SRV-IA, 16 GB).
+- **Teste de ponta a ponta do motor** (sem login no painel): `POST /office/motor/teste`
+  com uma senha temporária gravada no banco por quem tem acesso SQL
+  (`office.config`, chave `teste_motor`; modelo em `db/06_office_teste_motor.sql`).
+  Ela cria um arquivo "Teste do motor" na conta indicada e devolve a configuração
+  assinada do editor; abrir, editar e fechar tem que gerar a versão nova com origem
+  `editor`. Depois: mandar o arquivo para a lixeira e apagar a senha.
+- **Altura do editor**: o ONLYOFFICE troca o espaço reservado pela própria
+  moldura; o `editor.css` dá o tamanho a `.ed-area > iframe` (sem isso ela fica
+  com 150 px).
 - **Modelos** (`office/modelos/`): em branco e com a marca da Lube (proposta,
   ata, relatório mensal, apresentação). Gerados por
   `python office/ferramentas/gerar_modelos.py` (precisa de python-docx,

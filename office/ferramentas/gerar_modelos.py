@@ -9,8 +9,12 @@ Precisa de: python-docx 1.1, python-pptx 1.0, openpyxl 3.1, Pillow.
 Cores e letras: nota "Identidade visual da Lube" no cerebro (azul #0D176E,
 vermelho #E5101F; fonte Arial nos arquivos, que abre igual em qualquer maquina).
 """
+import re
+import zipfile
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from PIL import Image
 from docx import Document
@@ -27,6 +31,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.datavalidation import DataValidation
 from pptx import Presentation
 from pptx.dml.color import RGBColor as PptRGB
+from pptx.enum.lang import MSO_LANGUAGE_ID
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Emu, Inches, Pt as PptPt
@@ -53,6 +58,39 @@ def logo_leve(largura_px=640):
     img.save(buf, "PNG", optimize=True)
     buf.seek(0)
     return buf
+
+
+# Acabamento de todo arquivo gerado (achado no teste de ponta a ponta, 2026-10-21):
+# as bibliotecas deixam o idioma em ingles (o corretor sublinhava tudo) e as
+# propriedades com "python-docx", data de 2013 e "Microsoft Macintosh Word".
+def finalizar(caminho, titulo=""):
+    agora = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    core = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+        'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" '
+        'xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        f"<dc:title>{escape(titulo)}</dc:title><dc:creator>Lube Distribuidora</dc:creator>"
+        "<cp:lastModifiedBy>Lube Distribuidora</cp:lastModifiedBy><cp:revision>1</cp:revision>"
+        f'<dcterms:created xsi:type="dcterms:W3CDTF">{agora}</dcterms:created>'
+        f'<dcterms:modified xsi:type="dcterms:W3CDTF">{agora}</dcterms:modified></cp:coreProperties>'
+    )
+    tmp = caminho.with_name(caminho.name + ".tmp")
+    with zipfile.ZipFile(caminho) as zin, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            dados = zin.read(item.filename)
+            if item.filename.endswith(".xml"):
+                txt = dados.decode("utf-8")
+                if item.filename == "docProps/core.xml":
+                    txt = core
+                elif item.filename == "docProps/app.xml":
+                    txt = re.sub(r"<Application>.*?</Application>", "<Application>LUBE OFFICE</Application>", txt)
+                    txt = re.sub(r"<AppVersion>.*?</AppVersion>", "", txt)
+                txt = (txt.replace('w:val="en-US"', 'w:val="pt-BR"').replace('lang="en-US"', 'lang="pt-BR"')
+                          .replace('w:eastAsia="ja-JP"', 'w:eastAsia="pt-BR"').replace('w:eastAsia="en-US"', 'w:eastAsia="pt-BR"'))
+                dados = txt.encode("utf-8")
+            zout.writestr(item, dados)
+    tmp.replace(caminho)
 
 
 # ---------------------------------------------------------------- Word
@@ -325,6 +363,7 @@ def texto(slide, x, y, w, h, txt, tam, cor="FFFFFF", negrito=False, alinhar=PP_A
     r.font.size = PptPt(tam)
     r.font.bold = negrito
     r.font.name = FONTE
+    r.font.language_id = MSO_LANGUAGE_ID.BRAZILIAN_PORTUGUESE
     r.font.color.rgb = rgb(cor)
     return caixa
 
@@ -425,6 +464,7 @@ def apresentacao(com_conteudo):
         r = par.add_run()
         r.text = "▸  " + item
         r.font.size, r.font.name = PptPt(24), FONTE
+        r.font.language_id = MSO_LANGUAGE_ID.BRAZILIAN_PORTUGUESE
         r.font.color.rgb = rgb("1B2140")
         par.space_after = PptPt(18)
 
@@ -446,5 +486,10 @@ if __name__ == "__main__":
     ata_docx()
     relatorio_xlsx()
     apresentacao(True)
+    titulos = {"proposta-comercial.docx": "Proposta comercial", "ata-de-reuniao.docx": "Ata de reunião",
+               "relatorio-mensal.xlsx": "Relatório mensal", "apresentacao-lube.pptx": "Apresentação Lube"}
+    for f in sorted(SAIDA.iterdir()):
+        if f.suffix in (".docx", ".xlsx", ".pptx"):
+            finalizar(f, titulos.get(f.name, ""))
     for f in sorted(SAIDA.iterdir()):
         print(f"{f.name:28} {f.stat().st_size / 1024:7.1f} KB")

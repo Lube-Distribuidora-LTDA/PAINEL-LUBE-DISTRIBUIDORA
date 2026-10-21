@@ -1,9 +1,10 @@
 // =========================================================
 // LUBE OFFICE — Drive e editor do portal (2026-10-21)
-// Três portas:
+// Portas:
 //   POST /office                  o navegador do portal, com o JWT da sessão; a ação vai no corpo
 //   POST /office/motor            o motor de edição (ONLYOFFICE) devolvendo o arquivo salvo
 //   POST /office/motor/registrar  a SRV-IA avisando o endereço do motor (o túnel muda ao reiniciar)
+//   POST /office/motor/teste      teste de ponta a ponta, só com a senha temporária do banco
 // As duas portas do motor usam token JWT assinado com OFFICE_JWT_SECRET.
 // O schema office só é tocado pelas funções public.office_srv_*, com a chave de
 // serviço, que nunca sai daqui. Quem pode o quê é conferido no banco.
@@ -338,10 +339,56 @@ async function registrarMotor(req: Request) {
   }
 }
 
+// ---------------------------------------------------------
+// porta de teste do motor: abre um arquivo de teste no editor sem login no painel,
+// para conferir de ponta a ponta depois de instalar ou reinstalar. Só funciona com a
+// senha temporária que alguém com acesso ao banco grava em office.config
+// ('teste_motor', ver db/06_office_teste_motor.sql); o arquivo é do dono que ela indica.
+// ---------------------------------------------------------
+async function testeMotor(req: Request) {
+  let c: Record<string, any>;
+  try { c = await req.json(); } catch { return json({ erro: 'JSON inválido' }, 400); }
+  try {
+    const t = await rpc('office_srv_teste_motor', { p_token: String(c.token ?? '') });
+    const dono = String(t.dono);
+    const m = await motorAtual(true);
+    if (m.situacao !== 'ligado') return json({ erro: 'Motor ' + m.situacao, situacao: m.situacao, visto_em: m.visto_em }, 503);
+    let id = uuidOuNulo(c.arquivo);
+    if (!id) {
+      // arquivo de teste novo, a partir do documento em branco do portal
+      const nome = 'Teste do motor ' + horaBrasilia(new Date().toISOString()).replace(/[/:]/g, '-');
+      const r = await rpc('office_srv_arquivo_criar', { p_user: dono, p_pasta: null, p_nome: nome, p_extensao: 'docx' });
+      const modelo = await fetch(`${PORTAL}/office/modelos/branco.docx`);
+      if (!modelo.ok) throw new ErroOffice('Modelo em branco não encontrado no portal', 500);
+      const bytes = new Uint8Array(await modelo.arrayBuffer());
+      const { error } = await admin.storage.from(BUCKET).upload(r.caminho, bytes, { contentType: tipoMime('docx'), upsert: false });
+      if (error) throw new ErroOffice('Falha ao gravar o arquivo de teste: ' + error.message, 500);
+      await rpc('office_srv_arquivo_confirmar', { p_user: dono, p_arquivo: r.id, p_tamanho: bytes.byteLength, p_origem: 'novo' });
+      id = r.id;
+    }
+    const a = await rpc('office_srv_abrir', { p_user: dono, p_arquivo: id });
+    if (!String(a.nome).startsWith('Teste do motor')) return json({ erro: 'Só arquivos "Teste do motor" abrem por aqui' }, 403);
+    const pessoa = (await rpc('office_srv_eu', { p_user: dono })).pessoa;
+    const config = montarEditor({
+      arquivo: a, urlArquivo: await linkAssinado(a.caminho, 300),
+      callbackUrl: `${URL_SB}/functions/v1/office/motor?arquivo=${a.id}`,
+      voltarUrl: `${PORTAL}/office/`, pessoa: { id: pessoa.id, nome: pessoa.nome },
+    });
+    const arquivo = { ...a };
+    delete arquivo.caminho;
+    return json({ arquivo, motor: { api: `${m.url}/web-apps/apps/api/documents/api.js`, config: { ...config, token: await assinarHS256(config, MOTOR_CHAVE) } } });
+  } catch (e) {
+    if (e instanceof ErroOffice) return json({ erro: e.message }, e.status);
+    console.error('office teste:', e);
+    return json({ erro: 'Falha no teste do motor' }, 500);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
   const caminho = new URL(req.url).pathname.replace(/\/+$/, '');
+  if (caminho.endsWith('/office/motor/teste')) return testeMotor(req);
   if (caminho.endsWith('/office/motor/registrar')) return registrarMotor(req);
   if (caminho.endsWith('/office/motor')) return retornoDoMotor(req);
   return acaoDoPortal(req);
