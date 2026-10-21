@@ -180,6 +180,7 @@
           if (!r.ok) {
             var e = new Error(j && j.erro ? j.erro : 'Falha ao falar com o LUBE OFFICE (' + r.status + ')');
             e.status = r.status;
+            e.dados = j;   // o que deu certo antes do erro (ex.: o envio no painel saiu, o e-mail não)
             throw e;
           }
           return j;
@@ -218,7 +219,7 @@
     if (tarja) tarja.hidden = false;
     return new Promise(function (ok, falha) {
       var s = document.createElement('script');
-      s.src = 'demo.js?v=20261021';
+      s.src = 'demo.js?v=20261021b';
       s.onload = ok;
       s.onerror = falha;
       document.head.appendChild(s);

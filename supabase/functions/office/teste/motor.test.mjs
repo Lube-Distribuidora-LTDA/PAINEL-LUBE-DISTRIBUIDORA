@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assinarHS256, verificarHS256 } from '../jwt.ts';
-import { lerRetorno, montarEditor, permissoes, tipoDocumento } from '../motor.ts';
+import { lerRetorno, montarEditor, motorVivo, permissoes, tipoDocumento, urlMotorValida } from '../motor.ts';
+import { linhaUnica, montarEmail, tipoMime } from '../email.ts';
 
 const CHAVE = 'chave-de-teste-com-tamanho-suficiente';
 const ID = '11111111-2222-3333-4444-555555555555';
@@ -90,4 +91,34 @@ test('retorno do motor: salvar, ignorar e recusar', () => {
   assert.equal(lerRetorno({ status: 2, key: 'outro-1', url: MOTOR + '/a', filetype: 'docx' }, ID, MOTOR).acao, 'erro');
   assert.equal(lerRetorno({ status: 2, key: ID + '-1', url: 'https://malicioso.com/a', filetype: 'docx' }, ID, MOTOR).acao, 'erro');
   assert.equal(lerRetorno({ status: 2, key: ID + '-1', url: MOTOR + '/a', filetype: 'exe' }, ID, MOTOR).acao, 'erro');
+});
+
+test('nunca baixar: o editor não oferece download para nenhum papel', () => {
+  for (const p of ['dono', 'editar', 'comentar', 'ver']) assert.equal(permissoes(p).permissions.download, false);
+  assert.equal(permissoes('ver').permissions.print, true);
+});
+
+test('endereço e sinal do motor registrado pela SRV-IA', () => {
+  assert.equal(urlMotorValida('https://abc-def.trycloudflare.com'), true);
+  assert.equal(urlMotorValida('https://office.lube.com.br/'), true);
+  assert.equal(urlMotorValida('http://abc.trycloudflare.com'), false);
+  assert.equal(urlMotorValida('https://abc.com/caminho'), false);
+  assert.equal(urlMotorValida('https://abc.com@malicioso.com'), false);
+  const agora = Date.parse('2026-10-21T15:00:00Z');
+  assert.equal(motorVivo('2026-10-21T14:50:00Z', agora), true);
+  assert.equal(motorVivo('2026-10-21T14:40:00Z', agora), false);
+  assert.equal(motorVivo(null, agora), false);
+});
+
+test('e-mail do Enviar: escapa o que vem da pessoa e não deixa quebrar o cabeçalho', () => {
+  const e = montarEmail({ remetente: { nome: 'Ana\r\nBcc: x@y.com', email: 'ana@lube.com.br' },
+    arquivo: 'Proposta <b>.docx', mensagem: '<script>alert(1)</script> segue' });
+  assert.ok(!/[\r\n]/.test(e.assunto));
+  assert.ok(e.assunto.startsWith('Ana Bcc: x@y.com enviou'));
+  assert.ok(e.html.includes('&lt;script&gt;'));
+  assert.ok(!e.html.includes('<script>'));
+  assert.ok(e.html.includes('Proposta &lt;b&gt;.docx'));
+  assert.ok(e.texto.includes('ana@lube.com.br'));
+  assert.equal(linhaUnica('a\n\nb'), 'a b');
+  assert.equal(tipoMime('xlsx'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 });

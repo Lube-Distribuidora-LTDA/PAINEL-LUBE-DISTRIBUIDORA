@@ -165,7 +165,7 @@
   var ACOES = {
     eu: function () {
       var meus = arquivos.filter(function (a) { return a.dono === EU && !a.lixeira_em; });
-      return { pessoa: P.eu, motor: false,
+      return { pessoa: P.eu, motor: false, motor_situacao: 'nao_instalado', motor_visto_em: null, email: true,
         avisos_nao_lidos: avisos.filter(function (v) { return !v.lido_em; }).length,
         uso: { arquivos: meus.length, bytes: meus.reduce(function (s, a) { return s + a.tamanho; }, 0) } };
     },
@@ -293,9 +293,28 @@
       var j = jArq(a);
       j.chave = a.id + '-' + a.versao;
       j.pasta_nome = a.pasta ? pastaPor(a.pasta).nome : null;
-      return { arquivo: j, motor: null, motivo: 'O motor de edição ainda não foi instalado.' };
+      return { arquivo: j, motor: null, situacao: 'nao_instalado', motivo: 'O editor está sendo ligado no servidor da Lube (SRV-IA).' };
     },
-    baixar: function () { falha('Na demonstração não há arquivo de verdade para baixar.'); },
+    enviar: function (d) {
+      var a = arqPor(d.id);
+      if (!a || nivelArq(EU, a) < 3) falha('só quem pode editar envia o arquivo', 403);
+      var ruins = (d.externos || []).filter(function (e) { return !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(e); });
+      if (ruins.length) falha('e-mail inválido: ' + ruins.join(', '));
+      var internos = [];
+      (d.internos || []).forEach(function (x) {
+        var p = pes(x.pessoa);
+        if (!p || p.id === EU) return;
+        if (nivelArq(x.pessoa, a) < NIVEL[x.papel || 'ver']) {
+          comps = comps.filter(function (s) { return !(s.arquivo === a.id && s.pessoa === x.pessoa); });
+          comps.push({ arquivo: a.id, pasta: null, pessoa: x.pessoa, papel: x.papel || 'ver', criado_em: new Date().toISOString() });
+        }
+        internos.push(p);
+      });
+      if (!internos.length && !(d.externos || []).length) falha('escolha pelo menos uma pessoa do painel ou um e-mail');
+      if (internos.length) registrar('enviou', a.id, null, { internos: internos, mensagem: d.mensagem || '' });
+      if ((d.externos || []).length) registrar('enviou_email', a.id, null, { externos: d.externos });
+      return { internos: internos, externos: d.externos || [], falhas: [] };
+    },
     versoes: function (d) {
       var a = arqPor(d.id);
       return {

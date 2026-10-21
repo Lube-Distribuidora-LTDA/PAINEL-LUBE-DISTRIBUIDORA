@@ -159,15 +159,21 @@ avisos não lidos.
 
 - **Drive** (`office/index.html`): Meus arquivos, Compartilhados comigo,
   Recentes, Modelos da Lube e Lixeira; criar documento, planilha, apresentação
-  ou pasta; enviar do computador (botão ou arrastar); renomear, mover, baixar;
+  ou pasta; enviar do computador (botão ou arrastar); renomear, mover;
   compartilhar com uma pessoa ou com **todos da Lube**, como ver, comentar ou
   editar (a pasta passa o acesso para tudo o que está dentro); versões com quem e
   quando, e voltar a qualquer uma; atividade do arquivo; sino de avisos
-  (compartilhamento e @menção em comentário).
-- **Editor** (`office/editor.html?id=`): abre o **ONLYOFFICE Docs** com a
-  configuração assinada pela função. Enquanto o motor não estiver instalado, a
-  página mostra o arquivo com os detalhes e o download.
-- **Banco**: schema `office` neste Supabase (`db/04_office.sql`), separado das
+  (compartilhamento, @menção em comentário e envio).
+- **Nada se baixa** (Júlio, 2026-10-21): nem no Drive, nem nas versões, nem
+  dentro do editor (`permissions.download = false`). O arquivo sai do painel só
+  pelo **Enviar** (quem pode editar): para **pessoas do painel** (ganham acesso,
+  se ainda não têm, e um aviso no sino) e/ou por **e-mail de fora** (anexo de até
+  20 MB, um e-mail por destinatário, pela caixa do Office com o nome de quem
+  enviou e resposta para ele). Todo envio fica na atividade do arquivo.
+- **Editor** (`office/editor.html?id=`): abre o **ONLYOFFICE Docs** dentro do
+  painel, com a configuração assinada pela função. Sem o motor no ar, a página
+  diz se ele está sendo ligado ou fora do ar (e desde quando).
+- **Banco**: schema `office` neste Supabase (`db/04_office.sql` e `db/05_office_envio_motor.sql`), separado das
   tabelas do portal. RLS ligado e sem políticas: o navegador **nunca** fala com o
   schema. Tudo passa pela Edge Function `office`, que chama as funções
   `public.office_srv_*` com a chave de serviço; cada função confere o papel de
@@ -177,13 +183,25 @@ avisos não lidos.
   (`arquivos/<id>/<carimbo>.<ext>`). O envio vai direto do navegador ao Storage
   por um link assinado que a função gera para o caminho reservado.
 - **Edge Function `office`** (`supabase/functions/office`, sem `verify_jwt`
-  porque tem duas portas e confere sozinha): `POST /office` recebe as ações do
+  porque tem três portas e confere sozinha): `POST /office` recebe as ações do
   navegador com o JWT da sessão; `POST /office/motor` recebe o arquivo salvo pelo
-  ONLYOFFICE, com o token JWT da chave do motor, e grava a versão nova.
-  Segredos (cadastrados pelo TI em Supabase › Edge Functions › Secrets):
-  `OFFICE_MOTOR_URL` (endereço do ONLYOFFICE) e `OFFICE_JWT_SECRET` (a mesma
-  chave JWT do ONLYOFFICE). Sem eles o Drive funciona e o editor avisa que o
-  motor ainda não foi instalado. Testes: `node --test supabase/functions/office/teste/motor.test.mjs`.
+  ONLYOFFICE e grava a versão nova; `POST /office/motor/registrar` recebe da
+  SRV-IA o endereço do motor. As duas portas do motor exigem token JWT da chave
+  do motor. Segredos (cadastrados pelo TI em Supabase › Edge Functions ›
+  Secrets): `OFFICE_JWT_SECRET` (a chave do motor, que o instalador da SRV-IA
+  gera e mostra), `OFFICE_SMTP_USER` e `OFFICE_SMTP_PASS` (a caixa de e-mail do
+  Enviar; porta 465, porque o Supabase bloqueia a 25 e a 587) e, opcional,
+  `OFFICE_MOTOR_URL` (endereço fixo; sem ele vale o que a SRV-IA registrou). Sem
+  eles o Drive funciona, o editor avisa que está sendo ligado e o Enviar por
+  e-mail avisa que falta a caixa. Testes: `node --test supabase/functions/office/teste/motor.test.mjs`.
+- **Motor na SRV-IA** (`office/srv-ia/`, cópia em `P:\INTEGRAÇÃO BI\OFFICE`):
+  `INSTALAR MOTOR.bat` instala o ONLYOFFICE Docs Community na porta 8090, cria a
+  chave do motor (`C:\BI\OFFICE\motor.chave`), liga a assinatura JWT e cria a
+  tarefa **LUBE OFFICE - Motor** (SYSTEM, desde que a máquina liga). A tarefa
+  abre um **túnel rápido da Cloudflare** (`*.trycloudflare.com`, sem porta aberta
+  e sem domínio), avisa o endereço ao painel e repete o aviso de 5 em 5 minutos;
+  sem aviso por 15 minutos, o painel mostra o editor fora do ar.
+  `DIAGNOSTICO MOTOR.bat` diz numa frase o que está errado.
 - **Modelos** (`office/modelos/`): em branco e com a marca da Lube (proposta,
   ata, relatório mensal, apresentação). Gerados por
   `python office/ferramentas/gerar_modelos.py` (precisa de python-docx,

@@ -1,0 +1,33 @@
+LUBE OFFICE - motor de edicao na SRV-IA
+=======================================
+
+Para que serve
+  O Word, o Excel e o PowerPoint do LUBE OFFICE abrem DENTRO do painel. Quem desenha
+  o editor e o ONLYOFFICE Docs, que roda aqui na SRV-IA. O painel (Vercel) e o banco
+  (Supabase) nao conseguem rodar ele.
+
+Como instalar (uma vez)
+  1. Na SRV-IA, de duplo clique em INSTALAR MOTOR.bat (ele pede administrador).
+  2. No fim ele copia a chave do motor (Ctrl+V). Cadastre no Supabase:
+     https://supabase.com/dashboard/project/wkkdcsqwlxjxorutrbnx/functions/secrets
+     Add new secret > Name: OFFICE_JWT_SECRET > Value: Ctrl+V > Save
+  3. Aperte ENTER na janela. Ele confere se o painel ja enxerga o editor e diz PRONTO.
+
+Como funciona
+  - ONLYOFFICE na porta 8090 (so dentro da maquina).
+  - Tunel rapido da Cloudflare (cloudflared): da um endereco https://...trycloudflare.com
+    sem abrir porta no firewall e sem dominio. O endereco muda quando o tunel reinicia;
+    a tarefa avisa o endereco novo ao painel sozinha.
+  - Tarefa agendada "LUBE OFFICE - Motor": roda como SYSTEM desde que a SRV-IA liga,
+    confere o motor, mantem o tunel e avisa o painel de 5 em 5 minutos.
+  - Se a SRV-IA desligar, o Drive do LUBE OFFICE continua funcionando; so o editor
+    mostra "fora do ar" ate ela voltar.
+
+Onde fica cada coisa (na SRV-IA)
+  C:\BI\OFFICE\motor.chave    a chave do motor (so administrador abre; NAO copie para lugar nenhum)
+  C:\BI\OFFICE\motor.log      o passo a passo
+  C:\BI\OFFICE\estado.json    a situacao atual (endereco do tunel, se o painel aceitou)
+  C:\BI\OFFICE\tunel.log      o log do cloudflared
+
+Deu problema?
+  Rode DIAGNOSTICO MOTOR.bat: ele diz numa frase o que esta errado.

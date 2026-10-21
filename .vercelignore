@@ -12,3 +12,6 @@ sentinela/demo.js
 # LUBE OFFICE: demonstração (só localhost, ?demo=1) e o gerador dos modelos
 office/demo.js
 office/ferramentas/
+# LUBE OFFICE: kit do motor que roda na SRV-IA (copiado para P:\INTEGRACAO BI\OFFICE)
+office/srv-ia/
+.gitattributes

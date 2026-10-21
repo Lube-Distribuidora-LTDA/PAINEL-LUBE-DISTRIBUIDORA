@@ -21,7 +21,8 @@ export function uuidValido(v: unknown): v is string {
   return typeof v === 'string' && UUID.test(v);
 }
 
-// o que cada papel pode fazer dentro do editor
+// o que cada papel pode fazer dentro do editor. Baixar, nunca (pedido do Júlio,
+// 2026-10-21): o arquivo só sai do painel pelo "Enviar" do LUBE OFFICE.
 export function permissoes(papel: string) {
   const edita = papel === 'dono' || papel === 'editar';
   const comenta = edita || papel === 'comentar';
@@ -29,9 +30,20 @@ export function permissoes(papel: string) {
     modo: comenta ? 'edit' : 'view',
     permissions: {
       edit: edita, review: edita, comment: comenta, fillForms: edita,
-      download: true, print: true, copy: true, chat: true, modifyFilter: edita,
+      download: false, print: true, copy: true, chat: true, modifyFilter: edita,
     },
   };
+}
+
+// endereço que a SRV-IA registra: só https, só o host (sem caminho)
+export function urlMotorValida(v: unknown): v is string {
+  return typeof v === 'string' && /^https:\/\/[a-z0-9.-]+(:[0-9]{2,5})?\/?$/i.test(v.trim());
+}
+
+// motor vivo = a SRV-IA deu sinal nos últimos 15 minutos (o túnel avisa de 5 em 5)
+export function motorVivo(vistoEm: unknown, agora = Date.now()) {
+  const t = typeof vistoEm === 'string' ? Date.parse(vistoEm) : NaN;
+  return Number.isFinite(t) && agora - t < 15 * 60 * 1000;
 }
 
 type Arquivo = {

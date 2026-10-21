@@ -36,7 +36,7 @@
     abrir: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
     pasta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
     compart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>',
-    baixar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+    enviar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg>',
     lapis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16Z"/></svg>',
     mover: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M10 13h6M13 10l3 3-3 3"/></svg>',
     relogio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
@@ -360,7 +360,7 @@
     if (est.visao === 'lixeira') return [['restaurar', 'Restaurar', SVG.restaurar]];
     var a = [['abrir', it.tipo === 'pasta' ? 'Abrir pasta' : 'Abrir no editor', it.tipo === 'pasta' ? SVG.pasta : SVG.abrir]];
     a.push(['acesso', O.pode(it.papel, 'compartilhar') ? 'Compartilhar' : 'Quem tem acesso', SVG.compart]);
-    if (it.tipo === 'arquivo') a.push(['baixar', 'Baixar', SVG.baixar]);
+    if (it.tipo === 'arquivo' && O.pode(it.papel, 'editar')) a.push(['enviar', 'Enviar', SVG.enviar]);
     if (O.pode(it.papel, 'renomear')) a.push(['renomear', 'Renomear', SVG.lapis]);
     if (O.pode(it.papel, 'mover')) a.push(['mover', 'Mover para…', SVG.mover]);
     if (it.tipo === 'arquivo') a.push(['versoes', 'Versões e atividade', SVG.relogio]);
@@ -389,22 +389,172 @@
     if (acao === 'abrir') abrirItem(it);
     else if (acao === 'acesso') gaveta(it, 'acesso');
     else if (acao === 'versoes') gaveta(it, 'versoes');
-    else if (acao === 'baixar') baixar(it);
+    else if (acao === 'enviar') dialogoEnviar(it);
     else if (acao === 'renomear') renomear(it);
     else if (acao === 'mover') mover(it);
     else if (acao === 'lixeira') lixeira(it);
     else if (acao === 'restaurar') restaurar(it);
   }
 
-  /* ---------- ações ---------- */
-  function baixar(it, versao) {
-    var t = O.toast('Preparando o download…', 'info', null, 0);
-    O.api('baixar', { id: it.id, versao: versao == null ? null : versao }).then(function (r) {
-      t.fechar();
-      var a = document.createElement('a');
-      a.href = r.url; a.download = r.nome; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); a.remove();
-    }, function (e) { t.fechar(); erroToast(e); });
+  /* ---------- enviar (no lugar do download, pedido do Júlio em 2026-10-21) ----------
+     O arquivo não sai pelo navegador: vai para pessoas do painel (acesso + aviso no
+     sino) e/ou por e-mail para fora (anexo enviado pelo servidor). */
+  var EMAIL_OK = /^[^@\s,;]+@[^@\s,;]+\.[a-z]{2,}$/i;
+  function dialogoEnviar(it) {
+    var d = $('[data-dialogo]');
+    d.className = 'dialogo dialogo--largo';
+    var internos = [];   // { pessoa, papel }
+    var externos = [];
+    var comEmail = !!(est.eu && est.eu.email);
+    d.innerHTML = '<form method="dialog" class="enviar" novalidate>' +
+      '<div class="dialogo__topo">' + O.icone(it.extensao || 'docx') + '<div><h2>Enviar “' + esc(nomeCompleto(it)) + '”</h2>' +
+      '<p class="enviar__sub">O arquivo não é baixado: vai direto para quem você escolher.</p></div></div>' +
+      '<section class="enviar__bloco"><span class="mono rotulo">Pessoas do painel</span>' +
+        '<div class="adicionar"><div class="adicionar__campo">' + SVG.busca +
+        '<input type="text" data-env-busca placeholder="Nome ou e-mail de quem está no painel" autocomplete="off" spellcheck="false" aria-label="Buscar pessoa do painel">' +
+        seletorPapel('ver', 'data-env-papel aria-label="Acesso de quem recebe"') + '</div>' +
+        '<div class="sugestoes suspenso" data-env-sug hidden></div></div>' +
+        '<div class="fichas" data-env-internos></div>' +
+        '<p class="enviar__nota">Recebe acesso ao arquivo (se ainda não tem) e um aviso no sino do painel.</p></section>' +
+      '<section class="enviar__bloco"><span class="mono rotulo">E-mail de fora</span>' +
+        '<label class="campo campo--fichas"><span class="fichas" data-env-externos></span>' +
+        '<input type="email" data-env-email placeholder="cliente@empresa.com.br" autocomplete="off" spellcheck="false" aria-label="E-mail de fora"' +
+        (comEmail ? '' : ' disabled') + '></label>' +
+        '<p class="enviar__nota">' + (comEmail
+          ? 'Vai como anexo, pela caixa de e-mail do LUBE OFFICE, com o seu nome. A resposta volta para ' + esc(est.eu.pessoa.email) + '.'
+          : 'O envio por e-mail ainda não foi ligado: falta cadastrar a caixa de e-mail do LUBE OFFICE.') + '</p></section>' +
+      '<label class="enviar__msg"><span class="mono rotulo">Mensagem (opcional)</span>' +
+        '<textarea data-env-msg rows="3" maxlength="1000" placeholder="Um recado para quem recebe"></textarea></label>' +
+      '<p class="dialogo__erro" data-dlg-erro></p>' +
+      '<div class="dialogo__acoes"><button class="btn" type="button" data-dlg-cancelar>Cancelar</button>' +
+      '<button class="btn btn--prim" type="submit" data-env-ok disabled>' + SVG.enviar + 'Enviar</button></div></form>';
+
+    var busca = $('[data-env-busca]', d), sug = $('[data-env-sug]', d), email = $('[data-env-email]', d);
+    var erroEl = $('[data-dlg-erro]', d), ok = $('[data-env-ok]', d);
+    var lista = [], foco = 0;
+    var fechar = SVG.fechar.replace('<svg ', '<svg aria-hidden="true" ');
+
+    function atualizar() {
+      $('[data-env-internos]', d).innerHTML = internos.map(function (x, i) {
+        var p = pessoaPorId(x.pessoa) || { id: x.pessoa, nome: '?' };
+        return '<span class="ficha">' + O.avatar(p, 'p') + esc(p.nome) + ' · ' + esc(O.papelTxt(x.papel).replace('Pode ', '')) +
+          '<button type="button" data-tira-int="' + i + '" aria-label="Tirar ' + esc(p.nome) + '">' + fechar + '</button></span>';
+      }).join('');
+      $('[data-env-externos]', d).innerHTML = externos.map(function (e, i) {
+        return '<span class="ficha ficha--email">' + esc(e) +
+          '<button type="button" data-tira-ext="' + i + '" aria-label="Tirar ' + esc(e) + '">' + fechar + '</button></span>';
+      }).join('');
+      ok.disabled = !internos.length && !externos.length && !EMAIL_OK.test(email.value.trim());
+    }
+    function mostrarSug() {
+      var q = busca.value.trim().toLowerCase();
+      var ja = {};
+      ja[euId()] = true;
+      internos.forEach(function (x) { ja[x.pessoa] = true; });
+      lista = (est.pessoas || []).filter(function (p) {
+        return !ja[p.id] && (!q || (p.nome + ' ' + p.email).toLowerCase().indexOf(q) > -1);
+      }).slice(0, 7);
+      if (!lista.length) { sug.innerHTML = '<p class="avisos__vazio" style="padding:1rem">Ninguém encontrado no painel.</p>'; sug.hidden = false; return; }
+      foco = Math.min(foco, lista.length - 1);
+      sug.innerHTML = lista.map(function (p, i) {
+        return '<button type="button" class="sugestao' + (i === foco ? ' is-foco' : '') + '" data-sug="' + i + '">' + O.avatar(p) +
+          '<span><strong>' + esc(p.nome) + '</strong><em>' + esc(p.email) + (p.cargo ? ' · ' + esc(p.cargo) : '') + '</em></span></button>';
+      }).join('');
+      sug.hidden = false;
+    }
+    function escolher(p) {
+      internos.push({ pessoa: p.id, papel: $('[data-env-papel]', d).value });
+      busca.value = '';
+      sug.hidden = true;
+      atualizar();
+      busca.focus();
+    }
+    function addEmails() {
+      var partes = email.value.split(/[\s,;]+/).filter(Boolean);
+      var ruins = [];
+      partes.forEach(function (e) {
+        e = e.toLowerCase();
+        if (!EMAIL_OK.test(e)) ruins.push(e);
+        else if (externos.indexOf(e) < 0) externos.push(e);
+      });
+      email.value = ruins.join(' ');
+      erroEl.textContent = ruins.length ? 'E-mail inválido: ' + ruins.join(', ') : '';
+      atualizar();
+      return !ruins.length;
+    }
+
+    pessoas().then(function () { if (document.activeElement === busca) mostrarSug(); });
+    busca.addEventListener('focus', function () { pessoas().then(mostrarSug); });
+    busca.addEventListener('input', function () { foco = 0; mostrarSug(); });
+    busca.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); foco = Math.min(foco + 1, lista.length - 1); mostrarSug(); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); foco = Math.max(foco - 1, 0); mostrarSug(); }
+      else if (ev.key === 'Enter') { ev.preventDefault(); if (lista[foco]) escolher(lista[foco]); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); sug.hidden = true; }
+    });
+    busca.addEventListener('blur', function () { setTimeout(function () { sug.hidden = true; }, 150); });
+    sug.addEventListener('mousedown', function (ev) {
+      var b = ev.target.closest('[data-sug]');
+      if (b) { ev.preventDefault(); escolher(lista[+b.getAttribute('data-sug')]); }
+    });
+    email.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ',' || ev.key === ';' || ev.key === ' ') {
+        if (email.value.trim()) { ev.preventDefault(); addEmails(); }
+        else if (ev.key === 'Enter') ev.preventDefault();
+      } else if (ev.key === 'Backspace' && !email.value && externos.length) {
+        externos.pop(); atualizar();
+      }
+    });
+    email.addEventListener('input', atualizar);
+    email.addEventListener('blur', function () { if (email.value.trim()) addEmails(); });
+    d.addEventListener('click', function (ev) {
+      var b;
+      if ((b = ev.target.closest('[data-tira-int]'))) { internos.splice(+b.getAttribute('data-tira-int'), 1); atualizar(); }
+      else if ((b = ev.target.closest('[data-tira-ext]'))) { externos.splice(+b.getAttribute('data-tira-ext'), 1); atualizar(); }
+    });
+    $('[data-dlg-cancelar]', d).addEventListener('click', function () { d.close(); });
+
+    $('form', d).addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (email.value.trim() && !addEmails()) return;
+      if (!internos.length && !externos.length) { erroEl.textContent = 'Escolha pelo menos uma pessoa do painel ou um e-mail.'; return; }
+      ok.disabled = true;
+      ok.lastChild.textContent = 'Enviando…';
+      erroEl.textContent = '';
+      O.api('enviar', { id: it.id, internos: internos, externos: externos, mensagem: $('[data-env-msg]', d).value }).then(function (r) {
+        d.close();
+        O.toast(resumoEnvio(r));
+        if (r.falhas && r.falhas.length) {
+          O.toast('Não saiu para: ' + r.falhas.map(function (f) { return f.para; }).join(', ') + '. ' + r.falhas[0].erro, 'erro', null, 12000);
+        }
+        if (r.internos && r.internos.length) carregar();
+      }, function (e) {
+        ok.disabled = false;
+        ok.lastChild.textContent = 'Enviar';
+        var r = e.dados || {};
+        if (r.internos && r.internos.length) {
+          // as pessoas do painel já receberam; o que falhou foi o e-mail
+          internos = [];
+          atualizar();
+          erroEl.textContent = 'No painel já receberam: ' + r.internos.map(function (p) { return p.nome; }).join(', ') + '. ' + e.message;
+        } else {
+          erroEl.textContent = e.message;
+        }
+      });
+    });
+
+    d.showModal();
+    atualizar();
+    busca.focus();
+  }
+  function resumoEnvio(r) {
+    var partes = [];
+    if (r.internos && r.internos.length) {
+      partes.push(r.internos.map(function (p) { return O.primeiroNome(p.nome); }).join(', ') +
+        (r.internos.length > 1 ? ' receberam' : ' recebeu') + ' no painel');
+    }
+    if (r.externos && r.externos.length) partes.push(r.externos.join(', ') + ' por e-mail');
+    return 'Enviado: ' + partes.join('; ') + '.';
   }
 
   function renomear(it) {
@@ -511,6 +661,7 @@
   /* ---------- diálogos ---------- */
   function dialogoNome(o) {
     var d = $('[data-dialogo]');
+    d.className = 'dialogo';
     d.innerHTML = '<form method="dialog" novalidate>' +
       '<div class="dialogo__topo">' + O.icone(o.ico || 'docx') + '<h2>' + esc(o.titulo) + '</h2></div>' +
       (o.texto ? '<p>' + esc(o.texto) + '</p>' : '') +
@@ -544,6 +695,7 @@
   // escolher a pasta de destino
   function mover(it) {
     var d = $('[data-dialogo]');
+    d.className = 'dialogo';
     var atual = null, trilha = [];
     function desenhar(itens) {
       var pastas = itens.filter(function (x) { return x.tipo === 'pasta' && x.id !== it.id && O.pode(x.papel, 'editar'); });
@@ -624,6 +776,7 @@
       '<div class="gaveta__corpo" data-gav-corpo></div>' +
       '<div class="gaveta__pe">' + (it.tipo === 'arquivo'
         ? '<button class="btn" type="button" data-gav-link>' + SVG.link + 'Copiar link</button>' +
+          (it.papel == null || O.pode(it.papel, 'editar') ? '<button class="btn" type="button" data-gav-enviar>' + SVG.enviar + 'Enviar</button>' : '') +
           '<button class="btn btn--azul" type="button" data-gav-abrir>' + SVG.abrir + 'Abrir</button>'
         : '<button class="btn btn--azul" type="button" data-gav-abrir>' + SVG.pasta + 'Abrir pasta</button>') + '</div>';
     abrirGaveta();
@@ -806,16 +959,13 @@
       return '<div class="versao' + (i === 0 ? ' is-atual' : '') + '"><span class="versao__n">v' + v.numero + '</span>' +
         '<div class="versao__txt"><strong>' + (i === 0 ? 'Versão atual · ' : '') + esc(O.dataCompleta(v.criado_em)) + '</strong>' +
         '<em>' + autores + ' · ' + esc(ORIGEM_TXT[v.origem] || v.origem) + ' · ' + O.bytes(v.tamanho) + '</em></div>' +
-        '<div class="versao__acoes"><button class="mini" type="button" data-v-baixar="' + v.numero + '" title="Baixar esta versão">' + 'Baixar' + '</button>' +
+        '<div class="versao__acoes">' +
         (i > 0 && podeRest ? '<button class="mini" type="button" data-v-rest="' + v.numero + '" title="Voltar para esta versão">Restaurar</button>' : '') +
         '</div></div>';
     }).join('') + '</div>';
     h += '<p class="herdado">Cada vez que todos fecham o arquivo depois de mexer, o editor guarda uma versão nova. Nenhuma versão é apagada.</p>';
     var corpo = $('[data-gav-corpo]');
     corpo.innerHTML = h;
-    $$('[data-v-baixar]', corpo).forEach(function (b) {
-      b.addEventListener('click', function () { baixar(g.it, +b.getAttribute('data-v-baixar')); });
-    });
     $$('[data-v-rest]', corpo).forEach(function (b) {
       b.addEventListener('click', function () {
         var n = +b.getAttribute('data-v-rest');
@@ -846,6 +996,12 @@
       case 'baixou': return 'baixou a versão ' + (d.versao || '');
       case 'versao_restaurada': return 'voltou para a versão ' + d.de + ' (virou a ' + d.nova + ')';
       case 'mencionou': return 'mencionou ' + (d.avisados || 0) + (d.avisados === 1 ? ' pessoa' : ' pessoas') + ' num comentário';
+      case 'enviou': {
+        var n = (d.internos || []).length;
+        return 'enviou para ' + ((d.internos || []).map(function (p) { return p.nome; }).join(', ') || n + ' pessoa(s)') + ' no painel';
+      }
+      case 'enviou_email': return 'enviou por e-mail para ' + (d.externos || []).join(', ');
+      case 'email_falhou': return 'tentou enviar por e-mail para ' + (d.externos || []).join(', ') + ', e não saiu' + (d.erro ? ' (' + d.erro + ')' : '');
       default: return t.acao;
     }
   }
@@ -877,9 +1033,11 @@
     lista.innerHTML = r.avisos.map(function (v) {
       var alvo = v.arquivo ? v.arquivo.nome + '.' + v.arquivo.extensao : v.pasta ? v.pasta.nome : 'um item';
       var de = v.de ? v.de.nome : 'Alguém';
+      var recado = v.mensagem ? '<span class="aviso__msg">“' + esc(v.mensagem) + '”</span>' : '';
       var txt = v.tipo === 'mencao'
-        ? '<span><strong>' + esc(de) + '</strong> mencionou você em <strong>' + esc(alvo) + '</strong></span>' +
-          (v.mensagem ? '<span class="aviso__msg">“' + esc(v.mensagem) + '”</span>' : '')
+        ? '<span><strong>' + esc(de) + '</strong> mencionou você em <strong>' + esc(alvo) + '</strong></span>' + recado
+        : v.tipo === 'enviou'
+        ? '<span><strong>' + esc(de) + '</strong> enviou <strong>' + esc(alvo) + '</strong> para você</span>' + recado
         : '<span><strong>' + esc(de) + '</strong> compartilhou <strong>' + esc(alvo) + '</strong> com você · ' +
           esc(O.papelTxt(v.mensagem).toLowerCase()) + '</span>';
       return '<button type="button" class="aviso' + (v.lido_em ? '' : ' aviso--novo') + '" data-aviso="' + esc(v.id) + '">' +
@@ -917,10 +1075,14 @@
     $('[data-uso-arquivos]').textContent = u.arquivos + (u.arquivos === 1 ? ' arquivo' : ' arquivos');
     $('[data-uso-bytes]').textContent = O.bytes(u.bytes) + ' usados';
     var m = $('[data-motor]');
-    m.classList.toggle('is-ok', !!est.eu.motor);
-    $('[data-motor-txt]').textContent = est.eu.motor
-      ? 'Editor no ar: abre e edita junto, na hora.'
-      : 'Editor em instalação. Por enquanto o arquivo abre com os detalhes e o download.';
+    var sit = est.eu.motor_situacao || (est.eu.motor ? 'ligado' : 'nao_instalado');
+    m.classList.toggle('is-ok', sit === 'ligado');
+    m.classList.toggle('is-fora', sit === 'fora');
+    $('[data-motor-txt]').textContent = sit === 'ligado'
+      ? 'Editor no ar: Word, Excel e PowerPoint abrem aqui dentro, juntos.'
+      : sit === 'fora'
+      ? 'Editor fora do ar: o servidor da Lube não responde desde ' + O.quando(est.eu.motor_visto_em) + '.'
+      : 'Editor sendo ligado no servidor da Lube. O Drive já funciona.';
   }
 
   function bloquear(titulo, texto, botao) {
@@ -999,6 +1161,7 @@
       if (t.closest('[data-gav-fechar]') || t.closest('[data-veu]')) { fecharGaveta(); return; }
       if ((el = t.closest('[data-gav-aba]')) && est.gav) { est.gav.aba = el.getAttribute('data-gav-aba'); renderAba(); return; }
       if (t.closest('[data-gav-abrir]') && est.gav) { var g = est.gav.it; fecharGaveta(); abrirItem(g); return; }
+      if (t.closest('[data-gav-enviar]') && est.gav) { dialogoEnviar(est.gav.it); return; }
       if (t.closest('[data-gav-link]') && est.gav) {
         var link = location.origin + location.pathname.replace(/[^/]*$/, '') + 'editor.html?id=' + est.gav.it.id;
         (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () {
@@ -1132,10 +1295,13 @@
         carregar();
         carregarAvisos();
         var u = new URLSearchParams(location.search);
-        var comp = u.get('compartilhar');
-        if (comp && /^[0-9a-f-]{36}$/i.test(comp)) {
-          gaveta({ tipo: 'arquivo', id: comp, nome: u.get('nome') || 'Arquivo', extensao: u.get('ext') || '', papel: null }, 'acesso');
-        }
+        // vindo do editor: abre o compartilhar ou o enviar daquele arquivo
+        var comp = u.get('compartilhar'), env = u.get('enviar');
+        var doEditor = function (id) {
+          return { tipo: 'arquivo', id: id, nome: u.get('nome') || 'Arquivo', extensao: u.get('ext') || '', papel: null };
+        };
+        if (comp && /^[0-9a-f-]{36}$/i.test(comp)) gaveta(doEditor(comp), 'acesso');
+        else if (env && /^[0-9a-f-]{36}$/i.test(env)) dialogoEnviar(doEditor(env));
       }, function (e) {
         if (e.status === 401) {
           bloquear('Sua sessão acabou', 'Entre de novo pelo Painel de Sistemas.', { texto: 'Ir para o login', href: '../?voltar=office' });

@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="office.css?v=20261021">
-<link rel="stylesheet" href="editor.css?v=20261021">
+<link rel="stylesheet" href="office.css?v=20261021b">
+<link rel="stylesheet" href="editor.css?v=20261021b">
 </head>
 <body class="carregando editor-pg">
 
@@ -46,6 +46,10 @@
   </div>
   <div class="ed-acoes">
     <span class="selo-papel" data-ed-papel hidden></span>
+    <a class="btn" href="#" data-ed-enviar hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg>
+      <span>Enviar</span>
+    </a>
     <a class="btn" href="#" data-ed-compartilhar>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>
       <span>Compartilhar</span>
@@ -60,19 +64,19 @@
     <div class="ed-cartao">
       <span class="ed-cartao__ico" data-ed-cartao-ico></span>
       <div class="ed-cartao__txt">
-        <span class="mono">LUBE OFFICE</span>
+        <span class="mono" data-ed-estado>LUBE OFFICE</span>
         <h1 data-ed-cartao-nome></h1>
         <p data-ed-motivo></p>
       </div>
       <dl class="detalhes" data-ed-detalhes></dl>
       <div class="ed-cartao__acoes">
-        <button class="btn btn--prim" type="button" data-ed-baixar>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
-          Baixar o arquivo
+        <button class="btn btn--prim" type="button" data-ed-tentar>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          Tentar de novo
         </button>
         <a class="btn" href="./" data-voltar>Voltar ao LUBE OFFICE</a>
       </div>
-      <p class="ed-nota">Assim que o motor de edição estiver no ar, este mesmo endereço abre o arquivo para editar junto, com o nome e o cursor de cada pessoa.</p>
+      <p class="ed-nota">O arquivo abre aqui mesmo, dentro do painel, para editar junto, com o nome e o cursor de cada pessoa. Nada é baixado.</p>
     </div>
   </section>
 </main>
@@ -82,7 +86,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="../config.js?v=20261006"></script>
 <script src="../marca.js?v=20261006"></script>
-<script src="comum.js?v=20261021"></script>
-<script src="editor.js?v=20261021"></script>
+<script src="comum.js?v=20261021b"></script>
+<script src="editor.js?v=20261021b"></script>
 </body>
 </html>

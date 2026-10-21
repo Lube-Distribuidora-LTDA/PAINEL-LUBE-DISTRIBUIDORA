@@ -1,7 +1,7 @@
 /* =========================================================
    LUBE OFFICE — página do editor
    Pede à função office a configuração assinada e abre o ONLYOFFICE.
-   Sem o motor instalado, mostra o arquivo com os detalhes e o download.
+   Sem o motor no ar, mostra o arquivo com os detalhes e o porquê (nada se baixa).
    @menções nos comentários viram aviso no sino do painel.
    ========================================================= */
 (function () {
@@ -18,10 +18,11 @@
     var q = [extra, sufixoDemo()].filter(Boolean).join('&');
     return './' + (q ? '?' + q : '');
   }
-  function urlCompartilhar() {
-    return urlDrive('compartilhar=' + encodeURIComponent(id) + '&nome=' + encodeURIComponent(arquivo ? arquivo.nome : '') +
+  function urlDoArquivo(acao) {
+    return urlDrive(acao + '=' + encodeURIComponent(id) + '&nome=' + encodeURIComponent(arquivo ? arquivo.nome : '') +
       '&ext=' + encodeURIComponent(arquivo ? arquivo.extensao : ''));
   }
+  function urlCompartilhar() { return urlDoArquivo('compartilhar'); }
 
   function bloquear(titulo, texto, botao) {
     $('[data-bloqueio-titulo]').textContent = titulo;
@@ -46,14 +47,20 @@
     if (a.papel && a.papel !== 'dono') { papel.textContent = O.papelTxt(a.papel); papel.hidden = false; }
     $('[data-ed-compartilhar]').setAttribute('href', urlCompartilhar());
     $('[data-ed-compartilhar]').setAttribute('target', '_blank');
+    // nada se baixa: o arquivo sai do painel só pelo Enviar (quem pode editar)
+    var enviar = $('[data-ed-enviar]');
+    enviar.hidden = !O.pode(a.papel, 'editar');
+    enviar.setAttribute('href', urlDoArquivo('enviar'));
+    enviar.setAttribute('target', '_blank');
     $$('[data-voltar]').forEach(function (el) { el.setAttribute('href', urlDrive(a.pasta ? 'pasta=' + encodeURIComponent(a.pasta) : '')); });
   }
 
-  function espera(a, motivo) {
+  function espera(a, motivo, situacao) {
     $('[data-ed-cartao-ico]').innerHTML = O.icone(a.extensao);
     $('[data-ed-cartao-nome]').textContent = a.nome + '.' + a.extensao;
+    $('[data-ed-estado]').textContent = situacao === 'fora' ? 'Editor fora do ar' : 'Editor sendo ligado';
     $('[data-ed-motivo]').textContent = (motivo || 'O editor não abriu.') +
-      ' Enquanto isso, baixe o arquivo para abrir no computador.';
+      (situacao === 'fora' ? ' Assim que ele voltar, é só tentar de novo.' : ' Enquanto isso, o arquivo fica guardado e pode ser enviado ou compartilhado pelo LUBE OFFICE.');
     var alt = a.alterado_por ? ' por ' + a.alterado_por.nome : '';
     var linhas = [
       ['Tipo', O.nomeTipo(a.extensao) + ' (.' + a.extensao + ')'],
@@ -67,16 +74,6 @@
     $('[data-ed-detalhes]').innerHTML = linhas.map(function (l) { return '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>'; }).join('');
     $('[data-ed-espera]').hidden = false;
     document.body.classList.remove('carregando');
-  }
-
-  function baixar() {
-    var t = O.toast('Preparando o download…', 'info', null, 0);
-    O.api('baixar', { id: id }).then(function (r) {
-      t.fechar();
-      var a = document.createElement('a');
-      a.href = r.url; a.download = r.nome; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); a.remove();
-    }, function (e) { t.fechar(); O.toast(e.message, 'erro'); });
   }
 
   function carregarScript(src, ms) {
@@ -135,7 +132,7 @@
 
   function iniciar() {
     O.marcas();
-    $('[data-ed-baixar]').addEventListener('click', baixar);
+    $('[data-ed-tentar]').addEventListener('click', function () { location.reload(); });
     O.pronto().then(function () { return O.token(); }).then(function (t) {
       if (!t) {
         bloquear('Entre pelo painel', 'O LUBE OFFICE abre com o mesmo login do Painel de Sistemas.',
@@ -146,9 +143,9 @@
       return O.api('abrir', { id: id }).then(function (r) {
         mostrarArquivo(r.arquivo);
         if (r.motor) {
-          return abrirMotor(r.motor).catch(function (e) { $('[data-ed-motor]').hidden = true; espera(r.arquivo, e.message); });
+          return abrirMotor(r.motor).catch(function (e) { $('[data-ed-motor]').hidden = true; espera(r.arquivo, e.message, 'fora'); });
         }
-        espera(r.arquivo, r.motivo);
+        espera(r.arquivo, r.motivo, r.situacao);
       }, function (e) {
         if (e.status === 401) bloquear('Sua sessão acabou', 'Entre de novo pelo Painel de Sistemas.', { texto: 'Ir para o login', href: '../?voltar=office' });
         else if (e.status === 404 || e.status === 403) bloquear('Sem acesso a este arquivo', 'Ele foi para a lixeira, mudou de dono ou não foi compartilhado com você. Peça acesso a quem mandou o link.');

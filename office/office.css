@@ -240,6 +240,7 @@ body:not(.carregando) .carga{ opacity:0; visibility:hidden; }
 .motor{ display:flex; align-items:center; gap:.6rem; padding:.7rem .9rem; border-radius:12px; border:1px dashed var(--line-2); font-size:.78rem; color:var(--muted); line-height:1.35; }
 .motor i{ width:8px; height:8px; flex:none; border-radius:50%; background:#F5A524; box-shadow:0 0 10px #F5A524; }
 .motor.is-ok i{ background:var(--plan); box-shadow:0 0 10px var(--plan); }
+.motor.is-fora i{ background:var(--red); box-shadow:0 0 10px var(--red); }
 .voltar{ display:flex; align-items:center; gap:.5rem; color:var(--muted); font-size:.82rem; padding:.3rem .2rem; }
 .voltar:hover{ color:var(--off); }
 .voltar svg{ width:16px; }
@@ -532,6 +533,35 @@ span.ico > svg,.menu__ico > svg{ width:100%; height:100%; display:block; }
 .pastas-escolha button:hover{ background:rgba(255,255,255,.06); }
 .pastas-escolha .ico{ width:22px; height:22px; }
 .pastas-escolha__vazio{ padding:1.2rem; text-align:center; color:var(--muted); font-size:.85rem; }
+
+/* ---------- enviar (pessoas do painel e e-mail de fora) ---------- */
+.dialogo--largo{ width:min(580px, calc(100vw - 2rem)); }
+.enviar__sub{ color:var(--muted); font-size:.84rem; margin-top:.25rem; }
+.enviar__bloco{ display:grid; gap:.55rem; }
+.enviar__nota{ color:var(--muted); font-size:.78rem; line-height:1.45; }
+.dialogo .rotulo{ margin-bottom:0; }
+.dialogo .adicionar__campo{ height:46px; }
+.fichas{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.fichas:empty{ display:none; }
+.ficha{
+  display:inline-flex; align-items:center; gap:.4rem; padding:.22rem .25rem .22rem .25rem; border-radius:999px;
+  background:rgba(44,63,196,.22); border:1px solid rgba(77,107,255,.35); font-size:.8rem; max-width:100%;
+}
+.ficha .av{ box-shadow:none; }
+.ficha--email{ padding-left:.7rem; background:rgba(238,27,36,.12); border-color:rgba(238,27,36,.38); }
+.ficha button{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; color:var(--muted); flex:none; }
+.ficha button:hover{ background:rgba(255,255,255,.12); color:#fff; }
+.ficha button svg{ width:12px; }
+.campo--fichas{ height:auto; min-height:50px; flex-wrap:wrap; padding:.45rem .7rem; gap:.4rem; }
+.campo--fichas input{ min-width:180px; height:34px; }
+.campo--fichas input:disabled{ cursor:not-allowed; opacity:.5; }
+.enviar__msg{ display:grid; gap:.5rem; }
+.enviar__msg textarea{
+  resize:vertical; min-height:76px; padding:.75rem .9rem; border-radius:12px; border:1px solid var(--line-2);
+  background:rgba(255,255,255,.04); color:var(--off); font:inherit; font-size:.92rem; line-height:1.45; outline:0;
+}
+.enviar__msg textarea:focus{ border-color:rgba(77,107,255,.6); box-shadow:0 0 0 4px rgba(44,63,196,.2); }
+.dialogo .btn svg{ width:16px; }
 
 /* ---------- arrastar para enviar ---------- */
 .soltar{
