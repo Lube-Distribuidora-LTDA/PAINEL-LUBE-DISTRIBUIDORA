@@ -168,7 +168,7 @@ caso('evento liberado tem os campos do contrato (§3.3)', async () => {
   const ch = c.rota('/evento')[0];
   assert.match(ch.headers.get('authorization'), /^Bearer ey/);
   assert.equal(ch.headers.get('content-type'), 'application/json');
-  assert.equal(ch.headers.get('x-sentinela-guarda'), 'sentinela-guarda/1.1.0');
+  assert.equal(ch.headers.get('x-sentinela-guarda'), 'sentinela-guarda/1.2.0');
   assert.equal(ch.headers.get('x-sentinela-runtime'), 'nodejs');
   assert.equal(ch.init.method, 'POST');
   conta(15);
@@ -625,6 +625,28 @@ caso('passe na query → POST /sessao → 302 com Set-Cookie __Host-sentinela e 
   conta(15);
 });
 
+caso('passe trocado dentro do Painel (iframe) → cookie SameSite=None; Partitioned; aba normal segue Lax', async () => {
+  const g = await novoGuarda();
+  const { chave, c, H } = await cenarioLogin();
+  const sessao = await assinarJwt(sessaoPayload(), chave);
+  c.sessaoOk = async () => ({ ok: true, sessao, exp: new Date(Date.now() + 8 * 3600e3).toISOString(), email: 'julio@lube.com.br' });
+  const quadro = { 'sec-fetch-dest': 'iframe', 'sec-fetch-site': 'cross-site' };
+  const r = await rodar(g, req(H, '/?sentinela_passe=eyJh.eyJw.c2ln', { headers: quadro }));
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('set-cookie'), '__Host-sentinela=' + sessao + '; Path=/; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=28800');
+  // com o cookie, a página dentro do iframe entra
+  assert.equal(await rodar(g, req(H, '/', { headers: quadro, cookie: '__Host-sentinela=' + sessao })), null);
+  // falha do passe dentro do iframe: a marca de falha também vai particionada
+  c.sessaoOk = async () => null;
+  const r2 = await rodar(g, req(H, '/?sentinela_passe=eyJh.eyJw.velho', { headers: quadro }));
+  assert.ok((r2.headers.get('set-cookie') || '').startsWith('__Host-sentinela-falha=1; Path=/; HttpOnly; Secure; SameSite=None; Partitioned;'));
+  // aba normal (document): continua Lax
+  c.sessaoOk = async () => ({ ok: true, sessao, exp: new Date(Date.now() + 8 * 3600e3).toISOString(), email: 'julio@lube.com.br' });
+  const r3 = await rodar(g, req(H, '/?sentinela_passe=eyJh.eyJw.c2ln'));
+  assert.match(r3.headers.get('set-cookie'), /; SameSite=Lax; Max-Age=28800$/);
+  conta(5);
+});
+
 caso('passe inválido → 302 sem cookie de sessão, evento observado passe_invalido; laço quebrado', async () => {
   const g = await novoGuarda();
   const { c, H } = await cenarioLogin();
@@ -812,7 +834,7 @@ caso('GET /.sentinela/saude → JSON no-store, sem expor listas, sem evento', as
   const j = JSON.parse(txt);
   assert.deepEqual(Object.keys(j), ['guarda', 'runtime', 'oidc', 'lista', 'ip', 'pais', 'cidade']);
   assert.deepEqual(Object.keys(j.lista), ['ok', 'idade_s', 'modo']);
-  assert.equal(j.guarda, 'sentinela-guarda/1.1.0');
+  assert.equal(j.guarda, 'sentinela-guarda/1.2.0');
   assert.equal(j.runtime, 'nodejs');
   assert.equal(j.oidc, true);
   assert.equal(j.lista.ok, true);

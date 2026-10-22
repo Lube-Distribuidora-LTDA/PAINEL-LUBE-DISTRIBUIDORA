@@ -50,7 +50,7 @@ function novoEdge(listaObj) {
 caso('no Edge Runtime: sem process/Buffer, runtime "edge" na saúde', async () => {
   const { rt, g, pedir } = novoEdge(lista());
   assert.equal(rt.evaluate('typeof process + "/" + typeof Buffer + "/" + typeof require'), 'undefined/undefined/undefined');
-  assert.equal(g.VERSAO, 'sentinela-guarda/1.1.0');
+  assert.equal(g.VERSAO, 'sentinela-guarda/1.2.0');
   const r = await g.sentinela(pedir('/.sentinela/saude'));
   const j = JSON.parse(await r.text());
   assert.equal(j.runtime, 'edge');
