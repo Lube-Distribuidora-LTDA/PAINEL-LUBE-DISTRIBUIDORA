@@ -7,7 +7,10 @@
    vira um passo do Desfazer (Ctrl+Z).
    A aba entra pelo AddToolbarMenuItem do ONLYOFFICE (8.1 em diante); os
    ícones ficam em facil/light e facil/dark (um de cada para os temas claro e
-   escuro), gerados por office/ferramentas/gerar_icones_facil.py.
+   escuro) e em theme-lube-noite/ (brancos: o Lube Noite é escuro mas se declara
+   claro), gerados por office/ferramentas/gerar_icones_facil.py.
+   Também avisa a página do editor qual tema está na tela (brilho do modo escuro
+   e botão claro/escuro do portal).
    ========================================================= */
 (function (window) {
   'use strict';
@@ -17,8 +20,12 @@
   if (!L) return;
 
   var ABA = 'lube-facil';
-  // relativo ao plugin: o editor completa com o endereço de office/ia/
-  function icone(nome) { return 'facil/%theme-type%(light|dark)/' + nome + '.%extension%(svg)'; }
+  // relativo ao plugin: o editor completa com o endereço de office/ia/. Escolha do editor: primeiro
+  // o nome do tema (theme-lube-noite → ícones brancos), depois o tipo (light/dark) da pasta facil/.
+  // Tem que ser texto: lista de objetos o editor estraga ao completar o endereço.
+  function icone(nome) {
+    return '%theme-name%(facil|theme-lube-noite)/%theme-type%(light|dark)/' + nome + '.%extension%(svg)';
+  }
   function avisar(texto, erro) { L.avisar({ tipo: 'aviso', texto: texto, erro: !!erro }); }
   function hoje() { return new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }); }
 
@@ -382,9 +389,20 @@
     });
   }
 
+  /* ======================= tema na tela ======================= */
+  // o editor manda o tema ao abrir (antes do init, quando a página ainda não ouve o plugin) e a
+  // cada troca pelo menu Ver; a página usa para o brilho do modo escuro e o botão claro/escuro
+  var temaAtual = '';
+  function avisarTema() { if (temaAtual) L.avisar({ tipo: 'tema', id: temaAtual }); }
+  plugin.onThemeChanged = function (t) {
+    temaAtual = String((t && (t.Name || t.name)) || '');
+    avisarTema();
+  };
+
   var antes = plugin.init;
   plugin.init = function () {
     if (antes) antes.apply(this, arguments);
     try { registrar(); } catch (e) { avisar('A aba Lube Fácil não abriu: ' + ((e && e.message) || e), true); }
+    avisarTema();
   };
 })(window);

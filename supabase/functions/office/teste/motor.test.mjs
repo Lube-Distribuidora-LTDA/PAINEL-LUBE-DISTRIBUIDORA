@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assinarHS256, verificarHS256 } from '../jwt.ts';
-import { lerRetorno, montarEditor, motorVivo, permissoes, tipoDocumento, urlMotorValida, visualDoEditor } from '../motor.ts';
+import { dataBrasilia, lerRetorno, montarEditor, motorVivo, permissoes, tipoDocumento, urlMotorValida, visualDoEditor } from '../motor.ts';
 import { linhaUnica, montarEmail, tipoMime } from '../email.ts';
 
 const CHAVE = 'chave-de-teste-com-tamanho-suficiente';
@@ -75,6 +75,7 @@ test('visual do editor: o de antes até ligar, e o da Lube só com tema conhecid
   assert.deepEqual(visualDoEditor({ visual: 'classico' }), { lube: false, tema: 'theme-dark' });
   assert.deepEqual(visualDoEditor({ visual: 'lube' }), { lube: true, tema: 'theme-lube-claro' });
   assert.deepEqual(visualDoEditor({ visual: 'lube', tema: 'theme-lube-escuro' }), { lube: true, tema: 'theme-lube-claro' });
+  assert.deepEqual(visualDoEditor({ visual: 'lube', tema: 'theme-lube-noite' }), { lube: true, tema: 'theme-lube-noite' });
   assert.deepEqual(visualDoEditor({ visual: 'lube', tema: '"><script>' }), { lube: true, tema: 'theme-lube-claro' });
 
   const antes = montarEditor(cfgBase()).editorConfig.customization;
@@ -89,6 +90,14 @@ test('visual do editor: o de antes até ligar, e o da Lube só com tema conhecid
   assert.equal(lube.features.tabStyle, 'line');
   assert.equal(lube.features.spellcheck.mode, true);
   assert.equal(lube.autosave, true);
+});
+
+test('data "Carregado" da tela Arquivo em horário de Brasília', () => {
+  assert.equal(dataBrasilia('2026-10-22T11:00:56.502741+00:00'), '22/10/2026 08:00');
+  assert.equal(dataBrasilia(null), '');
+  assert.equal(dataBrasilia('não é data'), '');
+  const cfg = montarEditor({ ...cfgBase(), arquivo: { ...cfgBase().arquivo, criado_em: '2026-01-05T15:30:00Z' } });
+  assert.equal(cfg.document.info.uploaded, '05/01/2026 12:30');
 });
 
 function cfgBase() {

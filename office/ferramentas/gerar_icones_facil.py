@@ -3,7 +3,9 @@ LUBE OFFICE - gera os icones da aba "Lube Facil" (office/ia/facil.js).
 
 Saida: office/ia/facil/light/*.svg e office/ia/facil/dark/*.svg, 28x28 (tamanho
 dos botoes grandes do ONLYOFFICE). O editor escolhe a pasta pelo tipo do tema:
-light nos temas claros, dark nos escuros (Lube Escuro incluido).
+light nos temas claros, dark nos escuros. O Lube Noite e escuro mas se declara
+claro (ver gerar_temas.py), entao tem pasta propria pelo nome do tema:
+office/ia/theme-lube-noite/light e /dark, com os icones brancos.
 
 Rodar (na pasta do portal):  python office/ferramentas/gerar_icones_facil.py
 Cores da marca: nota "Identidade visual da Lube" no cerebro.
@@ -96,14 +98,18 @@ ICONES = {
 
 
 def main():
-    for tema, cores in CORES.items():
-        pasta = SAIDA / tema
+    # pasta -> cores; o facil.js monta o caminho com %theme-name%(facil|theme-lube-noite)/%theme-type%(light|dark)
+    pastas = {
+        SAIDA / "light": CORES["light"], SAIDA / "dark": CORES["dark"],
+        RAIZ / "ia" / "theme-lube-noite" / "light": CORES["dark"], RAIZ / "ia" / "theme-lube-noite" / "dark": CORES["dark"],
+    }
+    for pasta, cores in pastas.items():
         pasta.mkdir(parents=True, exist_ok=True)
         for nome, corpo in ICONES.items():
             svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">'
                    + corpo.format(**cores) + "</svg>\n")
             (pasta / (nome + ".svg")).write_text(svg, encoding="utf-8")
-    print("ok", len(ICONES), "icones x", len(CORES), "temas em", SAIDA.relative_to(RAIZ.parent))
+    print("ok", len(ICONES), "icones x", len(pastas), "pastas")
 
 
 if __name__ == "__main__":

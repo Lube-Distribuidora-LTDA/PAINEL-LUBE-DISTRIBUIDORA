@@ -1,6 +1,6 @@
 @echo off
 rem ===========================================================================
-rem  LUBE OFFICE - coloca os tema da Lube (Lube Claro) no editor.
+rem  LUBE OFFICE - coloca os temas da Lube (Lube Claro e Lube Noite) no editor.
 rem
 rem  Rode NA SRV-IA, de duplo clique. Ele pede administrador no meio do
 rem  caminho - isso e esperado. Nao reinicia o motor: quem estiver editando

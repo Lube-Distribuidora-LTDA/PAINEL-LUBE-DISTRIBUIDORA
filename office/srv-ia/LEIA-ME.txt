@@ -32,9 +32,10 @@ Onde fica cada coisa (na SRV-IA)
 Deu problema?
   Rode DIAGNOSTICO MOTOR.bat: ele diz numa frase o que esta errado.
 
-Tema da Lube no editor (Lube Claro)
+Temas da Lube no editor (Lube Claro e Lube Noite)
   1. Na SRV-IA, de duplo clique em INSTALAR TEMA LUBE.bat (ele pede administrador).
-  2. Ele copia o tema e a pagina tema-lube.html (pasta temas) para o ONLYOFFICE e espera
-     o motor oferecer o tema (de 1 a 6 minutos). Nao reinicia nada: quem edita continua.
-  3. Quem liga o visual novo para todos e o painel (office.config, chave editor).
-  Rodar de novo e seguro. O tema sai de office/ferramentas/gerar_temas.py.
+  2. Ele copia os temas e a pagina tema-lube.html (pasta temas) para o ONLYOFFICE e espera
+     o motor oferecer os temas (de 1 a 6 minutos). Nao reinicia nada: quem edita continua.
+  3. Quem liga o visual novo para todos e o painel (office.config, chave editor; o padrao
+     e o Lube Claro). Cada pessoa troca para o escuro no botao "Escuro" do topo do editor.
+  Rodar de novo e seguro. Os temas saem de office/ferramentas/gerar_temas.py.

@@ -94,6 +94,8 @@
     // botões da aba Lube Fácil: abrir a IA e dar retorno do que fizeram
     if (d.tipo === 'abrir-painel') { abrir(); return; }
     if (d.tipo === 'aviso') { O.toast(String(d.texto || '').slice(0, 200), d.erro ? 'erro' : null); return; }
+    // tema do editor (ao abrir e quando muda no menu Ver): brilho do modo escuro e botão claro/escuro
+    if (d.tipo === 'tema') { if (window.OFC_EDITOR_TEMA) window.OFC_EDITOR_TEMA(String(d.id || '').slice(0, 60)); return; }
     var p = pedidos[d.id];
     if (!p) return;
     if (d.tipo === 'progresso') { if (p.progresso) p.progresso(d); return; }

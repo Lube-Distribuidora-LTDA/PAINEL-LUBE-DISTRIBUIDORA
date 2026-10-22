@@ -38,6 +38,38 @@
 .ed-cartao__acoes .btn{ height:44px; padding:0 1.2rem; }
 .ed-nota{ color:var(--muted-d); font-size:.8rem; line-height:1.5; }
 
+/* claro ⇄ escuro (visual da Lube): lua no claro, sol no escuro */
+.btn--tema svg{ width:18px; }
+.btn--tema .sol{ display:none; color:#FFD27A; }
+.btn--tema[aria-pressed="true"] .lua{ display:none; }
+.btn--tema[aria-pressed="true"] .sol{ display:block; }
+
+/* brilho vermelho e azul atrás do papel no Word escuro (Lube Noite). O editor pinta essa área
+   com cor sólida (azul quase preto); a luz vem por cima em modo "tela", que deixa o papel branco
+   branco e só acende o fundo escuro. Cobre só a área do documento: abaixo da barra do editor
+   (cabeçalho compacto), entre os painéis laterais e acima da barra de status. */
+.ed-brilho{
+  position:absolute; z-index:2; top:100px; left:40px; right:40px; bottom:26px;
+  pointer-events:none; mix-blend-mode:screen; opacity:0; transition:opacity .8s var(--ease, ease);
+  overflow:hidden;
+  /* bordas esfumadas: sobre o menu Arquivo (que cobre a área toda) não aparece a beirada da camada */
+  -webkit-mask-image:linear-gradient(to bottom, transparent, #000 90px, #000 calc(100% - 60px), transparent),
+                     linear-gradient(to right, transparent, #000 90px, #000 calc(100% - 90px), transparent);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to bottom, transparent, #000 90px, #000 calc(100% - 60px), transparent),
+             linear-gradient(to right, transparent, #000 90px, #000 calc(100% - 90px), transparent);
+  mask-composite:intersect;
+}
+.ed-brilho::before, .ed-brilho::after, .ed-brilho i{ content:""; position:absolute; border-radius:50%; filter:blur(60px); }
+.ed-brilho::before{ width:46vw; height:46vw; left:-14vw; bottom:-18vw; background:radial-gradient(closest-side, rgba(229,16,31,.55), rgba(229,16,31,0)); }
+.ed-brilho::after{ width:44vw; height:44vw; right:-13vw; top:-16vw; background:radial-gradient(closest-side, rgba(44,63,196,.75), rgba(44,63,196,0)); }
+.ed-brilho i{ width:30vw; height:30vw; right:-10vw; bottom:-12vw; background:radial-gradient(closest-side, rgba(77,107,255,.38), rgba(77,107,255,0)); }
+.ed-palco[data-tipo="docx"][data-tema="theme-lube-noite"] .ed-brilho{ opacity:1; }
+.ed-palco[data-tipo="docx"][data-tema="theme-lube-noite"] .ed-brilho::before{ animation:ed-respira 11s ease-in-out infinite alternate; }
+.ed-palco[data-tipo="docx"][data-tema="theme-lube-noite"] .ed-brilho::after{ animation:ed-respira 13s ease-in-out -4s infinite alternate-reverse; }
+@keyframes ed-respira{ from{ transform:translate(0, 0) scale(1); opacity:.85; } to{ transform:translate(2.5vw, -2vw) scale(1.12); opacity:1; } }
+@media (prefers-reduced-motion: reduce){ .ed-brilho::before, .ed-brilho::after{ animation:none !important; } }
+
 @media (max-width:640px){
   .ed-acoes .btn span{ display:none; }
   .ed-acoes .btn{ padding:0 .7rem; }

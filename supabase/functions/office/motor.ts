@@ -67,9 +67,18 @@ export function origemDoPlugin(origem: string | null, portal: string) {
 
 // visual do editor (office.config 'editor'): "lube" = tema da Lube, cabeçalho compacto
 // (o nome do arquivo já está no topo do portal), abas em linha e sem dicas de novidade
-// do ONLYOFFICE; qualquer outro valor = o visual de antes. Só tema claro: tema escuro
-// próprio volta ao cinza do ONLYOFFICE a cada abertura (teste de 2026-10-22).
-export const TEMAS_LUBE = ['theme-lube-claro'];
+// do ONLYOFFICE; qualquer outro valor = o visual de antes. O primeiro tema é o padrão.
+// Lube Noite é escuro mas declarado "light" (ver office/ferramentas/gerar_temas.py).
+export const TEMAS_LUBE = ['theme-lube-claro', 'theme-lube-noite'];
+
+// "Carregado" na tela Arquivo do editor: o ONLYOFFICE mostra o texto como vem
+export function dataBrasilia(iso: unknown) {
+  const t = typeof iso === 'string' ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t)) return '';
+  return new Date(t).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  }).replace(',', '');
+}
 
 export function visualDoEditor(v: unknown) {
   const c = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
@@ -110,7 +119,7 @@ export function montarEditor(o: {
       url: o.urlArquivo,
       info: {
         owner: a.dono?.nome ?? '',
-        uploaded: a.criado_em ?? '',
+        uploaded: dataBrasilia(a.criado_em),
         folder: a.pasta_nome || 'Meus arquivos',
       },
       permissions: p.permissions,

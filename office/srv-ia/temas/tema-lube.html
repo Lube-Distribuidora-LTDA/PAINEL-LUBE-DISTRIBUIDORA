@@ -7,29 +7,36 @@
 <body>
 <script>
 /* LUBE OFFICE — deixa o tema da Lube pronto antes de o editor abrir.
-   O ONLYOFFICE só pinta um tema próprio (Lube Escuro, Lube Claro) depois de a pessoa
+   O ONLYOFFICE só pinta um tema próprio (Lube Claro, Lube Noite) depois de a pessoa
    escolher no menu: até lá abre com as cores padrão. O painel abre esta página escondida,
    no mesmo endereço do motor, e ela grava as cores do tema na memória do navegador, onde
-   o editor procura ao abrir. Se a pessoa escolheu outro tema no menu, nada muda.
+   o editor procura ao abrir. Se a pessoa escolheu outro tema no menu, nada muda; com
+   ?forcar=1 (botão claro/escuro do painel) o tema pedido passa a ser a escolha dela.
    Fica no motor (SRV-IA) em web-apps/apps/common/main/resources/lube/; quem copia é o
    INSTALAR TEMA LUBE.bat. */
 (function () {
   function avisar(ok) { try { parent.postMessage({ lubeTema: true, ok: ok }, '*'); } catch (e) {} }
-  try {
-    var tema = (/[?&]tema=(theme-lube-[a-z]+)(?:&|$)/.exec(location.search) || [])[1];
-    if (!tema) { avisar(false); return; }
-    var escolhido = localStorage.getItem('ui-theme-id');
-    if (escolhido && escolhido.indexOf('theme-lube-') !== 0) { avisar(true); return; }
-    var alvo = escolhido || tema;
-    // o arquivo do tema direto (o themes.json do motor fica 5 minutos em cache depois de uma troca)
-    fetch('/web-apps/apps/common/main/resources/themes/' + alvo + '.json', { cache: 'no-store' }).then(function (r) {
+  // o arquivo do tema direto (o themes.json do motor fica 5 minutos em cache depois de uma troca)
+  function ler(id) {
+    return fetch('/web-apps/apps/common/main/resources/themes/' + id + '.json', { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('tema ' + r.status);
       return r.json();
     }).then(function (t) {
-      var ok = !!(t && t.id === alvo && t.colors);
-      if (ok) localStorage.setItem('ui-theme', JSON.stringify({ id: t.id, type: t.type, text: t.name, colors: t.colors }));
-      avisar(ok);
-    })['catch'](function () { avisar(false); });
+      if (!(t && t.id === id && t.colors)) throw new Error('tema inválido');
+      return t;
+    });
+  }
+  function guardar(t) { localStorage.setItem('ui-theme', JSON.stringify({ id: t.id, type: t.type, text: t.name, colors: t.colors })); }
+  try {
+    var tema = (/[?&]tema=(theme-lube-[a-z]+)(?:&|$)/.exec(location.search) || [])[1];
+    if (!tema) { avisar(false); return; }
+    var forcar = /[?&]forcar=1(?:&|$)/.test(location.search);
+    var escolhido = localStorage.getItem('ui-theme-id');
+    if (forcar) { localStorage.setItem('ui-theme-id', tema); escolhido = null; }
+    if (escolhido && escolhido.indexOf('theme-lube-') !== 0) { avisar(true); return; }
+    // escolha antiga que não existe mais (o Lube Escuro saiu em 2026-10-22): volta para o tema pedido
+    (escolhido ? ler(escolhido)['catch'](function () { localStorage.removeItem('ui-theme-id'); return ler(tema); }) : ler(tema))
+      .then(function (t) { guardar(t); avisar(true); })['catch'](function () { avisar(false); });
   } catch (e) { avisar(false); }
 })();
 </script>

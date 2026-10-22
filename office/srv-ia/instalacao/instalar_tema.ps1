@@ -4,7 +4,7 @@ param(
 
 # instalar_tema.ps1
 #
-# LUBE OFFICE - coloca o tema da Lube (Lube Claro) no motor de edicao
+# LUBE OFFICE - coloca os temas da Lube (Lube Claro e Lube Noite) no motor de edicao
 # (ONLYOFFICE Docs) da SRV-IA. Nao reinicia o motor: quem estiver editando continua.
 #
 # Como rodar (NA SRV-IA): P:\INTEGRACAO BI\OFFICE\INSTALAR TEMA LUBE.bat
@@ -103,7 +103,7 @@ try {
     if ($faltam.Count -eq 0) {
         Escrever-Log ('tema: PRONTO, o motor oferece os temas da Lube; pagina do tema ' + $(if ($pagina) { 'ok' } else { 'sem resposta' }))
         Write-Host '================================================================' -ForegroundColor Green
-        Write-Host ' PRONTO: o editor ja oferece o tema Lube Claro.' -ForegroundColor Green
+        Write-Host ' PRONTO: o editor ja oferece os temas Lube Claro e Lube Noite.' -ForegroundColor Green
         Write-Host '================================================================' -ForegroundColor Green
     } else {
         Escrever-Log ('tema: copiado, mas o motor ainda nao lista ' + ($faltam -join ', '))

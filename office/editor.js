@@ -51,6 +51,7 @@
       (a.pasta_nome || (a.papel !== 'dono' && a.dono ? 'de ' + a.dono.nome : 'Meus arquivos')) +
       ' · versão ' + a.versao;
     $('[data-ed-ico]').innerHTML = O.icone(a.extensao);
+    if (palco()) palco().dataset.tipo = String(a.extensao || '').toLowerCase();
     var papel = $('[data-ed-papel]');
     if (a.papel && a.papel !== 'dono') { papel.textContent = O.papelTxt(a.papel); papel.hidden = false; }
     $('[data-ed-compartilhar]').setAttribute('href', urlCompartilhar());
@@ -95,13 +96,51 @@
     });
   }
 
+  // modo claro e escuro da Lube: a escolha fica neste navegador (botão da lua no topo ou
+  // menu Ver › Tema da interface do editor, que o plugin avisa)
+  var TEMAS_LUBE = ['theme-lube-claro', 'theme-lube-noite'];
+  function temaPreferido() {
+    try { var t = localStorage.getItem('office_tema'); return TEMAS_LUBE.indexOf(t) > -1 ? t : null; } catch (e) { return null; }
+  }
+  function guardarTema(t) {
+    try { if (TEMAS_LUBE.indexOf(t) > -1) localStorage.setItem('office_tema', t); else localStorage.removeItem('office_tema'); } catch (e) {}
+  }
+  function palco() { return $('.ed-palco'); }
+  // tema que o editor está usando: liga o brilho atrás do papel no Noite e troca o ícone do botão
+  function mostrarTema(t) {
+    var p = palco();
+    if (p) p.dataset.tema = t || '';
+    var b = $('[data-tema-trocar]');
+    if (!b) return;
+    var noite = t === 'theme-lube-noite';
+    b.setAttribute('aria-pressed', noite ? 'true' : 'false');
+    b.title = noite ? 'Modo claro' : 'Modo escuro';
+    b.querySelector('span').textContent = noite ? 'Claro' : 'Escuro';
+  }
+  // aviso do plugin (abertura e troca pelo menu Ver): só uma troca vira escolha da pessoa
+  // (quem nunca escolheu acompanha o padrão do painel); tema que não é da Lube tira a escolha
+  var temaAberto = '';
+  window.OFC_EDITOR_TEMA = function (t) {
+    t = String(t || '');
+    mostrarTema(t);
+    if (/^theme-/.test(t) && t !== temaAberto) guardarTema(t);
+  };
+
   // tema da Lube: o ONLYOFFICE só pinta tema próprio depois de a pessoa escolher no menu
   // (teste de 2026-10-22). A página tema-lube.html, no motor, grava as cores do tema na
   // memória do editor antes de ele abrir; se ela não responder em 2,5 s, o editor abre assim mesmo.
+  // Com o visual da Lube ligado, a escolha da pessoa (claro ou escuro) vale sobre o padrão:
+  // o tema vai no endereço do editor (a configuração assinada não precisa mudar).
   function prepararTema(m) {
     var c = m.config && m.config.editorConfig && m.config.editorConfig.customization;
     var tema = c && c.uiTheme;
     if (!/^theme-lube-[a-z]+$/.test(String(tema || ''))) return Promise.resolve();
+    var escolhido = temaPreferido();
+    if (escolhido) c.uiTheme = tema = escolhido;
+    temaAberto = tema;
+    mostrarTema(tema);
+    var botao = $('[data-tema-trocar]');
+    if (botao) botao.hidden = false;
     var origem = new URL(m.api).origin;
     return new Promise(function (ok) {
       var f = document.createElement('iframe');
@@ -111,7 +150,8 @@
       setTimeout(fim, 2500);
       f.hidden = true;
       f.setAttribute('aria-hidden', 'true');
-      f.src = origem + '/web-apps/apps/common/main/resources/lube/tema-lube.html?tema=' + encodeURIComponent(tema);
+      f.src = origem + '/web-apps/apps/common/main/resources/lube/tema-lube.html?tema=' + encodeURIComponent(tema) +
+        (escolhido ? '&forcar=1' : '');
       document.body.appendChild(f);
     });
   }
@@ -200,6 +240,11 @@
   function iniciar() {
     O.marcas();
     $('[data-ed-tentar]').addEventListener('click', function () { location.reload(); });
+    // claro ⇄ escuro: guarda a escolha e reabre o editor nela (o texto já está salvo no motor)
+    $('[data-tema-trocar]').addEventListener('click', function () {
+      guardarTema(palco().dataset.tema === 'theme-lube-noite' ? 'theme-lube-claro' : 'theme-lube-noite');
+      location.reload();
+    });
     if (TESTE) { iniciarTeste(); return; }
     O.pronto().then(function () { return O.token(); }).then(function (t) {
       if (!t) {
