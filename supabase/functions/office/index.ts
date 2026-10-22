@@ -5,6 +5,7 @@
 //   POST /office/motor            o motor de edição (ONLYOFFICE) devolvendo o arquivo salvo
 //   POST /office/motor/registrar  a SRV-IA avisando o endereço do motor (o túnel muda ao reiniciar)
 //   POST /office/motor/teste      teste de ponta a ponta, só com a senha temporária do banco
+//   POST /office/limpeza          o pg_cron do banco: apaga de vez o que passou do prazo na lixeira
 // As duas portas do motor usam token JWT assinado com OFFICE_JWT_SECRET.
 // O schema office só é tocado pelas funções public.office_srv_*, com a chave de
 // serviço, que nunca sai daqui. Quem pode o quê é conferido no banco.
@@ -298,9 +299,10 @@ async function acaoDoPortal(req: Request) {
         const r = await rpc('office_srv_eu', { p_user: eu });
         const m = await motorAtual();
         const ia = await rpc('office_srv_ia_situacao', { p_user: eu });
+        const lixeiraDias = await rpc('office_srv_lixeira_dias', {});
         return json({
           ...r, motor: m.situacao === 'ligado', motor_situacao: m.situacao, motor_visto_em: m.visto_em, email: smtpPronto(),
-          ia: { ...ia, ligada: !!claude },
+          ia: { ...ia, ligada: !!claude }, lixeira_dias: lixeiraDias,
         });
       }
       case 'ia':
@@ -585,10 +587,60 @@ async function testeMotor(req: Request) {
   }
 }
 
+// ---------------------------------------------------------
+// porta da limpeza: a lixeira guarda por office.config 'lixeira' (3 dias, pedido do Júlio) e o
+// envio nunca confirmado por 1 dia; depois o arquivo sai do Storage (todas as versões, pela API:
+// o Supabase não deixa apagar pelo SQL) e do banco. Quem chama é o pg_cron do próprio banco
+// (office.limpeza_disparar), com a senha de office.config 'limpeza'. Arquivo que não saiu do
+// Storage fica no banco e entra de novo na próxima hora.
+// ---------------------------------------------------------
+async function limparLixeira(req: Request) {
+  let c: Record<string, any>;
+  try { c = await req.json(); } catch { return json({ erro: 'JSON inválido' }, 400); }
+  const token = String(c.token ?? '');
+  try {
+    const v = await rpc('office_srv_lixeira_vencidos', { p_token: token, p_limite: 100 });
+    const apagados: string[] = [];
+    const falhas: string[] = [];
+    let objetos = 0;
+    let bytes = 0;
+    for (const a of (v.arquivos ?? []) as { id: string; caminhos: string[] }[]) {
+      const pasta = 'arquivos/' + a.id;
+      const { data: lista, error } = await admin.storage.from(BUCKET).list(pasta, { limit: 1000 });
+      if (error) { falhas.push(a.id + ': ' + error.message); continue; }
+      const caminhos = new Set((a.caminhos ?? []).filter(Boolean));
+      let tamanho = 0;
+      for (const o of lista ?? []) {
+        if (!o?.id || !o.name) continue;
+        caminhos.add(pasta + '/' + o.name);
+        tamanho += Number(o.metadata?.size ?? 0);
+      }
+      if (caminhos.size) {
+        const { data: fora, error: e2 } = await admin.storage.from(BUCKET).remove([...caminhos]);
+        if (e2) { falhas.push(a.id + ': ' + e2.message); continue; }
+        objetos += fora?.length ?? 0;
+      }
+      bytes += tamanho;
+      apagados.push(a.id);
+    }
+    const r = await rpc('office_srv_lixeira_apagar', {
+      p_token: token, p_arquivos: apagados, p_pastas: v.pastas ?? [], p_objetos: objetos, p_bytes: bytes,
+      p_erro: falhas.length ? falhas.join(' | ') : null,
+    });
+    if (falhas.length) console.error('office limpeza:', falhas);
+    return json({ ...r, dias: v.dias, falhas: falhas.length });
+  } catch (e) {
+    if (e instanceof ErroOffice) return json({ erro: e.message }, e.status);
+    console.error('office limpeza:', e);
+    return json({ erro: 'Falha na limpeza da lixeira' }, 500);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
   const caminho = new URL(req.url).pathname.replace(/\/+$/, '');
+  if (caminho.endsWith('/office/limpeza')) return limparLixeira(req);
   if (caminho.endsWith('/office/motor/teste')) return testeMotor(req);
   if (caminho.endsWith('/office/motor/registrar')) return registrarMotor(req);
   if (caminho.endsWith('/office/motor')) return retornoDoMotor(req);

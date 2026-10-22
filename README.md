@@ -182,8 +182,12 @@ avisos não lidos.
   tabelas do portal. RLS ligado e sem políticas: o navegador **nunca** fala com o
   schema. Tudo passa pela Edge Function `office`, que chama as funções
   `public.office_srv_*` com a chave de serviço; cada função confere o papel de
-  quem pediu (dono 4 · editar 3 · comentar 2 · ver 1). Nada se apaga: excluir
-  manda para a lixeira.
+  quem pediu (dono 4 · editar 3 · comentar 2 · ver 1). Excluir manda para a
+  lixeira, que guarda por **3 dias** (`office.config` 'lixeira'; pedido do Júlio,
+  2026-10-22): depois disso o item não volta mais e a limpeza de hora em hora
+  (pg_cron aos :17 → `POST /office/limpeza`) tira do Storage todas as versões e
+  apaga do banco, com o que tinha dentro; envio nunca confirmado sai em 1 dia.
+  Cada limpeza fica em `office.limpezas` (`db/11_office_lixeira.sql`).
 - **Arquivos**: bucket privado `office`, um objeto por versão
   (`arquivos/<id>/<carimbo>.<ext>`). O envio vai direto do navegador ao Storage
   por um link assinado que a função gera para o caminho reservado.

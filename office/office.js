@@ -118,6 +118,7 @@
     }
     var podeCriarAqui = est.visao === 'meus' || (est.visao === 'pasta' && est.pastaInfo && O.pode(est.pastaInfo.papel, 'editar'));
     $('[data-nova-pasta]').hidden = !podeCriarAqui;
+    if (est.visao !== 'lixeira') $('[data-lixeira-aviso]').hidden = true;
     var busca = $('[data-busca]');
     if (document.activeElement !== busca) busca.value = est.busca;
     $('[data-busca-limpar]').hidden = !busca.value;
@@ -239,9 +240,23 @@
     v.hidden = false;
   }
 
+  // lixeira: o item fica office.config 'lixeira' dias (3, pedido do Júlio) e depois é apagado para sempre
+  function lixeiraDias() { return (est.eu && est.eu.lixeira_dias) || 3; }
+  function diasTxt(n) { return n + (n === 1 ? ' dia' : ' dias'); }
+  function apagaEm(iso) {
+    var h = (new Date(iso).getTime() + lixeiraDias() * 86400000 - Date.now()) / 3600000;
+    if (!isFinite(h)) return '';
+    var txt = h <= 0 ? 'apagando' : h < 1 ? 'apaga em menos de 1 h' : h < 24 ? 'apaga em ' + Math.ceil(h) + ' h' : 'apaga em ' + diasTxt(Math.ceil(h / 24));
+    return '<span class="apaga' + (h < 24 ? ' is-perto' : '') + '">' + txt + '</span>';
+  }
+
   function renderLista() {
     var tab = $('[data-tabela]');
     $('[data-vazio]').hidden = true;
+    var aviso = $('[data-lixeira-aviso]');
+    aviso.hidden = !(est.visao === 'lixeira' && est.itens.length);
+    $('[data-lixeira-aviso-txt]').innerHTML = 'Os itens ficam <b>' + diasTxt(lixeiraDias()) + '</b> na lixeira. ' +
+      'Depois disso são apagados para sempre, com todas as versões, e não dá mais para restaurar.';
     if (!est.itens.length) {
       tab.hidden = true;
       var criar = '<button class="btn btn--prim" type="button" data-criar="docx">' + SVG.mais2 + 'Documento</button>' +
@@ -254,7 +269,8 @@
           est.pastaInfo && O.pode(est.pastaInfo.papel, 'editar') ? criar : ''],
         compartilhados: ['Nada compartilhado com você ainda', 'Quando alguém do painel compartilhar um arquivo ou uma pasta com você, aparece aqui, e o sino avisa.'],
         recentes: ['Nada recente', 'Os arquivos que você abrir ou editar nos últimos 60 dias aparecem aqui.'],
-        lixeira: ['Lixeira vazia', 'O que você mandar para a lixeira fica guardado aqui e pode ser restaurado.'],
+        lixeira: ['Lixeira vazia', 'O que você mandar para a lixeira fica aqui por ' + diasTxt(lixeiraDias()) +
+          ' e pode ser restaurado. Depois disso, é apagado para sempre.'],
         busca: ['Nada encontrado', 'Nenhum arquivo ou pasta que você pode abrir tem “' + esc(est.busca) + '” no nome.']
       }[est.visao] || ['Vazio', ''];
       vazio(V[0], V[1], V[2]);
@@ -293,11 +309,13 @@
     var compartilhada = it.compartilhado && it.compartilhado.total > 0;
     var quando = est.visao === 'lixeira' ? O.quando(it.lixeira_em) : O.quando(it.alterado_em);
     var por = !pasta && it.alterado_por ? (it.alterado_por.id === euId() ? 'você' : O.primeiroNome(it.alterado_por.nome)) : '';
+    var apaga = est.visao === 'lixeira' ? apagaEm(it.lixeira_em) : '';
     var alt = est.visao === 'lixeira'
-      ? '<span><b>' + esc(quando) + '</b></span>'
+      ? '<span><b>' + esc(quando) + '</b> · ' + apaga + '</span>'
       : (it.alterado_por && !pasta ? O.avatar(it.alterado_por, 'p') : '') +
         '<span><b>' + esc(quando) + '</b>' + (por ? ' por ' + esc(por) : '') + '</span>';
-    var sub = esc(quando) + (it.dono && it.dono.id !== euId() ? ' · de ' + esc(O.primeiroNome(it.dono.nome)) : '') +
+    var sub = esc(quando) + (apaga ? ' · ' + apaga : '') +
+      (it.dono && it.dono.id !== euId() ? ' · de ' + esc(O.primeiroNome(it.dono.nome)) : '') +
       (pasta ? '' : ' · ' + O.bytes(it.tamanho));
     return '<div class="linha" role="row" data-item="' + esc(it.id) + '" title="' + esc(nomeCompleto(it)) + '" style="--i:' + Math.min(i || 0, 18) + '"' +
       (arrastavel ? ' draggable="true"' : '') + '>' +
@@ -616,7 +634,7 @@
       tirarItem(it.id);
       atualizarEu();
       O.toast((it.tipo === 'pasta' ? 'A pasta “' + it.nome + '” e tudo o que está dentro foram' : '“' + nomeCompleto(it) + '” foi') +
-        ' para a lixeira.', null, { texto: 'Desfazer', fn: function () { restaurar(it, true); } }, 8000);
+        ' para a lixeira. Fica lá ' + diasTxt(lixeiraDias()) + '.', null, { texto: 'Desfazer', fn: function () { restaurar(it, true); } }, 8000);
     }, erroToast);
   }
 

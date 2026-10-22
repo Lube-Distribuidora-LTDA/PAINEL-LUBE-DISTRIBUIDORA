@@ -417,6 +417,14 @@ span.ico > svg,.menu__ico > svg{ width:100%; height:100%; display:block; }
 .vazio h3{ font-size:1.15rem; font-weight:800; }
 .vazio p{ color:var(--muted); max-width:44ch; line-height:1.5; font-size:.92rem; }
 .vazio .ferr{ margin-top:.5rem; }
+/* lixeira: o prazo (3 dias, depois apaga para sempre) e o "apaga em" de cada item */
+.lixeira-aviso{ display:flex; align-items:center; gap:.6rem; margin:0 0 .9rem; padding:.7rem .95rem; border-radius:12px;
+  background:rgba(238,27,36,.08); border:1px solid rgba(238,27,36,.28); color:var(--off); font-size:.86rem; line-height:1.45; }
+.lixeira-aviso[hidden]{ display:none; }
+.lixeira-aviso svg{ width:18px; flex:none; color:var(--red); }
+.lixeira-aviso b{ font-weight:700; }
+.apaga{ color:var(--muted-d); }
+.apaga.is-perto{ color:#FF7A80; }
 .esq{ height:58px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:1rem; padding:0 1rem; }
 .esq i{ display:block; height:12px; border-radius:6px; background:linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.12), rgba(255,255,255,.05)); background-size:200% 100%; animation:brilhar 1.2s linear infinite; }
 .esq i:first-child{ width:34px; height:34px; border-radius:9px; }
