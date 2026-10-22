@@ -317,11 +317,17 @@ span.ico > svg,.menu__ico > svg{ width:100%; height:100%; display:block; }
 .capa__grade i{ height:7px; background:#E3E8F5; border-radius:1px; }
 .capa__grade i.t{ background:#0D176E; }
 .capa__grade i.v{ background:#1FB26B; }
-.capa--slide{ inset:14% 8% 14%; border-radius:6px; padding:0; overflow:hidden; background:#0D176E; display:block; }
-.capa--slide::before{ content:''; position:absolute; left:-10%; bottom:18%; width:70%; height:14%; background:#E5101F; transform:skewX(-14deg); }
-.capa--slide .capa__placa{ position:absolute; right:7%; top:12%; width:24%; aspect-ratio:3/1; background:#fff; border-radius:3px; display:grid; place-items:center; padding:3%; }
-.capa--slide .capa__ttl{ position:absolute; left:8%; top:36%; width:52%; height:11%; background:#fff; border-radius:2px; transform:skewX(-14deg); }
-.capa--slide .capa__sub{ position:absolute; left:8%; top:53%; width:34%; height:5%; background:rgba(255,255,255,.55); border-radius:2px; }
+/* capa do modelo "Apresentação Lube": azul quase preto em degradê, feixe azul inclinado e bloco vermelho à direita */
+.capa--slide{ inset:14% 8% 14%; border-radius:6px; padding:0; overflow:hidden; display:block;
+  background:linear-gradient(115deg,#030B30 0%,#06186A 48%,#0C2FAD 100%); }
+.capa--slide::before{ content:''; position:absolute; right:12%; top:-10%; width:24%; height:130%; transform:skewX(-22deg);
+  background:linear-gradient(90deg,rgba(23,65,216,0) 0%,#1741D8 72%,#5B8CFF 100%); }
+.capa--slide::after{ content:''; position:absolute; right:-6%; top:16%; width:21%; height:66%; transform:skewX(-14deg);
+  background:linear-gradient(160deg,#FF3B45,#C20D1A); border-radius:12px 0 0 0; }
+.capa--slide .capa__placa{ position:absolute; left:8%; top:13%; width:13%; aspect-ratio:5/4; display:grid; place-items:center; z-index:1; }
+.capa--slide .capa__ttl{ position:absolute; left:8%; top:47%; width:42%; height:10%; background:#fff; border-radius:2px; z-index:1; }
+.capa--slide .capa__ttl::before{ content:''; position:absolute; left:0; top:-70%; width:16%; height:28%; background:#E5101F; }
+.capa--slide .capa__sub{ position:absolute; left:8%; top:64%; width:30%; height:5%; background:rgba(255,255,255,.5); border-radius:2px; z-index:1; }
 
 .modelo__capa--branco{ background:rgba(255,255,255,.03); }
 .capa--branco{ inset:10% 22% 0; display:grid; place-items:center; padding:0; }

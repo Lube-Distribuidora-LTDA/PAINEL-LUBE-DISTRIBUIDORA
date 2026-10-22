@@ -273,7 +273,7 @@
     { id: 'relatorio', nome: 'Relatório mensal', ext: 'xlsx', arquivo: 'modelos/relatorio-mensal.xlsx',
       desc: 'Indicadores do mês, meta e realizado', capa: 'plan' },
     { id: 'apresentacao', nome: 'Apresentação Lube', ext: 'pptx', arquivo: 'modelos/apresentacao-lube.pptx',
-      desc: 'Capa, agenda, resultados e fechamento', capa: 'apre' }
+      desc: '19 tipos de slide: capa, seções, números, etapas e fechamento', capa: 'apre' }
   ];
   var BRANCOS = {
     docx: { nome: 'Documento sem título', arquivo: 'modelos/branco.docx' },

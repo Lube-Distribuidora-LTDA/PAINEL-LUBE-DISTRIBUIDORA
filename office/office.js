@@ -157,7 +157,8 @@
   function capa(tipo) {
     var marca = window.LUBE_MARCA ? window.LUBE_MARCA('#0D176E', '#E5101F') : '';
     if (tipo === 'apre') {
-      return '<div class="capa capa--slide"><span class="capa__placa">' + marca + '</span>' +
+      var clara = window.LUBE_MARCA ? window.LUBE_MARCA('#FFFFFF', '#E5101F') : '';
+      return '<div class="capa capa--slide"><span class="capa__placa">' + clara + '</span>' +
         '<span class="capa__ttl"></span><span class="capa__sub"></span></div>';
     }
     if (tipo === 'plan') {

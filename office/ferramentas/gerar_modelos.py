@@ -527,7 +527,7 @@ if __name__ == "__main__":
     proposta_docx()
     ata_docx()
     relatorio_xlsx()
-    apresentacao(True)
+    # a "Apresentação Lube" sai do gerar_modelo_apresentacao.py (modelo padrão da Lube, 2026-10-22)
     ia_documento()
     ia_apresentacao()
     logo_plugin()

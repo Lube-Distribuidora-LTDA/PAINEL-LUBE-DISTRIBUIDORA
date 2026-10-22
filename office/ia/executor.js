@@ -25,9 +25,31 @@
   function editor() { return (plugin.info && plugin.info.editorType) || ''; }
   function pausa(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
 
+  // imagens do modelo de apresentação (capa e logo) em data URL, buscadas uma vez no portal (mesma origem)
+  var imagensModelo = null;
+  function carregarImagens() {
+    if (imagensModelo) return imagensModelo;
+    function uma(nome) {
+      return fetch(ORIGEM + '/office/ia/modelo/' + nome).then(function (r) {
+        if (!r.ok) throw new Error(nome + ' ' + r.status);
+        return r.blob();
+      }).then(function (b) {
+        return new Promise(function (ok, erro) { var f = new FileReader(); f.onload = function () { ok(f.result); }; f.onerror = erro; f.readAsDataURL(b); });
+      });
+    }
+    imagensModelo = Promise.all([uma('capa.jpg'), uma('logo-escura.png')]).then(function (v) {
+      return { 'capa.jpg': v[0], 'logo-escura.png': v[1] };
+    }, function () { imagensModelo = null; return null; });
+    return imagensModelo;
+  }
+
   // callCommand com promessa (o editor chama a função num escopo próprio: só Api e Asc.scope).
   // Escopo novo a cada comando: nada de um botão da Lube Fácil vaza para a IA (e vice-versa).
   function comando(fn, dados) {
+    // slide da Lube (IA ou aba Lube Fácil): leva as imagens do modelo junto
+    if (fn === slideDesenhar && dados && !dados.imagens) {
+      return carregarImagens().then(function (img) { return comando(fn, Object.assign({}, dados, { imagens: img || {} })); });
+    }
     return new Promise(function (ok) {
       Asc.scope = Asc.scope || {};
       Object.keys(Asc.scope).forEach(function (k) { if (k !== 'prototype') delete Asc.scope[k]; });
@@ -445,18 +467,31 @@
   /* ----------------------- PowerPoint ----------------------- */
   // transição de cada tipo de slide: variadas, mas sóbrias
   var TRANSICAO = {
-    capa: 'effectFadeSmoothly', secao: 'effectGalleryLeft', topicos: 'effectPushLeft', duas_colunas: 'effectRevealSmoothLeft',
+    capa: 'effectFadeSmoothly', secao: 'effectPushLeft', topicos: 'effectFade', duas_colunas: 'effectRevealSmoothLeft',
     numeros: 'effectZoomIn', etapas: 'effectWipeRight', citacao: 'effectFade', encerramento: 'effectFadeSmoothly'
   };
 
+  // Desenho do modelo "Apresentação Lube" (a "Inovação nos BIs", padrão da Lube desde 2026-10-22, pedido do
+  // Júlio): capa e encerramento com o feixe azul e o bloco vermelho, chamada vermelha em maiúsculas sobre o
+  // título, slides claros (#F1F2F7, cartões brancos) e escuros (fundo marinho, cartões azuis), divisor de
+  // seção vermelho e azul. As imagens vêm de office/ia/modelo/ (gerar_modelo_apresentacao.py).
   function slideDesenhar() {
     var S = Asc.scope.slide, BASE = Asc.scope.base, R = { avisos: [] };
     var W = 12192000, H = 6858000, CM = 360000;
-    var AZUL = '0D176E', VERM = 'E5101F', AZUL2 = '2A3796', CLARO = 'E8EBF7', TINTA = '1B2140', CINZA = '5C6480', BRANCO = 'FFFFFF';
+    var C = {
+      azul: '0D176E', verm: 'E5101F', vermEsc: 'C20D1A', vermClaro: 'FF5A64', tinta: '3A4466', escrita: '1B2140',
+      fundoClaro: 'F1F2F7', cartao: 'FBFBFD', borda: 'DCDFEA', rodapeClaro: '5A6488',
+      gelo: 'F5F7FD', branco: 'FFFBFB', lilas: 'C3CDF0', rodapeEsc: '8A9BD6',
+      cartaoEsc: '0B2180', bordaEsc: '2549C9', destaque: '1741D8'
+    };
     function tentar(f, rot) { try { return f(); } catch (e) { R.avisos.push(rot + ': ' + ((e && e.message) || e)); } }
     function cor(h) { return Api.CreateRGBColor(parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)); }
     function solido(h) { return Api.CreateSolidFill(cor(h)); }
     function sem() { return Api.CreateStroke(0, Api.CreateNoFill()); }
+    function traco(h) { return Api.CreateStroke(9525, solido(h)); }
+    function degrade(paradas, angulo) {
+      return Api.CreateLinearGradientFill(paradas.map(function (p) { return Api.CreateGradientStop(cor(p[0]), p[1]); }), angulo);
+    }
     var p = Api.GetPresentation();
     if (Asc.scope.primeiro && Asc.scope.criar) tentar(function () { p.SetSizes(W, H); }, 'tamanho');
     var sl = Api.CreateSlide();
@@ -464,9 +499,19 @@
     if (Asc.scope.posicao != null) p.AddSlide(sl, Asc.scope.posicao); else p.AddSlide(sl);
     var anim = [];
     function animar(sh, ef, gat, dur, atr) { if (sh) anim.push([sh, ef, gat || 'afterprevious', dur || 500, atr || 0]); }
-    function forma(tipo, x, y, w, h, hex) {
-      var s = Api.CreateShape(tipo, Math.round(w), Math.round(h), hex ? solido(hex) : Api.CreateNoFill(), sem());
+    // forma com cantos de 0,3 cm (o "roundRect" padrão arredonda demais os cartões grandes)
+    function forma(tipo, x, y, w, h, fundo, o) {
+      o = o || {};
+      var s = Api.CreateShape(tipo, Math.round(w), Math.round(h),
+        fundo ? (typeof fundo === 'string' ? solido(fundo) : fundo) : Api.CreateNoFill(), o.borda ? traco(o.borda) : sem());
       s.SetPosition(Math.round(x), Math.round(y));
+      if (tipo === 'roundRect') {
+        tentar(function () {
+          var g = Api.CreatePresetGeometry('roundRect');
+          g.SetAdjValue('adj', Math.round(Math.min(50000, (o.raio || 0.3) * CM / Math.min(w, h) * 100000)));
+          s.SetGeometry(g);
+        }, 'cantos');
+      }
       sl.AddObject(s);
       return s;
     }
@@ -489,11 +534,12 @@
         partes(t).forEach(function (pt) {
           var r = Api.CreateRun();
           r.AddText(pt.t);
-          r.SetFontFamily(o.fonte || 'Arial');
-          r.SetFontSize(Math.round((o.tam || 18) * 2));
-          r.SetFill(solido(pt.b && o.corNegrito ? o.corNegrito : (o.cor || TINTA)));
+          r.SetFontFamily('Arial');
+          r.SetFontSize(Math.round((o.tam || 16) * 2));
+          r.SetFill(solido(pt.b && o.corNegrito ? o.corNegrito : (o.cor || C.escrita)));
           if (o.negrito || pt.b) r.SetBold(true);
           if (o.italico) r.SetItalic(true);
+          if (o.espaco) tentar(function () { r.SetSpacing(o.espaco); }, 'letras');
           par.AddElement(r);
         });
         dc.Push(par);
@@ -502,148 +548,181 @@
       tentar(function () { s.SetPaddings(0, 0, 0, 0); }, 'margens');
       return s;
     }
-    function tam(t, base) { var n = String(t || '').length; return n > 70 ? base * 0.62 : n > 52 ? base * 0.74 : n > 36 ? base * 0.86 : base; }
-    function logo(x, y, w) {
-      var img = Api.CreateImage(BASE + '/office/ia/logo-lube.png', Math.round(w), Math.round(w / 3));
+    // título que encolhe com o tamanho do texto
+    function tam(t, base) { var n = String(t || '').length; return n > 70 ? base * 0.62 : n > 52 ? base * 0.72 : n > 36 ? base * 0.84 : base; }
+    // a imagem vem embutida (o motor na SRV-IA nem sempre alcança o endereço de quem pediu); senão, pelo endereço
+    function fonteImagem(nome) { return (Asc.scope.imagens && Asc.scope.imagens[nome]) || BASE + '/office/ia/modelo/' + nome; }
+    function imagem(nome, x, y, w, h) {
+      var img = Api.CreateImage(fonteImagem(nome), Math.round(w), Math.round(h));
       img.SetPosition(Math.round(x), Math.round(y));
       sl.AddObject(img);
       return img;
     }
-    function placa(x, y, w) {
-      var h = w * 0.4, pl = forma('roundRect', x, y, w, h, BRANCO), m = w * 0.08;
-      var lg = tentar(function () { return logo(x + m, y + (h - (w - 2 * m) / 3) / 2, w - 2 * m); }, 'logo');
-      var g = lg ? tentar(function () { return sl.GroupDrawings([pl, lg]); }, 'agrupar') : null;
-      return g || pl;
+    function fundoImagem(nome, reserva) {
+      var ok = tentar(function () { sl.SetBackground(Api.CreateBlipFill(fonteImagem(nome), 'stretch')); return true; }, 'fundo');
+      if (!ok) tentar(function () { sl.SetBackground(solido(reserva)); }, 'fundo liso');
     }
-    function fundo(h1, h2) {
-      if (h2) {
-        var ok = tentar(function () {
-          sl.SetBackground(Api.CreateLinearGradientFill([Api.CreateGradientStop(cor(h1), 0), Api.CreateGradientStop(cor(h2), 100000)], 2700000));
-          return true;
-        }, 'degradê');
-        if (ok) return;
+    // fundo dos slides escuros: o mesmo degradê do modelo, do azul no alto à direita ao quase preto embaixo
+    function fundoEscuro() {
+      var ok = tentar(function () { sl.SetBackground(degrade([['0C2FAD', 0], ['06186A', 50000], ['030B30', 100000]], 8100000)); return true; }, 'degradê do fundo');
+      if (!ok) tentar(function () { sl.SetBackground(solido('06186A')); }, 'fundo liso');
+    }
+    var escuro = ['duas_colunas', 'etapas', 'citacao'].indexOf(S.layout) > -1;
+    function chamada(txt, y, corTexto, corBarra) {
+      var b = forma('rect', 2.23 * CM, (y + 0.19) * CM, 1.04 * CM, 0.21 * CM, corBarra || C.verm);
+      var t = texto(String(txt || '').toUpperCase().slice(0, 60), 3.53 * CM, y * CM, 26 * CM, 0.66 * CM,
+        { tam: 12, negrito: true, cor: corTexto, espaco: 40, valign: 'center' });
+      animar(b, 'entranceWipe', 'afterprevious', 300);
+      animar(t, 'entranceFade', 'withprevious', 400);
+    }
+    function rodape(corTexto) {
+      texto('Lube Distribuidora', 2.26 * CM, 17.33 * CM, 14 * CM, 0.66 * CM, { tam: 12, cor: corTexto });
+    }
+    // fundo, chamada, título e subtítulo dos slides de conteúdo; devolve onde o conteúdo começa (cm)
+    function cabecalho(titulo, sub) {
+      if (escuro) fundoEscuro(); else tentar(function () { sl.SetBackground(solido(C.fundoClaro)); }, 'fundo');
+      chamada(Asc.scope.chamada || 'Lube Distribuidora', 2.26, escuro ? C.vermClaro : C.vermEsc);
+      var t = texto(titulo, 2.26 * CM, 3.27 * CM, 30.23 * CM, 1.47 * CM,
+        { tam: tam(titulo, 36), negrito: true, cor: escuro ? C.gelo : C.azul, valign: 'center' });
+      animar(t, 'entranceFade', 'afterprevious', 450);
+      if (sub) {
+        var st = texto(sub, 2.26 * CM, 5.09 * CM, 29 * CM, 1.6 * CM, { tam: 16, cor: escuro ? C.lilas : C.tinta });
+        animar(st, 'entranceFade', 'withprevious', 450);
       }
-      tentar(function () { sl.SetBackground(solido(h1)); }, 'fundo');
+      rodape(escuro ? C.rodapeEsc : C.rodapeClaro);
+      return sub ? 7.2 : 5.7;
     }
-    // cabeçalho dos slides claros: marca vermelha inclinada, título azul, logo e rodapé
-    function cabecalho(titulo) {
-      fundo(BRANCO);
-      forma('parallelogram', 1.6 * CM, 1.3 * CM, 1.0 * CM, 1.0 * CM, VERM);
-      var t = texto(titulo, 3.0 * CM, 0.85 * CM, 22.5 * CM, 1.9 * CM, { tam: tam(titulo, 30), cor: AZUL, fonte: 'Arial Black', valign: 'center' });
-      tentar(function () { logo(W - 6.0 * CM, 1.05 * CM, 4.4 * CM); }, 'logo');
-      forma('rect', 0, H - 0.3 * CM, W, 0.3 * CM, AZUL);
-      forma('parallelogram', W - 10 * CM, H - 0.3 * CM, 6.5 * CM, 0.3 * CM, VERM);
-      animar(t, 'entranceFade', 'afterprevious', 400);
+    function cartao(x, y, w, h, i, destacar) {
+      if (!escuro) return forma('roundRect', x, y, w, h, C.cartao, { borda: C.borda });
+      return destacar ? forma('roundRect', x, y, w, h, C.destaque, { borda: C.verm }) : forma('roundRect', x, y, w, h, C.cartaoEsc, { borda: C.bordaEsc });
     }
     var L = S.layout;
 
     if (L === 'capa' || L === 'encerramento') {
-      fundo(AZUL, '060B29');
-      var central = L === 'encerramento';
-      var faixa = forma('parallelogram', -1.5 * CM, (central ? 11.2 : 13.2) * CM, (central ? 37 : 19.5) * CM, 1.25 * CM, VERM);
-      var fina = forma('parallelogram', -1.5 * CM, (central ? 12.75 : 14.75) * CM, (central ? 26 : 12.5) * CM, 0.32 * CM, AZUL2);
-      var pl = central ? placa((W - 9.5 * CM) / 2, 2.2 * CM, 9.5 * CM) : placa(W - 10.6 * CM, 1.5 * CM, 8.6 * CM);
-      var tt = texto(S.titulo, central ? 2 * CM : 2.2 * CM, central ? 6.6 * CM : 5.0 * CM, central ? W - 4 * CM : 22.5 * CM, central ? 3.4 * CM : 5.4 * CM,
-        { tam: tam(S.titulo, central ? 44 : 46), cor: BRANCO, fonte: 'Arial Black', valign: central ? 'center' : 'bottom', alinhar: central ? 'center' : 'left' });
-      var st = S.subtitulo ? texto(S.subtitulo, central ? 2 * CM : 2.2 * CM, central ? 9.6 * CM : 10.6 * CM, central ? W - 4 * CM : 21 * CM, 2.2 * CM,
-        { tam: 20, cor: 'C9D0F0', alinhar: central ? 'center' : 'left' }) : null;
-      texto('Lube Distribuidora · desde 1959 · Cariacica-ES', central ? 2 * CM : 2.2 * CM, 17.2 * CM, central ? W - 4 * CM : 20 * CM, 0.9 * CM,
-        { tam: 11, cor: '8E99D6', alinhar: central ? 'center' : 'left' });
-      animar(pl, 'entranceZoom', 'afterprevious', 500);
-      animar(faixa, 'entranceWipe', 'withprevious', 700);
-      animar(fina, 'entranceWipe', 'afterprevious', 400);
-      animar(tt, 'entranceFlyIn', 'afterprevious', 650);
-      animar(st, 'entranceFade', 'afterprevious', 600);
+      fundoImagem('capa.jpg', '060B29');
+      if (L === 'capa') {
+        var lg = tentar(function () { return imagem('logo-escura.png', 2.26 * CM, 3.08 * CM, 11.29 * CM, 3.76 * CM); }, 'logo');
+        var MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+        var hoje = new Date();
+        animar(lg, 'entranceFade', 'afterprevious', 600);
+        chamada(Asc.scope.chamada || ('Lube Distribuidora · ' + MESES[hoje.getMonth()] + ' de ' + hoje.getFullYear()), 7.55, C.vermClaro);
+        var n = String(S.titulo || '').length;
+        var tt = texto(S.titulo, 2.26 * CM, 8.84 * CM, 17.8 * CM, 4.4 * CM,
+          { tam: n > 60 ? 30 : n > 40 ? 36 : n > 24 ? 44 : 52, negrito: true, cor: 'F7F9FF', valign: 'top' });
+        animar(tt, 'entranceFlyIn', 'afterprevious', 650);
+        if (S.subtitulo) {
+          var st = texto(S.subtitulo, 2.26 * CM, 13.51 * CM, 15.62 * CM, 2.53 * CM, { tam: 16, cor: C.lilas });
+          animar(st, 'entranceFade', 'afterprevious', 600);
+        }
+      } else {
+        var lg2 = tentar(function () { return imagem('logo-escura.png', 2.26 * CM, 3.7 * CM, 8.0 * CM, 2.67 * CM); }, 'logo');
+        animar(lg2, 'entranceFade', 'afterprevious', 600);
+        var m = String(S.titulo || '').length;
+        var fim = texto(S.titulo, 2.26 * CM, 7.0 * CM, 16.5 * CM, 4.2 * CM,
+          { tam: m > 70 ? 26 : m > 45 ? 30 : 36, negrito: true, cor: 'F7F9FF', valign: 'top' });
+        animar(fim, 'entranceFlyIn', 'afterprevious', 650);
+        var yb = 11.75;
+        if (S.subtitulo) {
+          var sf = texto(S.subtitulo, 2.26 * CM, 11.4 * CM, 16.5 * CM, 1.3 * CM, { tam: 16, cor: C.lilas });
+          animar(sf, 'entranceFade', 'afterprevious', 500);
+          yb = 13.1;
+        }
+        var bf = forma('rect', 2.23 * CM, (yb + 0.22) * CM, 1.04 * CM, 0.21 * CM, C.verm);
+        var lf = texto('Lube Distribuidora · desde 1959 · Cariacica-ES', 3.53 * CM, yb * CM, 18 * CM, 0.66 * CM, { tam: 13, cor: C.lilas, valign: 'center' });
+        animar(bf, 'entranceWipe', 'afterprevious', 300);
+        animar(lf, 'entranceFade', 'withprevious', 400);
+      }
     } else if (L === 'secao') {
-      fundo(AZUL, AZUL2);
-      var num = texto(String(Asc.scope.secaoN || 1).replace(/^(\d)$/, '0$1'), 2 * CM, 3.2 * CM, 10 * CM, 6 * CM,
-        { tam: 130, cor: '3A4AB8', fonte: 'Arial Black', valign: 'center' });
-      var fx = forma('parallelogram', 2.2 * CM, 10.1 * CM, 7 * CM, 0.5 * CM, VERM);
-      var ts = texto(S.titulo, 2.2 * CM, 10.9 * CM, 28 * CM, 2.8 * CM, { tam: tam(S.titulo, 40), cor: BRANCO, fonte: 'Arial Black', valign: 'top' });
-      var ss = S.subtitulo ? texto(S.subtitulo, 2.2 * CM, 13.8 * CM, 26 * CM, 1.6 * CM, { tam: 18, cor: 'C9D0F0' }) : null;
-      tentar(function () { var pl2 = placa(W - 7.6 * CM, 1.2 * CM, 5.8 * CM); animar(pl2, 'entranceFade', 'withprevious', 500); }, 'placa');
-      animar(num, 'entranceZoom', 'afterprevious', 600);
-      animar(fx, 'entranceWipe', 'afterprevious', 450);
+      tentar(function () { sl.SetBackground(solido('FF2B2F')); }, 'fundo');
+      forma('rect', 0, 0, W, H, tentar(function () { return degrade([['FF2B2F', 0], ['EF1F2A', 50000], ['C90C23', 100000]], 17400000); }, 'degradê') || 'EF1F2A');
+      var faixa = forma('rect', 22.29 * CM, 0, 10.99 * CM, H, '040F45');
+      var azul = forma('rect', 26.34 * CM, 0, 12.23 * CM, H, tentar(function () { return degrade([['0A5CFF', 0], ['0C45D8', 40000], ['0E31A6', 100000]], 0); }, 'degradê') || '0C45D8');
+      animar(faixa, 'entranceWipe', 'afterprevious', 500);
+      animar(azul, 'entranceWipe', 'withprevious', 650);
+      chamada('Seção ' + String(Asc.scope.secaoN || 1).replace(/^(\d)$/, '0$1'), 5.23, C.branco, C.branco);
+      var ts = texto(S.titulo, 2.26 * CM, 6.53 * CM, 19.6 * CM, 4.45 * CM, { tam: tam(S.titulo, 36), negrito: true, cor: C.branco, valign: 'bottom' });
       animar(ts, 'entranceFlyIn', 'afterprevious', 600);
-      animar(ss, 'entranceFade', 'afterprevious', 500);
+      if (S.subtitulo) {
+        var ss = texto(S.subtitulo, 2.26 * CM, 11.62 * CM, 19.6 * CM, 1.71 * CM, { tam: 16, cor: C.branco });
+        animar(ss, 'entranceFade', 'afterprevious', 500);
+      }
+      rodape(C.branco);
     } else if (L === 'topicos') {
-      cabecalho(S.titulo);
+      var y0 = cabecalho(S.titulo, S.subtitulo);
       var itens = (S.topicos || []).slice(0, 8);
-      if (S.subtitulo) { var sub = texto(S.subtitulo, 3.0 * CM, 3.0 * CM, 26 * CM, 1.1 * CM, { tam: 16, cor: CINZA }); animar(sub, 'entranceFade', 'afterprevious', 400); }
-      var y0 = (S.subtitulo ? 4.6 : 4.0) * CM, alto = (H - 1.6 * CM - y0) / Math.max(itens.length, 1);
-      alto = Math.min(alto, 2.7 * CM);
-      var fonte = itens.length <= 4 ? 26 : itens.length <= 6 ? 22 : 18;
+      var n2 = Math.max(itens.length, 1), gap = 0.3;
+      var alto = Math.min(2.41, (16.6 - y0 - (n2 - 1) * gap) / n2);
+      var fonte = n2 <= 4 ? 20 : n2 <= 6 ? 18 : 16;
       itens.forEach(function (it, i) {
-        var y = y0 + i * alto;
-        var mk = forma('parallelogram', 3.0 * CM, y + alto / 2 - 0.28 * CM, 0.7 * CM, 0.56 * CM, i % 2 ? AZUL2 : VERM);
-        var tx = texto(it, 4.3 * CM, y, 26.5 * CM, alto, { tam: fonte, cor: TINTA, corNegrito: AZUL, valign: 'center' });
-        animar(mk, 'entranceZoom', 'afterprevious', 250);
-        animar(tx, 'entranceFloatIn', 'withprevious', 450);
+        var y = y0 + i * (alto + gap);
+        var c = cartao(2.27 * CM, y * CM, 29.33 * CM, alto * CM, i);
+        var mk = forma('rect', 2.98 * CM, (y + alto / 2 - 0.11) * CM, 0.62 * CM, 0.22 * CM, i % 2 ? C.azul : C.verm);
+        var tx = texto(it, 4.0 * CM, y * CM, 26.9 * CM, alto * CM, { tam: fonte, cor: C.escrita, corNegrito: C.azul, valign: 'center' });
+        animar(c, 'entranceFloatIn', 'afterprevious', 350);
+        animar(mk, 'entranceWipe', 'withprevious', 350);
+        animar(tx, 'entranceFade', 'withprevious', 450);
       });
     } else if (L === 'duas_colunas') {
-      cabecalho(S.titulo);
+      var y1 = cabecalho(S.titulo, S.subtitulo) + 0.4;
       var cols = (S.colunas || []).slice(0, 2);
-      var cw = (W - 3.0 * CM - 1.6 * CM - 1.0 * CM) / 2;
+      var cw = (29.35 - 0.6) / 2, ch = 16.5 - y1;
       cols.forEach(function (c, i) {
-        var x = 3.0 * CM + i * (cw + 1.0 * CM), y = 4.0 * CM, h = H - y - 1.4 * CM;
-        var card = forma('roundRect', x, y, cw, h, i ? 'FDEDEE' : CLARO);
-        var topo = forma('roundRect', x, y, cw, 1.7 * CM, i ? VERM : AZUL);
-        var tt2 = texto(c.titulo, x + 0.7 * CM, y + 0.1 * CM, cw - 1.4 * CM, 1.5 * CM, { tam: tam(c.titulo, 20), cor: BRANCO, fonte: 'Arial Black', valign: 'center' });
-        var tp = texto((c.topicos || []).map(function (t) { return '•  ' + t; }), x + 0.8 * CM, y + 2.3 * CM, cw - 1.6 * CM, h - 2.8 * CM,
-          { tam: (c.topicos || []).length > 4 ? 17 : 20, cor: TINTA, corNegrito: AZUL, depois: 200 });
-        animar(card, 'entranceFlyIn', 'afterprevious', 550);
-        animar(topo, 'entranceWipe', 'withprevious', 550);
+        var x = 2.26 + i * (cw + 0.6);
+        var card = cartao(x * CM, y1 * CM, cw * CM, ch * CM, i, i === 0);
+        var tt2 = texto(c.titulo, (x + 0.75) * CM, (y1 + 0.6) * CM, (cw - 1.5) * CM, 1.1 * CM, { tam: tam(c.titulo, 22), negrito: true, cor: C.gelo, valign: 'center' });
+        var tp = texto((c.topicos || []).map(function (t) { return '•  ' + t; }), (x + 0.75) * CM, (y1 + 2.0) * CM, (cw - 1.5) * CM, (ch - 2.5) * CM,
+          { tam: (c.topicos || []).length > 4 ? 15 : 17, cor: i === 0 ? 'EEF1FA' : C.lilas, corNegrito: C.gelo, depois: 160 });
+        animar(card, 'entranceFloatIn', 'afterprevious', 500);
         animar(tt2, 'entranceFade', 'afterprevious', 350);
-        animar(tp, 'entranceFade', 'afterprevious', 500);
+        animar(tp, 'entranceFade', 'afterprevious', 450);
       });
     } else if (L === 'numeros') {
-      cabecalho(S.titulo);
+      var y2 = cabecalho(S.titulo, S.subtitulo);
       var ns = (S.numeros || []).slice(0, 4);
-      var n = Math.max(ns.length, 1), gap = 0.8 * CM, larg = (W - 3.0 * CM - 1.6 * CM - (n - 1) * gap) / n;
-      if (S.subtitulo) { var sb = texto(S.subtitulo, 3.0 * CM, 3.0 * CM, 26 * CM, 1.1 * CM, { tam: 16, cor: CINZA }); animar(sb, 'entranceFade', 'afterprevious', 400); }
-      ns.forEach(function (k, i) {
-        var x = 3.0 * CM + i * (larg + gap), y = 5.2 * CM, h = 9.0 * CM;
-        var card = forma('roundRect', x, y, larg, h, 'F4F6FB');
-        var fx2 = forma('parallelogram', x + 0.8 * CM, y + 1.0 * CM, 2.6 * CM, 0.4 * CM, i % 2 ? AZUL2 : VERM);
-        var vv = texto(k.valor, x + 0.6 * CM, y + 1.9 * CM, larg - 1.2 * CM, 3.4 * CM,
-          { tam: String(k.valor).length > 8 ? 30 : n > 3 ? 36 : 44, cor: AZUL, fonte: 'Arial Black', valign: 'center' });
-        var rr = texto(k.rotulo, x + 0.8 * CM, y + 5.5 * CM, larg - 1.6 * CM, 3.0 * CM, { tam: n > 3 ? 15 : 17, cor: CINZA });
-        animar(card, 'entranceZoom', 'afterprevious', 400);
-        animar(fx2, 'entranceWipe', 'withprevious', 400);
-        animar(vv, 'entranceFloatIn', 'afterprevious', 450);
-        animar(rr, 'entranceFade', 'withprevious', 450);
+      var k = Math.max(ns.length, 1);
+      var alt = Math.min(2.41, (16.6 - y2 - (k - 1) * 0.3) / k);
+      ns.forEach(function (nn, i) {
+        var y = y2 + i * (alt + 0.3);
+        var c = cartao(2.27 * CM, y * CM, 29.33 * CM, alt * CM, i);
+        var v = texto(nn.valor, 2.98 * CM, y * CM, 12.35 * CM, alt * CM,
+          { tam: String(nn.valor).length > 12 ? 28 : alt > 2.2 ? 36 : 32, negrito: true, cor: C.azul, valign: 'center' });
+        var r = texto(nn.rotulo, 15.68 * CM, y * CM, 15.4 * CM, alt * CM, { tam: 16, cor: C.tinta, valign: 'center' });
+        animar(c, 'entranceFloatIn', 'afterprevious', 350);
+        animar(v, 'entranceZoom', 'withprevious', 450);
+        animar(r, 'entranceFade', 'afterprevious', 350);
       });
     } else if (L === 'etapas') {
-      cabecalho(S.titulo);
+      var y3 = Math.max(cabecalho(S.titulo, S.subtitulo) + 1.0, 8.4);
       var es = (S.etapas || []).slice(0, 5);
-      var m = Math.max(es.length, 1), x0 = 3.0 * CM, larg2 = (W - x0 - 1.6 * CM) / m, yc = 6.4 * CM, d0 = 1.9 * CM;
-      var linha = forma('rect', x0 + larg2 / 2, yc + d0 / 2 - 0.08 * CM, (m - 1) * larg2, 0.16 * CM, 'C9D0F0');
-      animar(linha, 'entranceWipe', 'afterprevious', 700);
+      var q = Math.max(es.length, 1), gap2 = 0.58, w3 = (29.33 - (q - 1) * gap2) / q, h3 = 16.2 - y3;
       es.forEach(function (e, i) {
-        var cx = x0 + i * larg2 + larg2 / 2;
-        var bola = forma('ellipse', cx - d0 / 2, yc, d0, d0, i % 2 ? AZUL : VERM);
-        var nn = texto(String(i + 1), cx - d0 / 2, yc, d0, d0, { tam: 24, cor: BRANCO, fonte: 'Arial Black', valign: 'center', alinhar: 'center' });
-        var et = texto(e.titulo, cx - larg2 / 2 + 0.3 * CM, yc + d0 + 0.6 * CM, larg2 - 0.6 * CM, 1.6 * CM,
-          { tam: m > 4 ? 16 : 18, cor: AZUL, fonte: 'Arial Black', alinhar: 'center', valign: 'top' });
-        var ex = texto(e.texto, cx - larg2 / 2 + 0.3 * CM, yc + d0 + 2.4 * CM, larg2 - 0.6 * CM, 5.5 * CM, { tam: m > 4 ? 14 : 16, cor: CINZA, alinhar: 'center' });
-        animar(bola, 'entranceZoom', 'afterprevious', 350);
-        animar(nn, 'entranceZoom', 'withprevious', 350);
-        animar(et, 'entranceFloatIn', 'afterprevious', 350);
+        var x = 2.27 + i * (w3 + gap2);
+        var c = cartao(x * CM, y3 * CM, w3 * CM, h3 * CM, i);
+        var num = texto(('0' + (i + 1)).slice(-2), (x + 0.64) * CM, (y3 + 0.72) * CM, (w3 - 1.28) * CM, 1.16 * CM, { tam: 22, negrito: true, cor: C.vermClaro });
+        var et = texto(e.titulo, (x + 0.64) * CM, (y3 + 2.09) * CM, (w3 - 1.28) * CM, 1.5 * CM, { tam: q > 4 ? 15 : 18, negrito: true, cor: C.gelo });
+        var ex = texto(e.texto, (x + 0.64) * CM, (y3 + 3.75) * CM, (w3 - 1.28) * CM, (h3 - 4.2) * CM, { tam: q > 4 ? 12 : 14, cor: C.lilas });
+        animar(c, 'entranceFloatIn', 'afterprevious', 400);
+        animar(num, 'entranceZoom', 'withprevious', 400);
+        animar(et, 'entranceFade', 'afterprevious', 300);
         animar(ex, 'entranceFade', 'withprevious', 400);
       });
     } else if (L === 'citacao') {
-      fundo('060B29', AZUL);
-      var aspas = texto('“', 2.2 * CM, 0.6 * CM, 6 * CM, 6 * CM, { tam: 180, cor: VERM, fonte: 'Arial Black' });
-      var frase = texto(S.titulo, 3.4 * CM, 5.4 * CM, W - 6.8 * CM, 7 * CM, { tam: tam(S.titulo, 32), cor: BRANCO, italico: true, valign: 'center' });
-      var fx3 = forma('parallelogram', 3.4 * CM, 13.3 * CM, 2.2 * CM, 0.35 * CM, VERM);
-      var autor = texto(S.subtitulo || '', 6.2 * CM, 12.9 * CM, 20 * CM, 1.2 * CM, { tam: 17, cor: 'C9D0F0', valign: 'center' });
+      fundoEscuro();
+      chamada(Asc.scope.chamada || 'Lube Distribuidora', 2.26, C.vermClaro);
+      var aspas = texto('“', 2.0 * CM, 3.1 * CM, 6 * CM, 5 * CM, { tam: 150, negrito: true, cor: C.verm });
+      var frase = texto(S.titulo, 2.26 * CM, 6.6 * CM, 28.8 * CM, 6.2 * CM, { tam: tam(S.titulo, 34), negrito: true, cor: C.gelo, valign: 'center' });
       animar(aspas, 'entranceZoom', 'afterprevious', 500);
       animar(frase, 'entranceFade', 'afterprevious', 900);
-      animar(fx3, 'entranceWipe', 'afterprevious', 300);
-      animar(autor, 'entranceFloatIn', 'withprevious', 400);
+      if (S.subtitulo) {
+        var bq = forma('rect', 2.23 * CM, 13.9 * CM, 1.04 * CM, 0.21 * CM, C.verm);
+        var autor = texto(S.subtitulo, 3.53 * CM, 13.66 * CM, 22 * CM, 0.7 * CM, { tam: 16, cor: C.lilas, valign: 'center' });
+        animar(bq, 'entranceWipe', 'afterprevious', 300);
+        animar(autor, 'entranceFade', 'withprevious', 400);
+      }
+      rodape(C.rodapeEsc);
     } else {
-      cabecalho(S.titulo || '');
-      var corpo = texto(S.subtitulo || '', 3.0 * CM, 4.2 * CM, 26 * CM, 10 * CM, { tam: 20, cor: TINTA });
+      var y4 = cabecalho(S.titulo || '', '');
+      var corpo = texto(S.subtitulo || '', 2.26 * CM, y4 * CM, 29.3 * CM, (16.4 - y4) * CM, { tam: 20, cor: C.escrita });
       animar(corpo, 'entranceFade', 'afterprevious', 500);
     }
 
@@ -692,14 +771,16 @@
     var criar = d.modo === 'criar';
     var avisos = [];
     var antes = 0;
-    var secao = 0;
+    var secao = 0, nomeSecao = '';
     var cadeia = comando(function () { return Api.GetPresentation().GetSlidesCount(); }).then(function (n) { antes = n || 0; });
     slides.forEach(function (s, i) {
-      if (s.layout === 'secao') secao++;
+      if (s.layout === 'secao') { secao++; nomeSecao = s.titulo; }
       var n = secao;
+      // a chamada vermelha sobre o título é o nome da seção em que o slide está (ou a Lube)
+      var chamada = s.layout === 'capa' ? '' : (nomeSecao || 'Lube Distribuidora');
       cadeia = cadeia.then(function () {
         return comando(slideDesenhar, {
-          slide: s, base: d.base || ORIGEM, primeiro: i === 0, criar: criar, secaoN: n,
+          slide: s, base: d.base || ORIGEM, primeiro: i === 0, criar: criar, secaoN: n, chamada: chamada,
           transicao: TRANSICAO[s.layout] || 'effectFade'
         });
       }).then(function (r) {
