@@ -465,6 +465,19 @@
     document.title = (id && porId[id] ? nomeBonito(porId[id]) + ' · ' : '') + 'Lube Distribuidora — Painel de Sistemas';
     app.classList.remove('is-menu');
     if (!id) montarInicio();
+    else noPainel();
+  }
+
+  // a página tem a abertura em cima: ao abrir um BI, o painel vem para a tela inteira
+  function noPainel() {
+    var topo = app.getBoundingClientRect().top;
+    if (Math.abs(topo) < 2) return;
+    var suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    app.scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'start' });
+    // se a rolagem suave parar no meio (aba em segundo plano, outra rolagem), encaixa direto
+    setTimeout(function () {
+      if (Math.abs(app.getBoundingClientRect().top) > 2) app.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }, 1300);
   }
 
   function criarQuadro(s) {

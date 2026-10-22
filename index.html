@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261022" />
-<link rel="stylesheet" href="shell.css?v=20261022" />
+<link rel="stylesheet" href="styles.css?v=20261022b" />
+<link rel="stylesheet" href="shell.css?v=20261022b" />
 <script>try{if(window.self!==window.top)document.documentElement.className+=' em-moldura';}catch(e){document.documentElement.className+=' em-moldura';}</script>
 </head>
 <body class="is-loading">
@@ -160,8 +160,89 @@
   </div>
 </div>
 
+<!-- ============ NAVBAR (marca centralizada; some quando o painel chega) ============ -->
+<header class="nav" id="topo">
+  <div class="nav__side nav__side--l"></div>
+
+  <a class="nav__brand" href="#topo" aria-label="Lube Distribuidora — início">
+    <span class="nav__mark" data-logo-mark></span>
+    <span class="nav__brandtext">LUBE<em>Distribuidora</em></span>
+  </a>
+
+  <div class="nav__side nav__side--r">
+    <nav class="nav__links" aria-label="Navegação principal">
+      <a href="#painel" data-ir-painel>Painel</a>
+      <a href="office/">Office</a>
+    </nav>
+    <button class="nav__burger" type="button" aria-label="Abrir menu" aria-expanded="false" data-burger>
+      <span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ============ MENU MOBILE ============ -->
+<div class="menu" data-menu data-surface="dark">
+  <a href="#painel" data-ir-painel>Painel</a>
+  <a href="office/">Office</a>
+</div>
+
+<!-- ============ ABERTURA: "SISTEMAS CORPORATIVOS" e o caminhão; rolando, cai no painel ============ -->
+<div class="abertura">
+
+<!-- ============ HERO ============ -->
+<section class="hero" data-hero data-surface="dark">
+  <div class="hero__bg" data-hero-bg aria-hidden="true">
+    <div class="hero__glow"></div>
+    <div class="hero__grid"></div>
+  </div>
+
+  <div class="hero__content" data-hero-title>
+    <h1 class="hero__title">
+      <span class="mask"><span data-rise="2">SISTEMAS</span></span>
+      <span class="mask hero__title--alt"><span data-rise="3">CORPORATIVOS</span></span>
+    </h1>
+  </div>
+
+  <div class="hero__foot">
+    <span class="hero__cue" data-rise="5" aria-hidden="true"><i></i></span>
+    <div class="hero__meta" data-rise="6">
+      <div><span class="mono" data-stat-sistemas>00</span><small>Sistemas ativos</small></div>
+      <div><span class="mono" data-stat-areas>00</span><small>Áreas atendidas</small></div>
+      <div><span class="mono">24/7</span><small>Disponibilidade</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRANSIÇÃO — O CAMINHÃO ============ -->
+<section class="haul" data-haul aria-label="Transição">
+  <div class="haul__stage">
+    <div class="haul__dark" data-surface="dark">
+      <p class="haul__type" data-haul-type-dark>
+        <span>EM MOVIMENTO</span>
+        <em>desde 1959</em>
+      </p>
+    </div>
+
+    <div class="haul__light" data-haul-light data-surface="light">
+      <p class="haul__type haul__type--dark" data-haul-type-light>
+        <span>NOSSOS</span>
+        <em>sistemas</em>
+      </p>
+    </div>
+
+    <div class="haul__road" data-haul-road><i></i></div>
+
+    <div class="haul__truck" data-truck>
+      <div class="haul__speed" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="haul__vehicle" data-vehicle></div>
+    </div>
+  </div>
+</section>
+
+</div>
+
 <!-- ============ PAINEL (depois do login): menu flutuante + palco ============ -->
-<div class="app" data-app>
+<div class="app" id="painel" data-app data-surface="light">
 
   <!-- menu lateral flutuante -->
   <aside class="side" data-side aria-label="Menu do painel">
@@ -264,8 +345,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=20261006"></script>
 <script src="icones.js?v=20261006"></script>
-<script src="app.js?v=20261022"></script>
-<script src="shell.js?v=20261022"></script>
-<script src="portal.js?v=20261022"></script>
+<script src="app.js?v=20261022b"></script>
+<script src="shell.js?v=20261022b"></script>
+<script src="portal.js?v=20261022b"></script>
 </body>
 </html>

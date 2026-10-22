@@ -18,18 +18,27 @@
    o portal só avisa o painel de cima */
 html.em-moldura body{ visibility:hidden; }
 
-/* o painel só aparece depois do login; a página fica fixa e quem rola é o palco */
+/* depois do login: abertura ("SISTEMAS CORPORATIVOS" e o caminhão) e, rolando,
+   o painel, que ocupa exatamente uma tela no fim da página */
 .app{ display:none; }
-body.autenticado{ overflow:hidden; height:100vh; background:var(--app-bg); }
+body:not(.autenticado) .abertura{ display:none; }
+body.autenticado{ background:var(--app-bg); }
 body.autenticado .app{
+  position:relative; z-index:2;
   display:flex; gap:var(--gap-app);
   height:100vh; height:100dvh;
+  scroll-margin-top:0;
   padding:var(--gap-app);
   background:
     radial-gradient(1200px 600px at 100% -10%, rgba(44,63,196,.10), transparent 60%),
     radial-gradient(900px 500px at -10% 110%, rgba(0,160,233,.10), transparent 60%),
     var(--app-bg);
 }
+
+/* a navbar da abertura some quando o painel chega */
+.nav{ transition:opacity .45s var(--ease), transform .55s var(--ease); }
+body.no-painel .nav{ opacity:0; transform:translateY(-14px); }
+body.no-painel .nav a,body.no-painel .nav button{ pointer-events:none; }
 
 /* =========================================================
    MENU LATERAL
@@ -441,6 +450,7 @@ body.autenticado .app{
   background:var(--blue); color:#fff;
   transition:background .25s, transform .25s var(--ease);
 }
+.botao svg{ flex:none; width:16px; height:16px; }
 .botao:hover{ background:var(--red); }
 .botao--leve{ background:#F1F4FB; color:var(--blue-ink); }
 .botao--leve:hover{ background:#E4E9F7; color:var(--blue); }
