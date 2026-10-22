@@ -97,6 +97,30 @@
   avisos.push({ id: novoId(), para: EU, de: P.fer.id, pasta: financeiro.id, tipo: 'compartilhou', mensagem: 'comentar', em: ha(120), lido_em: null });
   avisos.push({ id: novoId(), para: EU, de: P.raf.id, arquivo: escala.id, tipo: 'compartilhou', mensagem: 'editar', em: ha(1300), lido_em: ha(1200) });
 
+  // ---- IA da Lube (demonstração) ----
+  var iaGasto = 0.0123, iaPedidos = 2;
+  var PLANOS = {
+    docx: { titulo_arquivo: 'Ata da reunião de compras', resumo: 'Montei a ata com 4 decisões, os responsáveis e a próxima reunião.',
+      blocos: [
+        { tipo: 'titulo', texto: 'Ata da reunião de compras', itens: [], linhas: [] },
+        { tipo: 'subtitulo', texto: 'Lube Distribuidora · 21/10/2026', itens: [], linhas: [] },
+        { tipo: 'secao', texto: 'Decisões', itens: [], linhas: [] },
+        { tipo: 'tabela', texto: '', itens: [], linhas: [['Ação', 'Responsável', 'Prazo'], ['Negociar prazo de 45 dias', 'Carlos', '28/10'], ['Revisar estoque mínimo da filial 11', 'Carlos', '28/10']] },
+        { tipo: 'destaque', texto: '**Próxima reunião:** 04/11 às 9h.', itens: [], linhas: [] }
+      ] },
+    xlsx: { titulo_arquivo: 'Metas por RCA - novembro 2026', resumo: 'Montei a planilha de metas de novembro com 8 RCAs, % atingido, diferença, total e gráfico (valores de exemplo).',
+      abas: [{ nome: 'Metas novembro', titulo: 'Metas de vendas por RCA', subtitulo: 'Novembro/2026 · valores de exemplo', cabecalho: ['RCA', 'Meta', 'Realizado', '% atingido', 'Diferença'],
+        linhas: [['RCA 01', 250000, 212000, '=C{L}/B{L}', '=C{L}-B{L}'], ['RCA 02', 220000, 236500, '=C{L}/B{L}', '=C{L}-B{L}']],
+        formatos: [{ coluna: 'B', tipo: 'moeda' }, { coluna: 'C', tipo: 'moeda' }, { coluna: 'D', tipo: 'porcentagem' }, { coluna: 'E', tipo: 'moeda' }],
+        total: { rotulo: 'Total', colunas: ['B', 'C', 'E'] }, grafico: { tipo: 'colunas', titulo: 'Meta x realizado', categorias: 'A', series: ['B', 'C'] }, observacao: '' }] },
+    pptx: { titulo_arquivo: 'Resultado de outubro', resumo: 'Montei 7 slides com capa, números em destaque, cronograma e encerramento.',
+      slides: [
+        { layout: 'capa', titulo: 'Resultado de outubro', subtitulo: 'Diretoria · Lube Distribuidora', topicos: [], colunas: [], numeros: [], etapas: [], notas: '' },
+        { layout: 'numeros', titulo: 'Destaques do mês', subtitulo: 'Valores de exemplo', topicos: [], colunas: [], numeros: [{ valor: 'R$ 4,8 mi', rotulo: 'Venda' }, { valor: '+12%', rotulo: 'Sobre setembro' }, { valor: '86', rotulo: 'Clientes novos' }], etapas: [], notas: '' },
+        { layout: 'encerramento', titulo: 'Obrigado', subtitulo: 'Dúvidas e sugestões', topicos: [], colunas: [], numeros: [], etapas: [], notas: '' }
+      ] }
+  };
+
   // ---- regras de papel (iguais às do banco) ----
   var NIVEL = { dono: 4, editar: 3, comentar: 2, ver: 1 };
   var TXT = { 4: 'dono', 3: 'editar', 2: 'comentar', 1: 'ver' };
@@ -167,7 +191,17 @@
       var meus = arquivos.filter(function (a) { return a.dono === EU && !a.lixeira_em; });
       return { pessoa: P.eu, motor: false, motor_situacao: 'nao_instalado', motor_visto_em: null, email: true,
         avisos_nao_lidos: avisos.filter(function (v) { return !v.lido_em; }).length,
-        uso: { arquivos: meus.length, bytes: meus.reduce(function (s, a) { return s + a.tamanho; }, 0) } };
+        uso: { arquivos: meus.length, bytes: meus.reduce(function (s, a) { return s + a.tamanho; }, 0) },
+        ia: { ligada: true, teto_dia_usd: 10, gasto_hoje_usd: iaGasto, meus_hoje: iaPedidos, livre: true } };
+    },
+    // IA da Lube na demonstração: devolve um plano pronto (nada sai da máquina, nada é cobrado)
+    ia: function (d) {
+      var custo = d.tipo === 'pptx' ? 0.0013 : d.tipo === 'xlsx' ? 0.0006 : 0.0004;
+      iaGasto = Math.round((iaGasto + custo) * 1e4) / 1e4;
+      iaPedidos++;
+      if (d.arquivo) registrar('ia', d.arquivo, null, { modo: d.modo, pedido: String(d.pedido || '').slice(0, 200), imagens: (d.imagens || []).length, custo_usd: custo });
+      return { plano: PLANOS[d.tipo] || PLANOS.docx, modelo: 'claude-haiku-5-5', custo_usd: custo, segundos: 6.4,
+        situacao: { ligada: true, teto_dia_usd: 10, gasto_hoje_usd: iaGasto, meus_hoje: iaPedidos, livre: true } };
     },
     listar: function (d) {
       if (d.pasta) {

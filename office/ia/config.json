@@ -1,0 +1,25 @@
+{
+  "name": "IA da Lube",
+  "nameLocale": { "pt-BR": "IA da Lube", "pt": "IA da Lube" },
+  "guid": "asc.{7A3C9F1E-4B2D-4E8A-9C61-1B5E0D2F8A47}",
+  "version": "1.0.0",
+  "baseUrl": "",
+  "variations": [
+    {
+      "description": "Executa no documento o que a IA da Lube monta (LUBE OFFICE)",
+      "url": "index.html",
+      "icons": ["icone.png", "icone@2x.png"],
+      "isViewer": false,
+      "EditorsSupport": ["word", "cell", "slide"],
+      "type": "system",
+      "isVisual": false,
+      "isModal": false,
+      "isInsideMode": false,
+      "isSystem": true,
+      "initDataType": "none",
+      "initData": "",
+      "isUpdateOleOnResize": false,
+      "buttons": []
+    }
+  ]
+}

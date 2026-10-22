@@ -590,6 +590,92 @@ span.ico > svg,.menu__ico > svg{ width:100%; height:100%; display:block; }
 .toast__barra{ height:3px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden; margin-top:.4rem; }
 .toast__barra b{ display:block; height:100%; width:0; background:#4D6BFF; transition:width .3s; }
 
+/* =========================================================
+   VIDA NA TELA (2026-10-21, pedido do Júlio: "dar vida" ao Office)
+   ========================================================= */
+
+/* aurora: três manchas de luz que andam devagar no fundo */
+.aurora{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+.aurora i{ position:absolute; border-radius:50%; filter:blur(80px); opacity:.5; will-change:transform; }
+.aurora i:nth-child(1){ width:46vw; height:46vw; left:-12vw; top:-18vw; background:radial-gradient(circle, rgba(44,63,196,.55), transparent 65%); animation:aurora1 34s ease-in-out infinite alternate; }
+.aurora i:nth-child(2){ width:38vw; height:38vw; right:-10vw; top:18vh; background:radial-gradient(circle, rgba(238,27,36,.28), transparent 65%); animation:aurora2 41s ease-in-out infinite alternate; }
+.aurora i:nth-child(3){ width:42vw; height:42vw; left:30vw; bottom:-26vw; background:radial-gradient(circle, rgba(111,134,255,.30), transparent 65%); animation:aurora3 47s ease-in-out infinite alternate; }
+@keyframes aurora1{ to{ transform:translate(18vw, 12vh) scale(1.15); } }
+@keyframes aurora2{ to{ transform:translate(-14vw, 20vh) scale(.9); } }
+@keyframes aurora3{ to{ transform:translate(-10vw, -18vh) scale(1.2); } }
+
+/* entrada em cascata */
+@keyframes entrar{ from{ opacity:0; transform:translateY(14px); } }
+body:not(.carregando) .ola > *{ animation:entrar .7s var(--ease) both; }
+body:not(.carregando) .ola > :nth-child(2){ animation-delay:.06s; }
+body:not(.carregando) .ola > :nth-child(3){ animation-delay:.12s; }
+body:not(.carregando) .ola > :nth-child(4){ animation-delay:.18s; }
+body:not(.carregando) .ola > :nth-child(5){ animation-delay:.24s; }
+.atalho{ animation:entrar .6s var(--ease) both; }
+.atalho:nth-child(1){ animation-delay:.28s; } .atalho:nth-child(2){ animation-delay:.34s; }
+.atalho:nth-child(3){ animation-delay:.40s; } .atalho:nth-child(4){ animation-delay:.46s; }
+.modelo{ animation:entrar .6s var(--ease) both; animation-delay:calc(var(--i, 0) * 60ms + .2s); }
+.tabela.is-entrando .linha:not(.linha--cab){ animation:entrar .5s var(--ease) both; animation-delay:calc(var(--i, 0) * 32ms); }
+
+/* luz que segue o mouse e leve inclinação 3D (cartões "vivos") */
+.vivo{ position:relative; --rx:0deg; --ry:0deg; transform-style:preserve-3d; }
+.vivo::before{
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1; opacity:0;
+  background:radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.12), transparent 62%);
+  transition:opacity .3s;
+}
+.vivo:hover::before{ opacity:1; }
+.atalho.vivo:hover,.modelo.vivo:hover{ transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-3px); }
+.atalho.vivo,.modelo.vivo{ transition:transform .35s var(--ease), border-color .25s, box-shadow .25s; }
+
+/* marcador da seção que desliza na lateral */
+.visoes{ position:relative; }
+.visoes__marca{
+  position:absolute; left:0; right:0; top:0; height:44px; border-radius:12px; pointer-events:none; opacity:0;
+  background:linear-gradient(90deg, rgba(44,63,196,.32), rgba(44,63,196,.14));
+  box-shadow:inset 0 0 0 1px rgba(111,134,255,.18);
+  transition:transform .45s var(--ease), height .3s, opacity .3s;
+}
+.visoes__marca::before{ content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px; background:var(--red); box-shadow:0 0 12px var(--red); }
+.visao{ position:relative; z-index:1; }
+.visao.is-on{ background:transparent; }
+.visao.is-on::before{ display:none; }
+
+/* abrir: o ícone decola até o centro */
+.decolar{ position:fixed; z-index:96; pointer-events:none; transition:transform .65s cubic-bezier(.2,.8,.2,1), opacity .65s ease .15s, filter .65s; filter:drop-shadow(0 0 0 rgba(111,134,255,0)); }
+.decolar .ico{ width:100%; height:100%; }
+.decolar.is-indo{ opacity:0; filter:drop-shadow(0 0 24px rgba(111,134,255,.9)); }
+
+/* arrastar item para pasta */
+.linha[draggable="true"]{ cursor:default; }
+.linha.is-arrastando{ opacity:.45; }
+body.arrastando-item .linha[data-item]{ transition:background .15s, box-shadow .15s; }
+.is-alvo{ background:rgba(31,178,107,.18) !important; box-shadow:inset 0 0 0 2px rgba(31,178,107,.7); border-radius:10px; }
+.trilha a.is-alvo,.visao.is-alvo{ color:#fff; }
+
+/* trocar de seção: a área principal faz uma transição curta */
+.principal{ view-transition-name:principal; }
+::view-transition-old(principal){ animation:vt-sai .22s ease both; }
+::view-transition-new(principal){ animation:vt-entra .38s var(--ease) both; }
+@keyframes vt-sai{ to{ opacity:0; transform:translateY(-6px); } }
+@keyframes vt-entra{ from{ opacity:0; transform:translateY(10px); } }
+
+/* botões e menus com um pouco mais de vida */
+.btn-novo{ overflow:hidden; position:relative; }
+.btn-novo::after{ content:''; position:absolute; top:0; bottom:0; width:40%; left:-60%; transform:skewX(-20deg);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation:brilho-passa 5s ease-in-out infinite 1.5s; }
+@keyframes brilho-passa{ 0%,70%{ left:-60%; } 100%{ left:140%; } }
+.menu-novo button{ animation:entrar .3s var(--ease) both; }
+.menu-novo button:nth-child(2){ animation-delay:.03s; } .menu-novo button:nth-child(3){ animation-delay:.06s; }
+.menu-novo button:nth-child(4){ animation-delay:.09s; } .menu-novo button:nth-child(6){ animation-delay:.12s; }
+.menu-novo button:nth-child(7){ animation-delay:.15s; } .menu-novo button:nth-child(8){ animation-delay:.18s; }
+.menu .menu__ia{ color:#fff; font-weight:700; background:linear-gradient(90deg, rgba(229,16,31,.22), rgba(44,63,196,.22)); margin-bottom:.15rem; }
+.menu .menu__ia:hover{ background:linear-gradient(90deg, rgba(229,16,31,.35), rgba(44,63,196,.35)); }
+.menu .menu__ia kbd{ margin-left:auto; font:500 .6rem 'JetBrains Mono',monospace; opacity:.7; padding:.1rem .35rem; border:1px solid rgba(255,255,255,.3); border-radius:5px; }
+.menu .menu__ia svg{ color:#FF8A91; }
+.toast{ animation:toast-entra .45s cubic-bezier(.2,1.4,.4,1); }
+@keyframes toast-entra{ from{ opacity:0; transform:translateY(16px) scale(.96); } }
+
 /* ---------- responsivo ---------- */
 @media (max-width:1180px){
   .linha{ grid-template-columns:minmax(0,1fr) 200px 90px 44px; }

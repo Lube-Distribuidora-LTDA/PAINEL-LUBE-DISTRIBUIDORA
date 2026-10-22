@@ -10,8 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="office.css?v=20261021b">
-<link rel="stylesheet" href="editor.css?v=20261021c">
+<link rel="stylesheet" href="office.css?v=20261021e">
+<link rel="stylesheet" href="editor.css?v=20261021d">
+<link rel="stylesheet" href="ia.css?v=20261021c">
 </head>
 <body class="carregando editor-pg">
 
@@ -46,6 +47,10 @@
   </div>
   <div class="ed-acoes">
     <span class="selo-papel" data-ed-papel hidden></span>
+    <button class="btn btn--ia" type="button" data-ia-abrir hidden aria-expanded="false" title="IA da Lube (Ctrl+Shift+I)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg>
+      <span>IA da Lube</span>
+    </button>
     <a class="btn" href="#" data-ed-enviar hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg>
       <span>Enviar</span>
@@ -58,7 +63,14 @@
 </header>
 
 <main class="ed-area">
+ <div class="ed-palco">
   <div id="editor-onlyoffice" class="ed-motor" data-ed-motor hidden></div>
+
+  <div class="ia-status" data-ia-status aria-live="polite">
+    <span class="ia-orbe ia-orbe--p" aria-hidden="true"><i></i><b></b></span>
+    <span data-ia-status-txt>A IA da Lube está trabalhando…</span>
+    <i class="ia-status__barra"><b data-ia-status-barra></b></i>
+  </div>
 
   <section class="ed-espera" data-ed-espera hidden>
     <div class="ed-cartao">
@@ -79,6 +91,8 @@
       <p class="ed-nota">O arquivo abre aqui mesmo, dentro do painel, para editar junto, com o nome e o cursor de cada pessoa. Nada é baixado.</p>
     </div>
   </section>
+ </div>
+ <aside class="ia" data-ia aria-label="IA da Lube"></aside>
 </main>
 
 <div class="toasts" data-toasts aria-live="polite"></div>
@@ -86,7 +100,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="../config.js?v=20261006"></script>
 <script src="../marca.js?v=20261006"></script>
-<script src="comum.js?v=20261021b"></script>
-<script src="editor.js?v=20261021b"></script>
+<script src="comum.js?v=20261021e"></script>
+<script src="ia-editor.js?v=20261021e"></script>
+<script src="editor.js?v=20261021e"></script>
 </body>
 </html>

@@ -13,12 +13,19 @@
 //   OFFICE_JWT_SECRET  a mesma chave JWT configurada no ONLYOFFICE (o instalador da SRV-IA gera)
 //   OFFICE_MOTOR_URL   opcional: endereço fixo do motor; sem ele vale o que a SRV-IA registrou
 //   OFFICE_SMTP_*      a caixa de e-mail do "Enviar" para fora (ver correio.ts)
+//   ANTHROPIC_API_KEY  a IA da Lube (a mesma chave da Sentinela, neste projeto)
 // =========================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import Anthropic from 'npm:@anthropic-ai/sdk@0.132.0';
+import JSZip from 'npm:jszip@3.10.1';
 import { assinarHS256, verificarHS256 } from './jwt.ts';
-import { lerRetorno, montarEditor, motorVivo, tipoDocumento, urlMotorValida, uuidValido } from './motor.ts';
+import { lerRetorno, montarEditor, motorVivo, origemDoPlugin, tipoDocumento, urlMotorValida, uuidValido } from './motor.ts';
 import { LIMITE_EMAIL_BYTES, linhaUnica, montarEmail, tipoMime } from './email.ts';
 import { enviarEmails, smtpPronto } from './correio.ts';
+import {
+  conferirPlano, custoUsd, esquema, hojeBrasilia, instrucoes, LIMITE_IMAGEM_BYTES, LIMITE_TEXTO_FONTE, modeloValido, montarPedido,
+  ordemNatural, textoDocx, textoPptx, textoXlsx, TIPOS_IMAGEM, type ModoIa, type TipoIa,
+} from './ia.ts';
 
 const URL_SB  = Deno.env.get('SUPABASE_URL')!;
 const ANON    = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -96,6 +103,169 @@ async function linkAssinado(caminho: string, segundos: number) {
 }
 
 // ---------------------------------------------------------
+// IA da Lube: o Claude devolve um plano em JSON; o plugin executa no editor
+// ---------------------------------------------------------
+const CHAVE_IA = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
+const claude = CHAVE_IA ? new Anthropic({ apiKey: CHAVE_IA, maxRetries: 1, timeout: 140_000 }) : null;
+
+// o plugin entra no editor só se o portal já publicou office/ia/ (senão o editor reclamaria
+// de um plugin que não existe); máquina do TI e túnel de teste entram direto
+const pluginVisto = new Map<string, { quando: number; ok: boolean }>();
+async function pluginIaDe(req: Request) {
+  if (!claude) return undefined;
+  const origem = origemDoPlugin(req.headers.get('origin'), PORTAL);
+  if (origem !== PORTAL) return origem;
+  const c = pluginVisto.get(origem);
+  if (c && Date.now() - c.quando < 10 * 60_000) return c.ok ? origem : undefined;
+  let ok = false;
+  try {
+    const r = await fetch(origem + '/office/ia/config.json', { signal: AbortSignal.timeout(4000) });
+    ok = r.ok;
+    await r.body?.cancel();
+  } catch { ok = false; }
+  pluginVisto.set(origem, { quando: Date.now(), ok });
+  return ok ? origem : undefined;
+}
+
+// texto do arquivo de origem (Transformar com IA). PDF vai inteiro para o Claude ler.
+async function lerFonte(f: { nome: string; extensao: string; caminho: string; tamanho: number }) {
+  const ext = String(f.extensao).toLowerCase();
+  if (!['docx', 'xlsx', 'pptx', 'pdf', 'txt', 'csv'].includes(ext)) {
+    throw new ErroOffice('A IA lê Word, Excel, PowerPoint, PDF, TXT e CSV. Abra este arquivo e salve como .docx, .xlsx ou .pptx.', 400);
+  }
+  if (Number(f.tamanho) > 25 * 1024 * 1024) throw new ErroOffice('O arquivo de origem passa de 25 MB.', 413);
+  const { data: blob, error } = await admin.storage.from(BUCKET).download(f.caminho);
+  if (error || !blob) throw new ErroOffice('Falha ao ler o arquivo de origem', 500);
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  if (ext === 'pdf') {
+    if (bytes.byteLength > 20 * 1024 * 1024) throw new ErroOffice('O PDF passa de 20 MB.', 413);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { texto: '', pdf: btoa(bin) };
+  }
+  if (ext === 'txt' || ext === 'csv') return { texto: new TextDecoder().decode(bytes).slice(0, LIMITE_TEXTO_FONTE), pdf: '' };
+  const zip = await JSZip.loadAsync(bytes);
+  const ler = (n: string) => zip.file(n)?.async('string') ?? Promise.resolve('');
+  let texto = '';
+  if (ext === 'docx') texto = textoDocx(await ler('word/document.xml'));
+  else if (ext === 'pptx') {
+    const nomes = Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n)).sort(ordemNatural);
+    texto = textoPptx(await Promise.all(nomes.map(ler)));
+  } else {
+    const livro = await ler('xl/workbook.xml');
+    const nomesAbas = [...livro.matchAll(/<sheet [^>]*name="([^"]+)"/g)].map((m) => m[1]);
+    const arquivos = Object.keys(zip.files).filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort(ordemNatural);
+    const abas = await Promise.all(arquivos.map(async (n, i) => ({ nome: nomesAbas[i] ?? 'Aba ' + (i + 1), xml: await ler(n) })));
+    texto = textoXlsx(await ler('xl/sharedStrings.xml'), abas);
+  }
+  if (!texto.trim()) throw new ErroOffice('O arquivo de origem está vazio.', 400);
+  return { texto: texto.slice(0, LIMITE_TEXTO_FONTE), pdf: '' };
+}
+
+function erroDaIa(e: unknown) {
+  if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
+    return { msg: 'A chave da IA foi recusada. O TI precisa conferir a ANTHROPIC_API_KEY no Supabase.', status: 503 };
+  }
+  if (e instanceof Anthropic.RateLimitError) return { msg: 'A IA está ocupada agora. Tente de novo em um minuto.', status: 429 };
+  if (e instanceof Anthropic.APIConnectionTimeoutError) return { msg: 'A IA demorou demais para responder. Peça algo menor ou tente de novo.', status: 504 };
+  if (e instanceof Anthropic.BadRequestError) return { msg: 'A IA não aceitou o pedido: ' + String(e.message).slice(0, 240), status: 400 };
+  if (e instanceof Anthropic.APIError) return { msg: 'A IA está instável agora (' + (e.status ?? 'sem resposta') + '). Tente de novo em instantes.', status: 502 };
+  return { msg: 'Não foi possível falar com a IA agora. Tente de novo.', status: 502 };
+}
+
+async function pedirIa(eu: string, c: Record<string, any>) {
+  if (!claude) return json({ erro: 'A IA da Lube ainda não foi ligada: falta a chave ANTHROPIC_API_KEY nos segredos do Supabase.' }, 503);
+  const tipo = (['docx', 'xlsx', 'pptx'].includes(c.tipo) ? c.tipo : null) as TipoIa | null;
+  if (!tipo) return json({ erro: 'Tipo de arquivo inválido para a IA' }, 400);
+  const modo = (['criar', 'editor', 'transformar'].includes(c.modo) ? c.modo : 'editor') as ModoIa;
+  const pedido = String(c.pedido ?? '').replace(/[\u0000-\u0008]/g, '').trim().slice(0, 4000);
+  const arquivo = uuidOuNulo(c.arquivo);
+  const fonteId = modo === 'transformar' ? uuidOuNulo(c.fonte) : null;
+  if (modo === 'transformar' && !fonteId) return json({ erro: 'Diga qual arquivo transformar' }, 400);
+
+  const imagens: Anthropic.ImageBlockParam[] = [];
+  for (const im of (Array.isArray(c.imagens) ? c.imagens : []).slice(0, 5)) {
+    const tipoImg = String(im?.tipo ?? '');
+    const dados = String(im?.dados ?? '');
+    if (!TIPOS_IMAGEM.includes(tipoImg) || !/^[A-Za-z0-9+/]+={0,2}$/.test(dados)) {
+      return json({ erro: 'Imagem inválida: use JPG, PNG, WEBP ou GIF.' }, 400);
+    }
+    if (dados.length * 0.75 > LIMITE_IMAGEM_BYTES) return json({ erro: 'Imagem grande demais (até 5 MB cada).' }, 413);
+    imagens.push({ type: 'image', source: { type: 'base64', media_type: tipoImg as 'image/jpeg', data: dados } });
+  }
+  if (!pedido && !imagens.length && !fonteId) return json({ erro: 'Escreva o que você quer ou mande uma imagem.' }, 400);
+  const contexto = typeof c.contexto === 'string' ? c.contexto.slice(0, 40_000) : '';
+
+  const lib = await rpc('office_srv_ia_liberar', { p_user: eu, p_arquivo: arquivo, p_fonte: fonteId });
+  if (!lib.livre) {
+    return json({
+      erro: `A IA da Lube chegou ao teto de hoje (US$ ${Number(lib.teto_dia_usd).toFixed(2)} somando todo mundo). Ela volta à meia-noite.`,
+      situacao: lib,
+    }, 429);
+  }
+  const modelo = modeloValido(lib.modelo);
+  let fonte: { nome: string; texto: string } | null = null;
+  let pdf = '';
+  if (lib.fonte) {
+    const r = await lerFonte(lib.fonte);
+    if (r.texto) fonte = { nome: lib.fonte.nome + '.' + lib.fonte.extensao, texto: r.texto };
+    pdf = r.pdf;
+  }
+  const conteudo: Anthropic.ContentBlockParam[] = [
+    ...imagens,
+    ...(pdf ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } } as Anthropic.DocumentBlockParam] : []),
+    { type: 'text', text: montarPedido({
+      tipo, modo, pedido, contexto, fonte: fonte ?? (pdf ? { nome: lib.fonte.nome + '.pdf', texto: '(o PDF vem acima)' } : null),
+      nomeArquivo: typeof c.nome_arquivo === 'string' ? c.nome_arquivo.slice(0, 160) : '', imagens: imagens.length,
+      hoje: hojeBrasilia(),
+    }) },
+  ];
+  const registrar = (ok: boolean, uso: Anthropic.Usage | null, custo: number, erro: string | null) =>
+    rpc('office_srv_ia_registrar', {
+      p_user: eu, p_arquivo: arquivo, p_fonte: lib.fonte?.id ?? null, p_tipo: tipo, p_modo: modo, p_pedido: pedido,
+      p_imagens: imagens.length, p_modelo: modelo, p_tokens_entrada: uso?.input_tokens ?? 0,
+      p_tokens_saida: uso?.output_tokens ?? 0, p_custo: custo, p_ok: ok, p_erro: erro,
+    });
+
+  let resp: Anthropic.Message;
+  const inicio = Date.now();
+  try {
+    resp = await claude.messages.create({
+      model: modelo,
+      max_tokens: 16000,
+      system: instrucoes(tipo),
+      // esforço baixo: a IA da Lube monta conteúdo, não resolve problema difícil (custo e tempo menores)
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: esquema(tipo) } },
+      messages: [{ role: 'user', content: conteudo }],
+    } as Anthropic.MessageCreateParamsNonStreaming);
+  } catch (e) {
+    const r = erroDaIa(e);
+    console.error('office ia:', e);
+    await registrar(false, null, 0, r.msg).catch(() => {});
+    return json({ erro: r.msg }, r.status);
+  }
+  const custo = custoUsd(modelo, resp.usage);
+  if (resp.stop_reason === 'refusal') {
+    await registrar(false, resp.usage, custo, 'a IA recusou').catch(() => {});
+    return json({ erro: 'A IA não aceitou esse pedido. Reformule e tente de novo.' }, 422);
+  }
+  if (resp.stop_reason === 'max_tokens') {
+    await registrar(false, resp.usage, custo, 'resposta cortada (max_tokens)').catch(() => {});
+    return json({ erro: 'O pedido ficou grande demais para uma vez só. Peça em partes (por exemplo, 10 slides ou 100 linhas por vez).' }, 422);
+  }
+  const textoResp = resp.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
+  let plano;
+  try {
+    plano = conferirPlano(tipo, JSON.parse(textoResp));
+  } catch (e) {
+    await registrar(false, resp.usage, custo, 'plano inválido: ' + String((e as Error)?.message ?? e)).catch(() => {});
+    return json({ erro: 'A resposta da IA veio incompleta. Tente de novo.' }, 502);
+  }
+  const situacao = await registrar(true, resp.usage, custo, null);
+  return json({ plano, modelo, custo_usd: custo, segundos: Math.round((Date.now() - inicio) / 100) / 10, situacao });
+}
+
+// ---------------------------------------------------------
 // porta do navegador
 // ---------------------------------------------------------
 async function acaoDoPortal(req: Request) {
@@ -117,8 +287,14 @@ async function acaoDoPortal(req: Request) {
       case 'eu': {
         const r = await rpc('office_srv_eu', { p_user: eu });
         const m = await motorAtual();
-        return json({ ...r, motor: m.situacao === 'ligado', motor_situacao: m.situacao, motor_visto_em: m.visto_em, email: smtpPronto() });
+        const ia = await rpc('office_srv_ia_situacao', { p_user: eu });
+        return json({
+          ...r, motor: m.situacao === 'ligado', motor_situacao: m.situacao, motor_visto_em: m.visto_em, email: smtpPronto(),
+          ia: { ...ia, ligada: !!claude },
+        });
       }
+      case 'ia':
+        return pedirIa(eu, c);
       case 'listar':
         return json(await rpc('office_srv_listar', {
           p_user: eu, p_visao: typeof c.visao === 'string' ? c.visao : 'meus',
@@ -182,6 +358,7 @@ async function acaoDoPortal(req: Request) {
           callbackUrl: `${URL_SB}/functions/v1/office/motor?arquivo=${a.id}`,
           voltarUrl: `${PORTAL}/office/`,
           pessoa: { id: pessoa.id, nome: pessoa.nome },
+          pluginIa: await pluginIaDe(req),
         });
         const token = await assinarHS256(config, MOTOR_CHAVE);
         return json({ arquivo, situacao: m.situacao, motor: { api: `${m.url}/web-apps/apps/api/documents/api.js`, config: { ...config, token } } });
@@ -351,17 +528,27 @@ async function testeMotor(req: Request) {
   try {
     const t = await rpc('office_srv_teste_motor', { p_token: String(c.token ?? '') });
     const dono = String(t.dono);
+    // a IA também pode ser testada por aqui, só com arquivos "Teste do motor" (alvo e origem)
+    if (c.acao === 'ia') {
+      for (const id of [c.arquivo, c.modo === 'transformar' ? c.fonte : null]) {
+        if (!uuidValido(id)) continue;
+        const alvo = await rpc('office_srv_abrir', { p_user: dono, p_arquivo: id });
+        if (!String(alvo.nome).startsWith('Teste do motor')) return json({ erro: 'Só arquivos "Teste do motor" por aqui' }, 403);
+      }
+      return pedirIa(dono, c);
+    }
     const m = await motorAtual(true);
     if (m.situacao !== 'ligado') return json({ erro: 'Motor ' + m.situacao, situacao: m.situacao, visto_em: m.visto_em }, 503);
     let id = uuidOuNulo(c.arquivo);
     if (!id) {
-      // arquivo de teste novo, a partir do documento em branco do portal
+      // arquivo de teste novo, a partir do modelo em branco do portal (documento, planilha ou apresentação)
+      const ext = ['docx', 'xlsx', 'pptx'].includes(c.extensao) ? c.extensao : 'docx';
       const nome = 'Teste do motor ' + horaBrasilia(new Date().toISOString()).replace(/[/:]/g, '-');
-      const r = await rpc('office_srv_arquivo_criar', { p_user: dono, p_pasta: null, p_nome: nome, p_extensao: 'docx' });
-      const modelo = await fetch(`${PORTAL}/office/modelos/branco.docx`);
+      const r = await rpc('office_srv_arquivo_criar', { p_user: dono, p_pasta: null, p_nome: nome, p_extensao: ext });
+      const modelo = await fetch(`${PORTAL}/office/modelos/branco.${ext}`);
       if (!modelo.ok) throw new ErroOffice('Modelo em branco não encontrado no portal', 500);
       const bytes = new Uint8Array(await modelo.arrayBuffer());
-      const { error } = await admin.storage.from(BUCKET).upload(r.caminho, bytes, { contentType: tipoMime('docx'), upsert: false });
+      const { error } = await admin.storage.from(BUCKET).upload(r.caminho, bytes, { contentType: tipoMime(ext), upsert: false });
       if (error) throw new ErroOffice('Falha ao gravar o arquivo de teste: ' + error.message, 500);
       await rpc('office_srv_arquivo_confirmar', { p_user: dono, p_arquivo: r.id, p_tamanho: bytes.byteLength, p_origem: 'novo' });
       id = r.id;
@@ -373,6 +560,7 @@ async function testeMotor(req: Request) {
       arquivo: a, urlArquivo: await linkAssinado(a.caminho, 300),
       callbackUrl: `${URL_SB}/functions/v1/office/motor?arquivo=${a.id}`,
       voltarUrl: `${PORTAL}/office/`, pessoa: { id: pessoa.id, nome: pessoa.nome },
+      pluginIa: await pluginIaDe(req),
     });
     const arquivo = { ...a };
     delete arquivo.caminho;

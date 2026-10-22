@@ -11,10 +11,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="office.css?v=20261021b">
+<link rel="stylesheet" href="office.css?v=20261021e">
+<link rel="stylesheet" href="ia.css?v=20261021c">
 </head>
 <body class="carregando">
 
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 <div class="grao" aria-hidden="true"></div>
 <div class="tarja-demo" data-tarja-demo hidden>DEMONSTRAÇÃO · dados sintéticos, nada aqui é real</div>
 
@@ -96,6 +98,7 @@
         <kbd>N</kbd>
       </button>
       <div class="menu menu-novo suspenso" data-menu-novo hidden role="menu">
+        <button type="button" class="menu__ia" data-ia-criar role="menuitem" hidden><span class="ia-orbe ia-orbe--p" aria-hidden="true"><i></i><b></b></span>Criar com IA<kbd>I</kbd></button>
         <button type="button" data-criar="docx" role="menuitem"><span class="menu__ico" data-ico="docx"></span>Documento</button>
         <button type="button" data-criar="xlsx" role="menuitem"><span class="menu__ico" data-ico="xlsx"></span>Planilha</button>
         <button type="button" data-criar="pptx" role="menuitem"><span class="menu__ico" data-ico="pptx"></span>Apresentação</button>
@@ -107,6 +110,7 @@
     </div>
 
     <nav class="visoes" aria-label="Seções">
+      <i class="visoes__marca" data-visoes-marca aria-hidden="true"></i>
       <a class="visao" href="?v=meus" data-visao="meus">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
         Meus arquivos
@@ -138,6 +142,11 @@
       <div class="motor" data-motor>
         <i></i><span data-motor-txt>Conferindo o editor…</span>
       </div>
+      <button class="ia-lado" type="button" data-ia-criar hidden>
+        <span class="ia-orbe ia-orbe--p" aria-hidden="true"><i></i><b></b></span>
+        <span class="ia-lado__txt"><strong>IA da Lube</strong><span data-ia-lado-gasto>Claude Haiku 5.5</span></span>
+        <i class="ia__medidor"><b data-ia-lado-medidor></b></i>
+      </button>
       <a class="voltar" href="../">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
         Painel de sistemas
@@ -151,11 +160,21 @@
       <p class="mono">LUBE OFFICE</p>
       <h1><span data-saudacao>Olá</span>, <em data-primeiro-nome></em>.</h1>
       <p>Documentos, planilhas e apresentações da Lube, editados juntos e guardados no painel.</p>
+      <button class="ia-heroi vivo" type="button" data-ia-criar hidden>
+        <span class="ia-heroi__orbe ia-orbe" aria-hidden="true"><i></i><b></b></span>
+        <span class="ia-heroi__txt">
+          <span class="mono">Novo · IA da Lube</span>
+          <strong>Criar com IA</strong>
+          <span class="ia-heroi__frase">Peça <em data-ia-digita>uma ata a partir da foto do quadro</em><i class="ia-heroi__cursor"></i></span>
+        </span>
+        <span class="ia-heroi__tipos" aria-hidden="true"><span data-ico="docx"></span><span data-ico="xlsx"></span><span data-ico="pptx"></span></span>
+        <span class="ia-heroi__ir" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </button>
       <div class="atalhos">
-        <button class="atalho" type="button" data-criar="docx"><span class="ico" data-ico="docx"></span><strong>Documento</strong><span>Proposta, ata, comunicado</span></button>
-        <button class="atalho atalho--plan" type="button" data-criar="xlsx"><span class="ico ico--plan" data-ico="xlsx"></span><strong>Planilha</strong><span>Metas, listas, controles</span></button>
-        <button class="atalho atalho--apre" type="button" data-criar="pptx"><span class="ico ico--apre" data-ico="pptx"></span><strong>Apresentação</strong><span>Reunião, resultado do mês</span></button>
-        <button class="atalho atalho--env" type="button" data-enviar><span class="ico ico--env" data-ico="envio"></span><strong>Enviar arquivo</strong><span>Word, Excel, PowerPoint, PDF</span></button>
+        <button class="atalho vivo" type="button" data-criar="docx"><span class="ico" data-ico="docx"></span><strong>Documento</strong><span>Proposta, ata, comunicado</span></button>
+        <button class="atalho atalho--plan vivo" type="button" data-criar="xlsx"><span class="ico ico--plan" data-ico="xlsx"></span><strong>Planilha</strong><span>Metas, listas, controles</span></button>
+        <button class="atalho atalho--apre vivo" type="button" data-criar="pptx"><span class="ico ico--apre" data-ico="pptx"></span><strong>Apresentação</strong><span>Reunião, resultado do mês</span></button>
+        <button class="atalho atalho--env vivo" type="button" data-enviar><span class="ico ico--env" data-ico="envio"></span><strong>Enviar arquivo</strong><span>Word, Excel, PowerPoint, PDF</span></button>
       </div>
     </section>
 
@@ -213,7 +232,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="../config.js?v=20261006"></script>
 <script src="../marca.js?v=20261006"></script>
-<script src="comum.js?v=20261021b"></script>
-<script src="office.js?v=20261021b"></script>
+<script src="comum.js?v=20261021e"></script>
+<script src="office.js?v=20261021e"></script>
 </body>
 </html>

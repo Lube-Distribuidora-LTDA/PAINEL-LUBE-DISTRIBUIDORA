@@ -51,9 +51,23 @@ type Arquivo = {
   dono?: { nome?: string } | null; criado_em?: string; pasta_nome?: string | null;
 };
 
+// plugin "IA da Lube" (office/ia/ no portal): roda escondido dentro do editor e executa
+// os planos da IA no documento. Mesmo GUID do office/ia/config.json.
+export const GUID_PLUGIN_IA = 'asc.{7A3C9F1E-4B2D-4E8A-9C61-1B5E0D2F8A47}';
+
+// de onde o plugin é servido: a origem da página que abriu o editor, se for o portal,
+// a máquina do TI (localhost) ou um túnel de teste; senão, o portal publicado
+export function origemDoPlugin(origem: string | null, portal: string) {
+  const o = String(origem ?? '').trim();
+  if (o === portal) return portal;
+  if (/^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/.test(o)) return o;
+  if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(o)) return o;
+  return portal;
+}
+
 export function montarEditor(o: {
   arquivo: Arquivo; urlArquivo: string; callbackUrl: string; voltarUrl: string;
-  pessoa: { id: string; nome: string };
+  pessoa: { id: string; nome: string }; pluginIa?: string;
 }) {
   const a = o.arquivo;
   const tipo = tipoDocumento(a.extensao);
@@ -92,6 +106,10 @@ export function montarEditor(o: {
         goback: { url: o.voltarUrl, text: 'Voltar ao LUBE OFFICE', blank: false },
         features: { spellcheck: { mode: true } },
       },
+      // a IA só escreve para quem pode editar (o servidor confere de novo)
+      ...(o.pluginIa && p.permissions.edit
+        ? { plugins: { autostart: [GUID_PLUGIN_IA], pluginsData: [o.pluginIa.replace(/\/+$/, '') + '/office/ia/config.json'] } }
+        : {}),
     },
   };
 }

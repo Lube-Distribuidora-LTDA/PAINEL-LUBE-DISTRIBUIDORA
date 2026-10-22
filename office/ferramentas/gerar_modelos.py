@@ -477,8 +477,50 @@ def apresentacao(com_conteudo):
     p.save(SAIDA / "apresentacao-lube.pptx")
 
 
+# ---------------------------------------------------------------- IA da Lube (2026-10-21)
+# Bases dos arquivos que a IA cria pelo Drive: o plugin office/ia/executor.js escreve o
+# conteúdo dentro do editor. O documento já nasce com o cabeçalho e o rodapé da Lube; a
+# apresentação, em 16:9 com um slide vazio (o plugin troca pelos slides da IA).
+def ia_documento():
+    d = doc_base()
+    cabecalho_rodape(d)
+    d.add_paragraph("")
+    d.save(SAIDA / "ia-documento.docx")
+
+
+def ia_apresentacao():
+    p = Presentation()
+    p.slide_width, p.slide_height = Inches(13.333), Inches(7.5)
+    p.slides.add_slide(p.slide_layouts[6])
+    p.save(SAIDA / "ia-apresentacao.pptx")
+
+
+def logo_plugin():
+    """Logo que o plugin põe nos slides (o motor baixa do portal) e o ícone do plugin."""
+    pasta = RAIZ / "ia"
+    pasta.mkdir(exist_ok=True)
+    (pasta / "logo-lube.png").write_bytes(logo_leve(480).getvalue())   # vai em cada slide: leve
+    simb = Image.open(LOGO).convert("RGBA")
+    simb = simb.crop((0, 0, round(simb.width * 0.37), simb.height))   # o "L" azul com o quadrado vermelho
+    for nome, lado in (("icone.png", 40), ("icone@2x.png", 80)):
+        quadro = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
+        s = simb.copy()
+        s.thumbnail((lado, lado), Image.LANCZOS)
+        quadro.paste(s, ((lado - s.width) // 2, (lado - s.height) // 2), s)
+        quadro.save(pasta / nome, "PNG", optimize=True)
+
+
 if __name__ == "__main__":
+    import sys
     SAIDA.mkdir(parents=True, exist_ok=True)
+    if sys.argv[1:] == ["ia"]:
+        # só as bases da IA, sem regravar os outros modelos
+        ia_documento()
+        ia_apresentacao()
+        logo_plugin()
+        finalizar(SAIDA / "ia-documento.docx", "")
+        finalizar(SAIDA / "ia-apresentacao.pptx", "")
+        sys.exit(0)
     branco_docx()
     branco_xlsx()
     apresentacao(False)
@@ -486,6 +528,9 @@ if __name__ == "__main__":
     ata_docx()
     relatorio_xlsx()
     apresentacao(True)
+    ia_documento()
+    ia_apresentacao()
+    logo_plugin()
     titulos = {"proposta-comercial.docx": "Proposta comercial", "ata-de-reuniao.docx": "Ata de reunião",
                "relatorio-mensal.xlsx": "Relatório mensal", "apresentacao-lube.pptx": "Apresentação Lube"}
     for f in sorted(SAIDA.iterdir()):

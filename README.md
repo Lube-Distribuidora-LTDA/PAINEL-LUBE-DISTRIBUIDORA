@@ -173,7 +173,12 @@ avisos não lidos.
 - **Editor** (`office/editor.html?id=`): abre o **ONLYOFFICE Docs** dentro do
   painel, com a configuração assinada pela função. Sem o motor no ar, a página
   diz se ele está sendo ligado ou fora do ar (e desde quando).
-- **Banco**: schema `office` neste Supabase (`db/04_office.sql` e `db/05_office_envio_motor.sql`), separado das
+- **Vida na tela**: aurora no fundo, entrada em cascata, luz que segue o mouse com
+  leve inclinação nos cartões, marcador da lateral que desliza, transição entre
+  seções (View Transitions), o ícone que "decola" ao abrir um arquivo e **arrastar um
+  arquivo ou pasta para outra pasta** (ou para a trilha) para mover, com Desfazer.
+  Quem pede menos movimento no sistema (`prefers-reduced-motion`) não vê animação.
+- **Banco**: schema `office` neste Supabase (`db/04_office.sql`, `db/05_office_envio_motor.sql` e `db/07_office_ia.sql`), separado das
   tabelas do portal. RLS ligado e sem políticas: o navegador **nunca** fala com o
   schema. Tudo passa pela Edge Function `office`, que chama as funções
   `public.office_srv_*` com a chave de serviço; cada função confere o papel de
@@ -210,8 +215,39 @@ avisos não lidos.
   assinada do editor; abrir, editar e fechar tem que gerar a versão nova com origem
   `editor`. Depois: mandar o arquivo para a lixeira e apagar a senha.
 - **Altura do editor**: o ONLYOFFICE troca o espaço reservado pela própria
-  moldura; o `editor.css` dá o tamanho a `.ed-area > iframe` (sem isso ela fica
+  moldura; o `editor.css` dá o tamanho a `.ed-palco > iframe` (sem isso ela fica
   com 150 px).
+- **IA da Lube** (desde 2026-10-21; decisões do Júlio: **Claude Haiku 5.5**, teto de
+  **US$ 10 por dia** somando a Lube toda, todo usuário ativo):
+  - **No editor**: botão **IA da Lube** (Ctrl+Shift+I) abre um painel ao lado do
+    documento. A pessoa pede, com texto e até 4 fotos (quadro, anotação à mão,
+    tabela impressa), e a IA escreve **dentro** do arquivo: no Word, blocos com a
+    cara da Lube (no lugar da seleção, se pedido); no Excel, uma aba com título,
+    faixa vermelha, cabeçalho azul, fórmulas, total e gráfico; no PowerPoint, slides
+    desenhados um a um, com transição e animação em cada elemento.
+  - **No Drive**: **Criar com IA** (cartão no topo, menu Novo ou tecla `I`) e
+    **Transformar com IA** no menu de cada arquivo (lê Word, Excel, PowerPoint, PDF,
+    TXT ou CSV e cria outro tipo; o original não muda). O Drive cria o arquivo a
+    partir de `office/modelos/ia-*` (documento já com cabeçalho e rodapé da Lube),
+    guarda o pedido no navegador e abre o editor, onde a IA monta tudo; o arquivo
+    ganha o nome que a IA sugerir.
+  - **Como funciona**: a ação `ia` da função `office` pede ao Claude um **plano em
+    JSON** (structured outputs; nunca HTML nem código) e o plugin escondido
+    `office/ia/` (`executor.js`) executa o plano no documento pela API do ONLYOFFICE
+    (`callCommand`). A página do editor fala direto com o plugin (mesma origem do
+    portal): o canal oficial `onExternalPluginMessage` só existe na edição paga do
+    ONLYOFFICE. O plugin só entra na configuração de quem pode editar, e só depois
+    que o portal publica `office/ia/config.json` (o `vercel.json` libera o CORS
+    dessa pasta, porque quem lê o `config.json` é o editor, em outro endereço).
+  - **Custo e teto**: cada pedido custa em geral **menos de 1 centavo de dólar**
+    (US$ 0,0005 a 0,0015 nos testes). Tudo fica em `office.ia_uso` (quem, o quê,
+    tokens, custo); o teto do dia e o modelo ficam em `office.config` (`ia`),
+    mudáveis sem publicar (`db/07_office_ia.sql`). A chave é a mesma
+    `ANTHROPIC_API_KEY` da Sentinela, neste projeto.
+  - **Testes**: `node --test supabase/functions/office/teste/ia.test.mjs`. De ponta a
+    ponta sem login: `office/editor.html?ext=pptx#teste=<senha temporária>` abre um
+    "Teste do motor" com a IA (só arquivos "Teste do motor", também como origem do
+    Transformar).
 - **Modelos** (`office/modelos/`): em branco e com a marca da Lube (proposta,
   ata, relatório mensal, apresentação). Gerados por
   `python office/ferramentas/gerar_modelos.py` (precisa de python-docx,

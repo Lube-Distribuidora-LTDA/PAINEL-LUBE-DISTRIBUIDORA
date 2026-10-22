@@ -193,6 +193,44 @@
     });
   }
 
+  // teste de ponta a ponta sem login (editor.html#teste=<senha temporária do banco>):
+  // a porta /office/motor/teste só aceita a senha gravada pelo TI em office.config, que vence sozinha
+  function apiTeste(corpo) {
+    return fetch(FUNCAO + '/motor/teste', {
+      method: 'POST', cache: 'no-store', credentials: 'omit',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(corpo)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) { var e = new Error(j && j.erro ? j.erro : 'Falha no teste (' + r.status + ')'); e.status = r.status; throw e; }
+        return j;
+      });
+    });
+  }
+
+  // foto para a IA: reduz para no máximo 1568 px no lado maior (o que a IA lê de fato) e JPEG,
+  // para o pedido sair leve. Devolve { tipo, dados (base64 sem o prefixo), url (para mostrar) }
+  function imagemParaIa(arquivo) {
+    return new Promise(function (ok, falha) {
+      if (!/^image\/(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(arquivo.type || '')) { falha(new Error('“' + arquivo.name + '” não é uma imagem.')); return; }
+      var url = URL.createObjectURL(arquivo);
+      var img = new Image();
+      img.onload = function () {
+        var max = 1568, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var g = c.getContext('2d');
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        var dataUrl = c.toDataURL('image/jpeg', 0.86);
+        ok({ tipo: 'image/jpeg', dados: dataUrl.split(',')[1], url: dataUrl, nome: arquivo.name });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); falha(new Error('Não deu para abrir “' + arquivo.name + '”.')); };
+      img.src = url;
+    });
+  }
+
   // envia um arquivo novo: reserva → manda direto ao Storage → confirma
   function enviarArquivo(blob, o) {
     return api('arquivo_novo', { pasta: o.pasta || null, nome: o.nome, extensao: o.extensao }).then(function (r) {
@@ -219,7 +257,7 @@
     if (tarja) tarja.hidden = false;
     return new Promise(function (ok, falha) {
       var s = document.createElement('script');
-      s.src = 'demo.js?v=20261021b';
+      s.src = 'demo.js?v=20261021c';
       s.onload = ok;
       s.onerror = falha;
       document.head.appendChild(s);
@@ -242,6 +280,18 @@
     xlsx: { nome: 'Planilha sem título', arquivo: 'modelos/branco.xlsx' },
     pptx: { nome: 'Apresentação sem título', arquivo: 'modelos/branco.pptx' }
   };
+  // base dos arquivos que a IA cria pelo Drive (o plugin escreve o conteúdo dentro do editor)
+  var BASES_IA = {
+    docx: 'modelos/ia-documento.docx',   // já com o cabeçalho e o rodapé da Lube
+    xlsx: 'modelos/branco.xlsx',
+    pptx: 'modelos/ia-apresentacao.pptx' // 16:9, o plugin troca o slide vazio pelos da IA
+  };
+  // dólar com vírgula e o número de casas que faz sentido (custo da IA é fração de centavo)
+  function usd(v) {
+    v = Number(v) || 0;
+    var casas = v === 0 ? 2 : v < 0.01 ? 4 : v < 1 ? 3 : 2;
+    return 'US$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: casas === 2 ? 2 : 0, maximumFractionDigits: casas });
+  }
   function baixarModelo(caminho) {
     return fetch(caminho, { cache: 'force-cache' }).then(function (r) {
       if (!r.ok) throw new Error('Modelo não encontrado (' + caminho + ')');
@@ -262,6 +312,7 @@
     avatar: avatar, avatarTodos: avatarTodos, iniciais: iniciais, primeiroNome: primeiroNome, corPessoa: corPessoa,
     papelTxt: papelTxt, pode: pode, bytes: bytes, quando: quando, dataCompleta: dataCompleta,
     toast: toast, api: api, token: token, enviarArquivo: enviarArquivo, sair: sair, pronto: pronto,
-    MODELOS: MODELOS, BRANCOS: BRANCOS, baixarModelo: baixarModelo, marcas: marcas
+    MODELOS: MODELOS, BRANCOS: BRANCOS, BASES_IA: BASES_IA, baixarModelo: baixarModelo, marcas: marcas,
+    apiTeste: apiTeste, imagemParaIa: imagemParaIa, usd: usd
   };
 })();

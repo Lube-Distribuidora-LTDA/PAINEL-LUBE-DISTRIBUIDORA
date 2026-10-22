@@ -27,7 +27,8 @@
     pedido: 0,
     pessoas: null,
     avisos: null,
-    gav: null
+    gav: null,
+    animar: false
   };
 
   /* ---------- ícones de interface ---------- */
@@ -49,7 +50,8 @@
     globo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     cadeado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
     vazio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M12 10v6M9 13h6"/></svg>',
-    mais2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>'
+    mais2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>',
+    brilho: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg>'
   };
 
   /* ---------- utilidades ---------- */
@@ -80,12 +82,17 @@
     if (o.visao && o.visao !== 'pasta' && o.visao !== 'busca') gravarSessao('office_origem', o.visao);
     var url = location.pathname + (u.toString() ? '?' + u.toString() : '');
     history[substituir ? 'replaceState' : 'pushState'](null, '', url);
-    lerUrl();
-    fecharLateral();
-    render();
-    carregar();
-    window.scrollTo(0, 0);
+    var mudar = function () {
+      lerUrl();
+      fecharLateral();
+      render();
+      carregar();
+      window.scrollTo(0, 0);
+    };
+    if (document.startViewTransition && !semMovimento()) document.startViewTransition(mudar);
+    else mudar();
   }
+  function semMovimento() { return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; }
   function gravarSessao(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
   function origem() {
     var v = null;
@@ -104,6 +111,11 @@
       a.classList.toggle('is-on', a.getAttribute('data-visao') === marcada);
       a.setAttribute('aria-current', a.getAttribute('data-visao') === marcada ? 'page' : 'false');
     });
+    var on = $('.visao.is-on'), marca = $('[data-visoes-marca]');
+    if (marca) {
+      marca.style.opacity = on ? '1' : '0';
+      if (on) { marca.style.transform = 'translateY(' + on.offsetTop + 'px)'; marca.style.height = on.offsetHeight + 'px'; }
+    }
     var podeCriarAqui = est.visao === 'meus' || (est.visao === 'pasta' && est.pastaInfo && O.pode(est.pastaInfo.papel, 'editar'));
     $('[data-nova-pasta]').hidden = !podeCriarAqui;
     var busca = $('[data-busca]');
@@ -170,13 +182,13 @@
     if (todos) {
       [['docx', 'Documento em branco'], ['xlsx', 'Planilha em branco'], ['pptx', 'Apresentação em branco']].forEach(function (b) {
         var cls = O.classeTipo(b[0]);
-        h += '<button class="modelo" type="button" data-criar="' + b[0] + '">' +
+        h += '<button class="modelo vivo" type="button" data-criar="' + b[0] + '" style="--i:' + (h.split('class="modelo').length - 1) + '">' +
           '<div class="modelo__capa modelo__capa--branco modelo__capa--' + cls + '"><span class="capa capa--branco">' + SVG.mais2 + '</span></div>' +
           '<div class="modelo__info"><strong>' + b[1] + '</strong><span>' + O.icone(b[0]) + O.nomeTipo(b[0]) + ' · .' + b[0] + '</span></div></button>';
       });
     }
     O.MODELOS.forEach(function (m) {
-      h += '<button class="modelo" type="button" data-modelo="' + m.id + '">' +
+      h += '<button class="modelo vivo" type="button" data-modelo="' + m.id + '" style="--i:' + (h.split('class="modelo').length - 1) + '">' +
         '<div class="modelo__capa">' + capa(m.capa) + '</div>' +
         '<div class="modelo__info"><strong>' + esc(m.nome) + '</strong><span>' + O.icone(m.ext) + esc(m.desc) + '</span></div></button>';
     });
@@ -204,6 +216,7 @@
       est.itens = r.itens || [];
       est.caminho = r.caminho || [];
       est.pastaInfo = r.pasta || null;
+      est.animar = true;
       render();
       renderLista();
     }, function (e) {
@@ -253,6 +266,12 @@
       '<span class="mono linha__alt">' + (est.visao === 'lixeira' ? 'Na lixeira' : 'Última alteração') + '</span>' +
       '<span class="mono linha__tam">Tamanho</span><span class="mono linha__comp">Acesso</span><span></span></div>';
     tab.innerHTML = cab + est.itens.map(linha).join('');
+    if (est.animar && !semMovimento()) {
+      est.animar = false;
+      tab.classList.add('is-entrando');
+      clearTimeout(tab._anim);
+      tab._anim = setTimeout(function () { tab.classList.remove('is-entrando'); }, 400 + est.itens.length * 35);
+    }
   }
 
   function acessoHtml(it) {
@@ -267,8 +286,9 @@
     return SVG.cadeado + '<span>Privado</span>';
   }
 
-  function linha(it) {
+  function linha(it, i) {
     var pasta = it.tipo === 'pasta';
+    var arrastavel = est.visao !== 'lixeira' && O.pode(it.papel, 'mover');
     var compartilhada = it.compartilhado && it.compartilhado.total > 0;
     var quando = est.visao === 'lixeira' ? O.quando(it.lixeira_em) : O.quando(it.alterado_em);
     var por = !pasta && it.alterado_por ? (it.alterado_por.id === euId() ? 'você' : O.primeiroNome(it.alterado_por.nome)) : '';
@@ -278,7 +298,8 @@
         '<span><b>' + esc(quando) + '</b>' + (por ? ' por ' + esc(por) : '') + '</span>';
     var sub = esc(quando) + (it.dono && it.dono.id !== euId() ? ' · de ' + esc(O.primeiroNome(it.dono.nome)) : '') +
       (pasta ? '' : ' · ' + O.bytes(it.tamanho));
-    return '<div class="linha" role="row" data-item="' + esc(it.id) + '" title="' + esc(nomeCompleto(it)) + '">' +
+    return '<div class="linha" role="row" data-item="' + esc(it.id) + '" title="' + esc(nomeCompleto(it)) + '" style="--i:' + Math.min(i || 0, 18) + '"' +
+      (arrastavel ? ' draggable="true"' : '') + '>' +
       '<button class="linha__nome" type="button" data-abrir>' + O.icone(pasta ? 'pasta' : it.extensao, compartilhada ? 'compartilhada' : '') +
         '<span class="linha__txt"><span class="linha__l1"><strong>' + esc(it.nome) + '</strong>' +
         (pasta ? '' : '<span class="ext">' + esc(it.extensao) + '</span>') +
@@ -347,6 +368,23 @@
     }
     if (it.tipo === 'pasta') { irPara({ pasta: it.id }); return; }
     window.open(urlEditor(it), '_blank', 'noopener');
+    decolar(it);
+  }
+  function decolar(it) {
+    if (semMovimento()) return;
+    var ico = $('[data-item="' + it.id + '"] .ico');
+    if (!ico) return;
+    var r = ico.getBoundingClientRect();
+    var el = document.createElement('div');
+    el.className = 'decolar';
+    el.innerHTML = O.icone(it.extensao);
+    el.style.left = r.left + 'px'; el.style.top = r.top + 'px'; el.style.width = r.width + 'px'; el.style.height = r.height + 'px';
+    document.body.appendChild(el);
+    requestAnimationFrame(function () {
+      el.style.transform = 'translate(' + (innerWidth / 2 - r.left - r.width / 2) + 'px,' + (innerHeight / 2 - r.top - r.height / 2) + 'px) scale(3.2)';
+      el.classList.add('is-indo');
+    });
+    setTimeout(function () { el.remove(); }, 900);
   }
 
   /* ---------- menu de cada item ---------- */
@@ -361,6 +399,7 @@
     var a = [['abrir', it.tipo === 'pasta' ? 'Abrir pasta' : 'Abrir no editor', it.tipo === 'pasta' ? SVG.pasta : SVG.abrir]];
     a.push(['acesso', O.pode(it.papel, 'compartilhar') ? 'Compartilhar' : 'Quem tem acesso', SVG.compart]);
     if (it.tipo === 'arquivo' && O.pode(it.papel, 'editar')) a.push(['enviar', 'Enviar', SVG.enviar]);
+    if (it.tipo === 'arquivo' && iaLigada() && /^(docx|xlsx|pptx|pdf|txt|csv)$/.test(it.extensao || '')) a.push(['transformar', 'Transformar com IA', SVG.brilho, 'menu__ia']);
     if (O.pode(it.papel, 'renomear')) a.push(['renomear', 'Renomear', SVG.lapis]);
     if (O.pode(it.papel, 'mover')) a.push(['mover', 'Mover para…', SVG.mover]);
     if (it.tipo === 'arquivo') a.push(['versoes', 'Versões e atividade', SVG.relogio]);
@@ -390,6 +429,7 @@
     else if (acao === 'acesso') gaveta(it, 'acesso');
     else if (acao === 'versoes') gaveta(it, 'versoes');
     else if (acao === 'enviar') dialogoEnviar(it);
+    else if (acao === 'transformar') dialogoIa({ fonte: it });
     else if (acao === 'renomear') renomear(it);
     else if (acao === 'mover') mover(it);
     else if (acao === 'lixeira') lixeira(it);
@@ -606,7 +646,7 @@
   }
 
   // documento, planilha ou apresentação: em branco ou de um modelo da Lube
-  function criarDe(caminho, nome, ext, origemArq, janela) {
+  function criarDe(caminho, nome, ext, origemArq, janela, extraUrl) {
     var t = O.toast('Criando “' + nome + '.' + ext + '”…', 'info', null, 0);
     return O.baixarModelo(caminho).then(function (blob) {
       return O.enviarArquivo(blob, { pasta: pastaParaCriar(), nome: nome, extensao: ext, origem: origemArq });
@@ -614,8 +654,11 @@
       t.fechar();
       avisarOndeFoi(it);
       atualizarEu();
-      if (janela && !janela.closed) janela.location.replace(urlEditor(it));
-      else O.toast('“' + nomeCompleto(it) + '” criado.', null, { texto: 'Abrir', fn: function () { abrirItem(it); } });
+      if (janela && !janela.closed) janela.location.replace(urlEditor(it) + (extraUrl || ''));
+      // a janela foi barrada (bloqueador de pop-up): o botão abre o editor levando o pedido da IA junto
+      else O.toast('“' + nomeCompleto(it) + '” criado.', null, {
+        texto: 'Abrir', fn: function () { window.open(urlEditor(it) + (extraUrl || ''), '_blank', 'noopener'); decolar(it); }
+      }, extraUrl ? 0 : 5000);
     }, function (e) {
       t.fechar();
       try { if (janela) janela.close(); } catch (x) {}
@@ -1002,6 +1045,9 @@
       }
       case 'enviou_email': return 'enviou por e-mail para ' + (d.externos || []).join(', ');
       case 'email_falhou': return 'tentou enviar por e-mail para ' + (d.externos || []).join(', ') + ', e não saiu' + (d.erro ? ' (' + d.erro + ')' : '');
+      case 'ia': return 'usou a IA da Lube' + (d.fonte ? ' a partir de “' + d.fonte.nome + '.' + d.fonte.extensao + '”' : '') +
+        (d.pedido ? ': “' + d.pedido + (d.pedido.length >= 200 ? '…' : '') + '”' : '') +
+        (d.imagens ? ' (' + d.imagens + (d.imagens > 1 ? ' imagens' : ' imagem') + ')' : '');
       default: return t.acao;
     }
   }
@@ -1072,7 +1118,10 @@
     var hr = new Date().getHours();
     $('[data-saudacao]').textContent = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
     var u = est.eu.uso || { arquivos: 0, bytes: 0 };
-    $('[data-uso-arquivos]').textContent = u.arquivos + (u.arquivos === 1 ? ' arquivo' : ' arquivos');
+    var usoEl = $('[data-uso-arquivos]');
+    if (!usoEl.getAttribute('data-contou')) { usoEl.setAttribute('data-contou', '1'); contar(usoEl, u.arquivos, u.arquivos === 1 ? ' arquivo' : ' arquivos'); }
+    else usoEl.textContent = u.arquivos + (u.arquivos === 1 ? ' arquivo' : ' arquivos');
+    desenharIa();
     $('[data-uso-bytes]').textContent = O.bytes(u.bytes) + ' usados';
     var m = $('[data-motor]');
     var sit = est.eu.motor_situacao || (est.eu.motor ? 'ligado' : 'nao_instalado');
@@ -1114,6 +1163,7 @@
         if (ext === 'pasta') novaPasta(); else pedirCriar(ext);
         return;
       }
+      if (t.closest('[data-ia-criar]')) { ev.preventDefault(); fecharMenus(); dialogoIa({}); return; }
       if ((el = t.closest('[data-modelo]'))) {
         var m = O.MODELOS.filter(function (x) { return x.id === el.getAttribute('data-modelo'); })[0];
         if (m) pedirCriar(m.ext, m);
@@ -1218,6 +1268,7 @@
       if (digitando || ev.ctrlKey || ev.metaKey || ev.altKey || $('[data-dialogo]').open) return;
       if (ev.key === '/') { ev.preventDefault(); busca.focus(); }
       else if (ev.key === 'n' || ev.key === 'N') { ev.preventDefault(); alternar('[data-menu-novo]', $('[data-novo]')); }
+      else if ((ev.key === 'i' || ev.key === 'I') && iaLigada()) { ev.preventDefault(); dialogoIa({}); }
     });
 
     window.addEventListener('scroll', function () { if (menuAberto) fecharMenus(); }, { passive: true });
@@ -1277,12 +1328,290 @@
     if (abrir) { el.hidden = false; botao.setAttribute('aria-expanded', 'true'); }
   }
 
+  /* =========================================================
+     IA da Lube no Drive: "Criar com IA" e "Transformar com IA"
+     O Drive cria o arquivo a partir da base da Lube, guarda o pedido no navegador
+     (localStorage, só até o editor abrir) e abre o editor, onde a IA monta tudo.
+     ========================================================= */
+  function iaLigada() { return !!(est.eu && est.eu.ia && est.eu.ia.ligada); }
+  var TIPOS_IA = {
+    docx: { nome: 'Documento', desc: 'Ata, proposta, comunicado, relatório', cls: '',
+      ex: ['Ata da reunião a partir da foto do quadro', 'Proposta comercial para um supermercado, com condições e prazos',
+           'Comunicado interno sobre o novo horário de entregas', 'Procedimento de recebimento de mercadoria, passo a passo'] },
+    xlsx: { nome: 'Planilha', desc: 'Controle, metas, cálculos com gráfico', cls: 'plan',
+      ex: ['Metas de vendas por RCA com % atingido e gráfico', 'Controle de contas a pagar do mês com total',
+           'Planilha a partir da foto da tabela impressa', 'Escala de entregas da semana por rota'] },
+    pptx: { nome: 'Apresentação', desc: 'Slides com a marca, animados', cls: 'apre',
+      ex: ['Resultado do mês para a diretoria, com números em destaque', 'Treinamento dos RCAs sobre o SAC',
+           'Slides a partir da foto do quadro', 'Lançamento do e-commerce B2B para os clientes'] }
+  };
+
+  function desenharIa() {
+    var on = iaLigada();
+    $$('[data-ia-criar]').forEach(function (b) { b.hidden = !on; });
+    if (!on) return;
+    var ia = est.eu.ia, teto = Number(ia.teto_dia_usd) || 10, g = Number(ia.gasto_hoje_usd) || 0;
+    var t = $('[data-ia-lado-gasto]'), m = $('[data-ia-lado-medidor]');
+    if (t) t.textContent = 'Hoje: ' + O.usd(g) + ' de ' + O.usd(teto);
+    if (m) m.style.width = Math.min(100, Math.max(2, g / teto * 100)) + '%';
+    digitar();
+  }
+
+  // frase que se escreve sozinha no cartão "Criar com IA"
+  var digitando = null;
+  function digitar() {
+    var el = $('[data-ia-digita]');
+    if (!el || digitando || semMovimento()) return;
+    var frases = ['uma ata a partir da foto do quadro', 'a planilha de metas por RCA com gráfico', 'os slides do resultado do mês',
+      'uma proposta comercial para o cliente', 'um resumo desta planilha em slides', 'o comunicado do novo horário'];
+    var i = 0, pos = el.textContent.length, apagando = true, pausa = 40;
+    digitando = setInterval(function () {
+      if (document.hidden || $('[data-ola]').hidden) return;
+      if (pausa > 0) { pausa--; return; }
+      var alvo = frases[i];
+      if (apagando) {
+        pos--;
+        el.textContent = el.textContent.slice(0, Math.max(0, pos));
+        if (pos <= 0) { apagando = false; i = (i + 1) % frases.length; pausa = 6; }
+      } else {
+        pos++;
+        el.textContent = frases[i].slice(0, pos);
+        if (pos >= alvo.length) { apagando = true; pausa = 70; }
+      }
+    }, 38);
+  }
+
+  function nomeProvisorio(pedido, tipo) {
+    var p = String(pedido || '').replace(/[\\/:*?"<>|\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!p) return TIPOS_IA[tipo].nome + ' da IA';
+    var palavras = p.split(' ').slice(0, 7).join(' ');
+    palavras = palavras.charAt(0).toUpperCase() + palavras.slice(1);
+    return palavras.length > 60 ? palavras.slice(0, 57).trim() + '…' : palavras;
+  }
+
+  function guardarPedidoIa(dados) {
+    var chave = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    dados.em = Date.now();
+    try { localStorage.setItem('office_ia_' + chave, JSON.stringify(dados)); }
+    catch (e) { throw new Error('As imagens são grandes demais para levar ao editor. Mande menos fotos ou fotos menores.'); }
+    return chave;
+  }
+  // pedido que nunca chegou ao editor (aba fechada antes de abrir) sai depois de 2 horas
+  function limparPedidosVelhos() {
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf('office_ia_') !== 0) return;
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(k)); } catch (e) {}
+        if (!v || !v.em || Date.now() - v.em > 2 * 3600e3) localStorage.removeItem(k);
+      });
+    } catch (e) {}
+  }
+
+  function dialogoIa(o) {
+    o = o || {};
+    if (!iaLigada()) { O.toast('A IA da Lube ainda não está ligada.', 'erro'); return; }
+    fecharMenus();
+    var fonte = o.fonte || null;
+    var tipo = o.tipo || (fonte ? ({ docx: 'pptx', xlsx: 'pptx', pptx: 'docx', pdf: 'docx', txt: 'docx', csv: 'xlsx' })[fonte.extensao] || 'docx' : 'docx');
+    var anexos = [];
+    var d = $('[data-dialogo]');
+    d.className = 'dialogo dialogo--ia';
+    var fechar = SVG.fechar.replace('<svg ', '<svg aria-hidden="true" ');
+    d.innerHTML = '<form method="dialog" class="ia-criar" novalidate>' +
+      '<div class="ia-criar__topo"><span class="ia-orbe" aria-hidden="true"><i></i><b></b></span>' +
+        '<div><span class="mono">IA da Lube · Claude Haiku 5.5</span><h2>' +
+        (fonte ? 'Transformar com IA' : 'Criar com IA') + '</h2><p>' +
+        (fonte ? 'A IA lê o arquivo e monta um novo, com a identidade da Lube. O original não muda.'
+               : 'Diga o que você quer. A IA monta dentro do editor, com a identidade da Lube.') + '</p></div>' +
+        '<button class="fechar" type="button" data-dlg-cancelar aria-label="Fechar">' + SVG.fechar + '</button></div>' +
+      (fonte ? '<div class="ia-fonte">' + O.icone(fonte.extensao) + '<span><strong>' + esc(nomeCompleto(fonte)) +
+        '</strong><em>A IA lê a última versão salva</em></span></div>' : '') +
+      '<div class="ia-tipos" role="radiogroup" aria-label="O que criar">' + ['docx', 'xlsx', 'pptx'].map(function (t, i) {
+        var T = TIPOS_IA[t];
+        return '<button type="button" class="ia-tipo' + (T.cls ? ' ia-tipo--' + T.cls : '') + '" role="radio" data-ia-tipo="' + t + '" style="--i:' + i + '">' +
+          O.icone(t) + '<strong>' + T.nome + '</strong><span>' + T.desc + '</span></button>';
+      }).join('') + '</div>' +
+      '<label class="ia-criar__caixa"><textarea data-ia-txt rows="3" maxlength="4000" aria-label="Pedido para a IA"></textarea></label>' +
+      '<div class="ia-criar__ex" data-ia-ex></div>' +
+      '<div class="ia-criar__fotos" data-ia-fotos>' +
+        '<button type="button" class="ia-criar__soltar" data-ia-escolher>' + SVG.brilho +
+          '<span><strong>Fotos para a IA ler</strong> quadro, anotação à mão, tabela impressa · arraste, cole ou clique</span></button>' +
+        '<div class="ia__anexos" data-ia-anexos></div>' +
+        '<input type="file" accept="image/*" multiple hidden data-ia-arquivo></div>' +
+      '<p class="dialogo__erro" data-dlg-erro></p>' +
+      '<div class="ia-criar__pe"><span class="ia-criar__gasto">Hoje na Lube: ' + esc(O.usd(est.eu.ia.gasto_hoje_usd)) + ' de ' + esc(O.usd(est.eu.ia.teto_dia_usd)) +
+        ' · cada pedido custa menos de 1 centavo</span>' +
+        '<button class="btn" type="button" data-dlg-cancelar>Cancelar</button>' +
+        '<button class="btn btn--ia-criar" type="submit" data-ia-ok>' + SVG.brilho + '<span>' + (fonte ? 'Transformar' : 'Criar com IA') + '</span></button></div>' +
+      '</form>';
+
+    var txt = $('[data-ia-txt]', d), erroEl = $('[data-dlg-erro]', d);
+    function marcarTipo(t) {
+      tipo = t;
+      $$('[data-ia-tipo]', d).forEach(function (b) { b.setAttribute('aria-checked', String(b.getAttribute('data-ia-tipo') === t)); });
+      txt.placeholder = fonte ? 'O que destacar? (opcional) Ex.: só as decisões e os números' : 'Descreva o que você quer. Ex.: ' + TIPOS_IA[t].ex[0].toLowerCase();
+      $('[data-ia-ex]', d).innerHTML = fonte ? '' : TIPOS_IA[t].ex.map(function (e, i) {
+        return '<button type="button" class="ia-sug" data-ia-ex-i="' + i + '" style="--i:' + i + '">' + SVG.brilho + esc(e) + '</button>';
+      }).join('');
+    }
+    function desenharAnexos() {
+      $('[data-ia-anexos]', d).innerHTML = anexos.map(function (a, i) {
+        return '<span class="ia-anexo" style="--i:' + i + '"><img src="' + a.url + '" alt=""><button type="button" data-ia-tira="' + i +
+          '" aria-label="Tirar imagem">' + fechar + '</button></span>';
+      }).join('');
+    }
+    function anexar(lista) {
+      var arr = Array.prototype.slice.call(lista || []).filter(function (f) { return /^image\//.test(f.type); });
+      if (anexos.length + arr.length > 4) { erroEl.textContent = 'Até 4 imagens por pedido.'; arr = arr.slice(0, Math.max(0, 4 - anexos.length)); }
+      Promise.all(arr.map(function (f) { return O.imagemParaIa(f).catch(function (e) { erroEl.textContent = e.message; return null; }); }))
+        .then(function (l) { l.forEach(function (a) { if (a) anexos.push(a); }); desenharAnexos(); });
+    }
+    marcarTipo(tipo);
+    d.addEventListener('click', function (ev) {
+      var b;
+      if ((b = ev.target.closest('[data-ia-tipo]'))) { marcarTipo(b.getAttribute('data-ia-tipo')); return; }
+      if ((b = ev.target.closest('[data-ia-ex-i]'))) { txt.value = TIPOS_IA[tipo].ex[+b.getAttribute('data-ia-ex-i')]; txt.focus(); return; }
+      if ((b = ev.target.closest('[data-ia-tira]'))) { anexos.splice(+b.getAttribute('data-ia-tira'), 1); desenharAnexos(); return; }
+      if (ev.target.closest('[data-ia-escolher]')) { $('[data-ia-arquivo]', d).click(); return; }
+      if (ev.target.closest('[data-dlg-cancelar]')) d.close();
+    });
+    $('[data-ia-arquivo]', d).addEventListener('change', function (ev) { anexar(ev.target.files); ev.target.value = ''; });
+    txt.addEventListener('paste', function (ev) {
+      var fs = (ev.clipboardData && ev.clipboardData.files) || [];
+      if (fs.length) { ev.preventDefault(); anexar(fs); }
+    });
+    var zona = $('[data-ia-fotos]', d);
+    zona.addEventListener('dragover', function (ev) { ev.preventDefault(); ev.stopPropagation(); zona.classList.add('is-soltar'); });
+    zona.addEventListener('dragleave', function () { zona.classList.remove('is-soltar'); });
+    zona.addEventListener('drop', function (ev) { ev.preventDefault(); ev.stopPropagation(); zona.classList.remove('is-soltar'); anexar(ev.dataTransfer.files); });
+    txt.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); $('form', d).requestSubmit(); } });
+
+    $('form', d).addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var pedido = txt.value.trim();
+      if (!pedido && !anexos.length && !fonte) { erroEl.textContent = 'Escreva o que você quer ou mande uma foto.'; txt.focus(); return; }
+      var chave;
+      try {
+        chave = guardarPedidoIa({
+          pedido: pedido, renomear: true,
+          imagens: anexos.map(function (a) { return { tipo: a.tipo, dados: a.dados, url: a.url }; }),
+          fonte: fonte ? { id: fonte.id, nome: nomeCompleto(fonte) } : null
+        });
+      } catch (e) { erroEl.textContent = e.message; return; }
+      var janela = janelaEmBranco();   // ainda dentro do clique: o bloqueador de pop-up não barra
+      d.close();
+      var nome = fonte ? nomeProvisorio((fonte.nome || '') + ' em ' + TIPOS_IA[tipo].nome.toLowerCase(), tipo) : nomeProvisorio(pedido, tipo);
+      criarDe(O.BASES_IA[tipo], nome, tipo, 'novo', janela, '&ia=' + chave);
+    });
+
+    d.showModal();
+    txt.focus();
+  }
+
+  /* ---------- vida na tela: luz que segue o mouse, leve inclinação e arrastar para pasta ---------- */
+  function ligarVida() {
+    if (semMovimento()) return;
+    document.addEventListener('pointermove', function (ev) {
+      var el = ev.target.closest && ev.target.closest('.vivo');
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      var x = ev.clientX - r.left, y = ev.clientY - r.top;
+      el.style.setProperty('--mx', x + 'px');
+      el.style.setProperty('--my', y + 'px');
+      el.style.setProperty('--ry', ((x / r.width - 0.5) * 7).toFixed(2) + 'deg');
+      el.style.setProperty('--rx', ((0.5 - y / r.height) * 7).toFixed(2) + 'deg');
+    }, { passive: true });
+    document.addEventListener('pointerout', function (ev) {
+      var el = ev.target.closest && ev.target.closest('.vivo');
+      if (el && !el.contains(ev.relatedTarget)) { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); }
+    }, { passive: true });
+  }
+
+  // arrastar um arquivo ou pasta da lista para uma pasta (ou para a trilha) move o item
+  function ligarArrastar() {
+    var tab = $('[data-tabela]'), arrastando = null, alvoAtual = null;
+    function alvo(t) {
+      if (!arrastando || !t || !t.closest) return null;
+      var lin = t.closest('.linha[data-item]');
+      if (lin) {
+        var it = itemPorId(lin.getAttribute('data-item'));
+        if (it && it.tipo === 'pasta' && it.id !== arrastando.id && O.pode(it.papel, 'editar')) return { el: lin, destino: it.id, nome: it.nome };
+        return null;
+      }
+      var a = t.closest('[data-ir-pasta]');
+      if (a) return { el: a, destino: a.getAttribute('data-ir-pasta'), nome: a.textContent };
+      a = t.closest('[data-ir-visao="meus"], .visao[data-visao="meus"]');
+      if (a && arrastando.dono && arrastando.dono.id === euId()) return { el: a, destino: null, nome: 'Meus arquivos' };
+      return null;
+    }
+    function marcar(el) {
+      if (alvoAtual === el) return;
+      if (alvoAtual) alvoAtual.classList.remove('is-alvo');
+      alvoAtual = el;
+      if (el) el.classList.add('is-alvo');
+    }
+    tab.addEventListener('dragstart', function (ev) {
+      var lin = ev.target.closest && ev.target.closest('.linha[data-item]');
+      var it = lin && itemPorId(lin.getAttribute('data-item'));
+      if (!it) return;
+      arrastando = it;
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('application/x-lube-office', it.id);
+      lin.classList.add('is-arrastando');
+      document.body.classList.add('arrastando-item');
+    });
+    tab.addEventListener('dragend', function () {
+      $$('.is-arrastando').forEach(function (e) { e.classList.remove('is-arrastando'); });
+      document.body.classList.remove('arrastando-item');
+      marcar(null);
+      arrastando = null;
+    });
+    document.addEventListener('dragover', function (ev) {
+      if (!arrastando) return;
+      var a = alvo(ev.target);
+      if (a) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; marcar(a.el); } else marcar(null);
+    });
+    document.addEventListener('drop', function (ev) {
+      if (!arrastando) return;
+      var a = alvo(ev.target), it = arrastando;
+      marcar(null);
+      if (!a) return;
+      ev.preventDefault();
+      var antes = it.tipo === 'pasta' ? it.pai : it.pasta;
+      if ((antes || null) === a.destino) return;
+      O.api('mover', { tipo: it.tipo, id: it.id, destino: a.destino }).then(function (novo) {
+        if (!aquiMesmo(novo)) tirarItem(it.id); else trocarItem(novo);
+        O.toast('“' + nomeCompleto(it) + '” foi para “' + a.nome + '”.', null, {
+          texto: 'Desfazer', fn: function () {
+            O.api('mover', { tipo: it.tipo, id: it.id, destino: antes || null }).then(function (v) { inserirItem(v) || carregar(); O.toast('Desfeito.'); }, erroToast);
+          }
+        }, 8000);
+      }, erroToast);
+    });
+  }
+
+  // número que conta até o valor (o espaço usado na lateral)
+  function contar(el, ate, sufixo) {
+    if (!el) return;
+    if (semMovimento() || ate < 2) { el.textContent = ate + sufixo; return; }
+    var t0 = performance.now(), dur = 900;
+    (function passo(t) {
+      var k = Math.min(1, (t - t0) / dur), v = Math.round(ate * (1 - Math.pow(1 - k, 3)));
+      el.textContent = v + sufixo;
+      if (k < 1) requestAnimationFrame(passo);
+    })(t0);
+  }
+
   /* ---------- início ---------- */
   function iniciar() {
     O.marcas();
     $$('[data-ico]').forEach(function (el) { el.innerHTML = O.icone(el.getAttribute('data-ico')); });
     lerUrl();
     ligar();
+    ligarVida();
+    ligarArrastar();
+    limparPedidosVelhos();
     O.pronto().then(function () { return O.token(); }).then(function (t) {
       if (!t) {
         bloquear('Entre pelo painel', 'O LUBE OFFICE abre com o mesmo login do Painel de Sistemas.',

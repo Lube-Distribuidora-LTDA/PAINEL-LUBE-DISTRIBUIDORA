@@ -12,6 +12,14 @@
   var id = u.get('id') || '';
   var arquivo = null;
   var editor = null;
+  // teste de ponta a ponta sem login: editor.html#teste=<senha temporária> (ver db/06_office_teste_motor.sql)
+  var TESTE = (/(?:^#|&)teste=([A-Za-z0-9_-]{32,})/.exec(location.hash) || [])[1] || null;
+  // pedido da IA que veio do Drive ("Criar com IA"): fica guardado no navegador até o editor abrir
+  var pendenteIa = window.OFC_IA_EDITOR ? window.OFC_IA_EDITOR.lerPendente(u.get('ia')) : null;
+  if (u.get('ia')) {
+    u.delete('ia');
+    history.replaceState(null, '', location.pathname + '?' + u.toString() + location.hash);
+  }
 
   function sufixoDemo() { return O.DEMO ? 'demo=1' : ''; }
   function urlDrive(extra) {
@@ -127,12 +135,49 @@
       editor = new window.DocsAPI.DocEditor('editor-onlyoffice', cfg);
       // se o editor não avisar que abriu, a tela de carga sai sozinha
       setTimeout(function () { document.body.classList.remove('carregando'); }, 15000);
+      // IA da Lube: o plugin só vem na configuração para quem pode editar e com a IA ligada
+      var plugins = m.config && m.config.editorConfig && m.config.editorConfig.plugins;
+      if (window.OFC_IA_EDITOR) {
+        window.OFC_IA_EDITOR.iniciar({
+          arquivo: arquivo, origemMotor: new URL(m.api).origin, teste: TESTE, pendente: pendenteIa,
+          ligada: !!(plugins && plugins.pluginsData && plugins.pluginsData.length),
+          aoTerminar: renomearPelaIa
+        });
+      }
+    });
+  }
+
+  // arquivo criado pela IA: ganha o nome que ela sugeriu (só se ainda tem o nome provisório)
+  function renomearPelaIa(r) {
+    var novo = r && r.plano && r.plano.titulo_arquivo;
+    if (!novo || TESTE || !pendenteIa || !pendenteIa.renomear || novo === arquivo.nome) return;
+    O.api('renomear', { tipo: 'arquivo', id: id, nome: novo }).then(function (a) {
+      arquivo.nome = a.nome;
+      $('[data-ed-nome]').textContent = a.nome + '.' + a.extensao;
+      var cartao = $('[data-ed-cartao-nome]');
+      if (cartao && cartao.textContent) cartao.textContent = a.nome + '.' + a.extensao;
+      document.title = a.nome + '.' + a.extensao + ' — LUBE OFFICE';
+    }, function () {});
+  }
+
+  // abre pela porta de teste (sem login): cria um "Teste do motor" novo ou reabre o indicado
+  function iniciarTeste() {
+    return O.apiTeste({ token: TESTE, arquivo: /^[0-9a-f-]{36}$/i.test(id) ? id : null, extensao: u.get('ext') || 'docx' }).then(function (r) {
+      id = r.arquivo.id;
+      u.set('id', id);
+      u.delete('ext');
+      history.replaceState(null, '', location.pathname + '?' + u.toString() + location.hash);
+      mostrarArquivo(r.arquivo);
+      return abrirMotor(r.motor);
+    }, function (e) {
+      bloquear('Teste não autorizado', e.message);
     });
   }
 
   function iniciar() {
     O.marcas();
     $('[data-ed-tentar]').addEventListener('click', function () { location.reload(); });
+    if (TESTE) { iniciarTeste(); return; }
     O.pronto().then(function () { return O.token(); }).then(function (t) {
       if (!t) {
         bloquear('Entre pelo painel', 'O LUBE OFFICE abre com o mesmo login do Painel de Sistemas.',
@@ -146,6 +191,10 @@
           return abrirMotor(r.motor).catch(function (e) { $('[data-ed-motor]').hidden = true; espera(r.arquivo, e.message, 'fora'); });
         }
         espera(r.arquivo, r.motivo, r.situacao);
+        // demonstração (só na máquina): o painel da IA funciona com um plano de exemplo, sem editor
+        if (O.DEMO && window.OFC_IA_EDITOR) {
+          window.OFC_IA_EDITOR.iniciar({ arquivo: r.arquivo, origemMotor: null, teste: null, pendente: pendenteIa, ligada: true, aoTerminar: renomearPelaIa });
+        }
       }, function (e) {
         if (e.status === 401) bloquear('Sua sessão acabou', 'Entre de novo pelo Painel de Sistemas.', { texto: 'Ir para o login', href: '../?voltar=office' });
         else if (e.status === 404 || e.status === 403) bloquear('Sem acesso a este arquivo', 'Ele foi para a lixeira, mudou de dono ou não foi compartilhado com você. Peça acesso a quem mandou o link.');
