@@ -224,7 +224,7 @@
   }
   var buscaLabel = $('.side__busca');
   if (buscaLabel) buscaLabel.addEventListener('click', function () {
-    if (app.classList.contains('is-rail')) { recolher(false); setTimeout(function () { busca.focus(); }, 300); }
+    if (app.classList.contains('is-rail')) { recolher(false); setTimeout(function () { busca.focus({ preventScroll: true }); }, 300); }
   });
 
   document.addEventListener('keydown', function (ev) {
@@ -232,7 +232,8 @@
       ev.preventDefault();
       if (app.classList.contains('is-rail')) recolher(false);
       if (window.matchMedia('(max-width:860px)').matches) app.classList.add('is-menu');
-      setTimeout(function () { if (busca) { busca.focus(); busca.select(); } }, 60);
+      noPainel();
+      setTimeout(function () { if (busca) { busca.focus({ preventScroll: true }); busca.select(); } }, 60);
     }
   });
 
@@ -433,7 +434,11 @@
     abasEl.innerHTML = html;
     if (acoesEl) acoesEl.hidden = !ativo;
     var on = $('.aba.is-on', abasEl);
-    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (on) {
+      var l = on.offsetLeft, r = l + on.offsetWidth;
+      if (l < abasEl.scrollLeft) abasEl.scrollLeft = Math.max(0, l - 8);
+      else if (r > abasEl.scrollLeft + abasEl.clientWidth) abasEl.scrollLeft = r - abasEl.clientWidth + 8;
+    }
   }
 
   if (abasEl) {
@@ -645,8 +650,7 @@
       guardar(chave('fixos'), fixos);
       areasFechadas = ler(chave('areas_fechadas'), {});
 
-      var adm = $('[data-admin-link]');
-      if (adm) adm.hidden = !(c.perfil && c.perfil.is_admin);
+      $$('[data-admin-link]').forEach(function (a) { a.hidden = !(c.perfil && c.perfil.is_admin); });
       montarConta();
       recolher(ler('lube_menu_recolhido', false));
       montarMenu();
@@ -700,5 +704,16 @@
       '<span class="conta__info"><span class="conta__nome">' + esc(nome) + '</span>' +
         '<span class="conta__email">' + esc(p.email) + '</span></span>' +
       '<button type="button" class="conta__sair" data-sair title="Sair" aria-label="Sair">' + ICO.sair + '</button>';
+
+    // barra da conta na navbar da abertura, como era antes: nome, Painel admin,
+    // Sentinela (só admin) e Sair
+    var topo = $('[data-nav-conta]');
+    if (topo) {
+      topo.innerHTML =
+        '<span class="nav-conta__nome">' + esc(nome) + '</span>' +
+        (p.is_admin ? '<a class="nav-conta__admin" href="admin.html">Painel admin</a>' +
+                      '<a class="nav-conta__link" href="sentinela/">Sentinela</a>' : '') +
+        '<button type="button" class="nav-conta__link" data-sair>Sair</button>';
+    }
   }
 })();

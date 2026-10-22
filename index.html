@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261022b" />
-<link rel="stylesheet" href="shell.css?v=20261022b" />
+<link rel="stylesheet" href="styles.css?v=20261022c" />
+<link rel="stylesheet" href="shell.css?v=20261022c" />
 <script>try{if(window.self!==window.top)document.documentElement.className+=' em-moldura';}catch(e){document.documentElement.className+=' em-moldura';}</script>
 </head>
 <body class="is-loading">
@@ -162,7 +162,9 @@
 
 <!-- ============ NAVBAR (marca centralizada; some quando o painel chega) ============ -->
 <header class="nav" id="topo">
-  <div class="nav__side nav__side--l"></div>
+  <div class="nav__side nav__side--l">
+    <span class="nav-conta mono" data-nav-conta></span>
+  </div>
 
   <a class="nav__brand" href="#topo" aria-label="Lube Distribuidora — início">
     <span class="nav__mark" data-logo-mark></span>
@@ -184,6 +186,8 @@
 <div class="menu" data-menu data-surface="dark">
   <a href="#painel" data-ir-painel>Painel</a>
   <a href="office/">Office</a>
+  <a href="admin.html" data-admin-link hidden>Admin</a>
+  <a href="sentinela/" data-admin-link hidden>Sentinela</a>
 </div>
 
 <!-- ============ ABERTURA: "SISTEMAS CORPORATIVOS" e o caminhão; rolando, cai no painel ============ -->
@@ -280,14 +284,17 @@
         <span class="side__rot">Office</span>
         <em class="side__badge mono" data-office-n hidden></em>
       </a>
+    </nav>
 
+    <div class="side__rodape">
       <a class="side__item" href="admin.html" data-admin-link hidden data-dica="Administração">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6Z"/><path d="m9 12 2 2 4-4"/></svg>
         <span class="side__rot">Administração</span>
       </a>
-    </nav>
-
-    <div class="side__rodape">
+      <a class="side__item" href="sentinela/" data-admin-link hidden data-dica="Sentinela">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        <span class="side__rot">Sentinela</span>
+      </a>
       <div class="suporte" data-suporte>
         <button class="side__item" type="button" data-suporte-btn aria-expanded="false" data-dica="Suporte TI">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2-4 2h-2"/></svg>
@@ -345,8 +352,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=20261006"></script>
 <script src="icones.js?v=20261006"></script>
-<script src="app.js?v=20261022b"></script>
-<script src="shell.js?v=20261022b"></script>
-<script src="portal.js?v=20261022b"></script>
+<script src="app.js?v=20261022c"></script>
+<script src="shell.js?v=20261022c"></script>
+<script src="portal.js?v=20261022c"></script>
 </body>
 </html>

@@ -18,6 +18,9 @@
   var $$    = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var pad2  = function (n) { return (n < 10 ? '0' : '') + n; };
 
+  try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+  if (!location.hash) window.scrollTo(0, 0);
+
   /* ---------------------------------------------------------
      1. MARCA "L" DA LUBE EM SVG
      --------------------------------------------------------- */
@@ -159,10 +162,14 @@
   var truck     = $('[data-truck]');
   var typeDark  = $('[data-haul-type-dark]');
   var typeLight = $('[data-haul-type-light]');
+  var painelEl  = $('[data-app]');
 
   var lastVh = 0;
-  var state  = { bg: 1, title: 1, haul: 0 };
-  var target = { bg: 1, title: 1, haul: 0 };
+  var state  = { bg: 1, title: 1, haul: 0, painel: 0 };
+  var target = { bg: 1, title: 1, haul: 0, painel: 0 };
+  var chegou = false;
+  // até o painel chegar, o conteúdo do início espera para entrar em cascata
+  if (painelEl && !reduced) painelEl.classList.add('pre-chegada');
 
   function measure() {
     var vh = window.innerHeight;
@@ -181,6 +188,10 @@
       var r = haul.getBoundingClientRect();
       var travel = haul.offsetHeight - vh;
       target.haul = travel > 0 ? clamp(-r.top / travel, 0, 1) : 0;
+    }
+    // entrada do painel: 0 quando o topo dele está no pé da tela, 1 quando ocupa a tela
+    if (painelEl && painelEl.offsetHeight) {
+      target.painel = clamp(1 - painelEl.getBoundingClientRect().top / vh, 0, 1);
     }
   }
 
@@ -214,14 +225,34 @@
     }
     /* as duas frases respiram enquanto a troca acontece */
     if (typeDark)  typeDark.style.transform  = 'scale(' + (1.1 - p * 0.16).toFixed(4) + ')';
-    if (typeLight) typeLight.style.transform = 'scale(' + (1.14 - p * 0.16).toFixed(4) + ')';
+    /* saindo do "NOSSOS sistemas", o painel sobe e se monta: o menu entra pela
+       esquerda, o palco cresce de baixo e a frase se apaga para dar lugar a ele */
+    state.painel = lerp(state.painel, target.painel, reduced ? 1 : 0.14);
+    var e = reduced ? 1 : 1 - Math.pow(1 - state.painel, 3);
+    if (typeLight) {
+      typeLight.style.transform = 'translateY(' + (-e * 90).toFixed(1) + 'px) scale(' + (1.14 - p * 0.16 - e * 0.12).toFixed(4) + ')';
+      typeLight.style.opacity = (1 - clamp(e * 1.6, 0, 1)).toFixed(3);
+      typeLight.style.filter = e > 0.01 ? 'blur(' + (e * 8).toFixed(1) + 'px)' : '';
+    }
+    if (painelEl) {
+      painelEl.style.setProperty('--entra', e.toFixed(4));
+      if (!chegou && state.painel > 0.965) {
+        chegou = true;
+        painelEl.classList.remove('pre-chegada');
+        painelEl.classList.add('chegou');
+      } else if (chegou && target.painel < 0.25 && !reduced) {
+        chegou = false;                       // voltou para a abertura: a chegada repete
+        painelEl.classList.remove('chegou');
+        painelEl.classList.add('pre-chegada');
+      }
+    }
 
     syncNav();
     requestAnimationFrame(render);
   }
 
   measure();
-  state.bg = target.bg; state.title = target.title; state.haul = target.haul;
+  state.bg = target.bg; state.title = target.title; state.haul = target.haul; state.painel = target.painel;
   requestAnimationFrame(render);
   window.addEventListener('scroll', measure, { passive: true });
   window.addEventListener('resize', measure);
