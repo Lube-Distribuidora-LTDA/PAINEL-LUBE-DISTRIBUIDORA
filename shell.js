@@ -39,13 +39,11 @@
     pinoCheio: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4h6l-1 6 3 3v2H7v-2l3-3Z"/><path d="M12 15v5" fill="none"/></svg>',
     cadeado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
     seta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 6 6 6-6 6"/></svg>',
-    ir: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
     fora: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
     casa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1Z"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    voltar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
     estrela: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4h6l-1 6 3 3v2H7v-2l3-3Z"/><path d="M12 15v5"/></svg>',
-    relogio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>',
-    grade: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 16v-4M12 16V8M15.5 16v-6"/></svg>',
     alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
     sair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>'
   };
@@ -326,28 +324,7 @@
   /* =========================================================
      INÍCIO
      ========================================================= */
-  function tile(s, grande) {
-    var nome = nomeBonito(s);
-    if (!s._liberado) {
-      return '<div class="tile tile--bloqueado" title="Sem autorização. Peça a liberação ao TI.">' +
-        '<span class="tile__ico">' + icone(s) + '</span>' +
-        '<span class="tile__txt"><span class="tile__area">' + esc(s.categoria) + '</span>' +
-          '<span class="tile__nome">' + esc(nome) + '</span>' +
-          '<span class="tile__desc">Sem autorização. Peça a liberação ao TI.</span></span>' +
-        '<span class="tile__ir" aria-hidden="true">' + ICO.cadeado + '</span>' +
-      '</div>';
-    }
-    var fixo = fixos.indexOf(s.id) > -1;
-    return '<button type="button" class="tile' + (grande ? ' tile--grande' : '') + '" data-abrir="' + esc(s.id) + '">' +
-      '<span class="tile__ico">' + icone(s) + '</span>' +
-      '<span class="tile__txt"><span class="tile__area">' + esc(s.categoria) + '</span>' +
-        '<span class="tile__nome">' + esc(nome) + '</span>' +
-        (s.descricao ? '<span class="tile__desc">' + esc(s.descricao) + '</span>' : '') + '</span>' +
-      (grande && fixo ? '<span class="tile__pino" role="button" tabindex="0" data-fixar="' + esc(s.id) + '" title="Desafixar">' + ICO.pinoCheio + '</span>'
-        : '<span class="tile__ir" aria-hidden="true">' + (s.abre_no_painel ? ICO.ir : ICO.fora) + '</span>') +
-    '</button>';
-  }
-
+  // início limpo (pedido do Júlio): só a saudação; os BIs ficam no menu lateral
   function saudacao() {
     var h = new Date().getHours();
     return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
@@ -359,15 +336,12 @@
     var primeiro = String(p.nome || (p.email || '').split('@')[0] || '').split(/\s+/)[0];
     primeiro = primeiro ? primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase() : '';
     var liberados = sistemas.filter(function (s) { return s._liberado; });
+    var fixados = fixos.filter(function (id) { return porId[id] && porId[id]._liberado; });
     var areas = {};
     sistemas.forEach(function (s) { if (s.categoria) areas[s.categoria] = 1; });
     var data = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    var fixados = fixos.map(function (id) { return porId[id]; }).filter(function (s) { return s && s._liberado; });
-    var recentes = ler(chave('recentes'), []).map(function (id) { return porId[id]; })
-      .filter(function (s) { return s && s._liberado; }).slice(0, 6);
-
-    var html =
+    inicioEl.innerHTML =
       '<div class="boas">' +
         '<div>' +
           '<p class="boas__data mono">' + esc(data) + '</p>' +
@@ -380,39 +354,14 @@
           '<div class="boas__num"><strong>' + fixados.length + '</strong><span>Fixados</span></div>' +
           '<div class="boas__num"><strong>' + Object.keys(areas).length + '</strong><span>Áreas</span></div>' +
         '</div>' +
+      '</div>' +
+      '<div class="inicio__vazio">' +
+        '<span class="inicio__marca" aria-hidden="true">' +
+          (window.LUBE_MARCA ? window.LUBE_MARCA('#1E2B8C', '#EE1B24') : '') + '</span>' +
+        '<p class="inicio__dica"><span class="inicio__seta" aria-hidden="true">' + ICO.voltar + '</span>' +
+          'Escolha um BI no menu ao lado</p>' +
       '</div>';
-
-    html += '<section class="secao"><div class="secao__topo"><h2 class="secao__h">' + ICO.estrela + 'Fixados</h2></div>' +
-      (fixados.length ? '<div class="tiles tiles--grandes">' + fixados.map(function (s) { return tile(s, true); }).join('') + '</div>'
-        : '<p class="secao__vazio">Nenhum BI fixado ainda. No menu, passe o mouse num BI e clique no alfinete ' + ICO.pino + ' para ele ficar sempre no topo.</p>') +
-      '</section>';
-
-    if (recentes.length) {
-      html += '<section class="secao"><div class="secao__topo"><h2 class="secao__h">' + ICO.relogio + 'Abertos recentemente</h2></div>' +
-        '<div class="tiles">' + recentes.map(function (s) { return tile(s); }).join('') + '</div></section>';
-    }
-
-    var ordemAreas = [], grupos = {};
-    sistemas.forEach(function (s) {
-      var a = s.categoria || 'Outros';
-      if (!grupos[a]) { grupos[a] = []; ordemAreas.push(a); }
-      grupos[a].push(s);
-    });
-    html += '<section class="secao"><div class="secao__topo"><h2 class="secao__h">' + ICO.grade +
-      'Todos os BIs <em class="mono">' + liberados.length + ' de ' + sistemas.length + ' liberados</em></h2></div>' +
-      ordemAreas.map(function (a) {
-        return '<p class="area__nome">' + esc(a) + '</p><div class="tiles">' + grupos[a].map(function (s) { return tile(s); }).join('') + '</div>';
-      }).join('') + '</section>';
-
-    inicioEl.innerHTML = html;
   }
-
-  if (inicioEl) inicioEl.addEventListener('click', function (ev) {
-    var pin = ev.target.closest('[data-fixar]');
-    if (pin) { ev.stopPropagation(); alternarFixo(pin.getAttribute('data-fixar')); return; }
-    var t = ev.target.closest('[data-abrir]');
-    if (t) abrir(t.getAttribute('data-abrir'));
-  });
 
   /* =========================================================
      ABAS E QUADROS
@@ -561,17 +510,10 @@
     else window.open(s.url, '_blank', 'noopener');
   }
 
-  function lembrarRecente(id) {
-    var r = ler(chave('recentes'), []).filter(function (x) { return x !== id; });
-    r.unshift(id);
-    guardar(chave('recentes'), r.slice(0, 12));
-  }
-
   function abrir(id) {
     var s = porId[id];
     if (!s) return;
     if (!s._liberado) { aviso('Você não tem autorização para abrir ' + nomeBonito(s) + '. Peça a liberação ao TI.'); return; }
-    lembrarRecente(id);
     if (ctx && ctx.registrar) ctx.registrar('abriu_sistema', id);
 
     if (!s.abre_no_painel) {
