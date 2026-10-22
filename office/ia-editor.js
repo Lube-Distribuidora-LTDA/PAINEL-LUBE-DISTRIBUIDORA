@@ -91,6 +91,9 @@
       return;
     }
     if (ev.source !== janelaPlugin) return;
+    // botões da aba Lube Fácil: abrir a IA e dar retorno do que fizeram
+    if (d.tipo === 'abrir-painel') { abrir(); return; }
+    if (d.tipo === 'aviso') { O.toast(String(d.texto || '').slice(0, 200), d.erro ? 'erro' : null); return; }
     var p = pedidos[d.id];
     if (!p) return;
     if (d.tipo === 'progresso') { if (p.progresso) p.progresso(d); return; }

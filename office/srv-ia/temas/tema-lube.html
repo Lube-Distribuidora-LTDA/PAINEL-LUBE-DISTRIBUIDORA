@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Tema da Lube</title>
+</head>
+<body>
+<script>
+/* LUBE OFFICE — deixa o tema da Lube pronto antes de o editor abrir.
+   O ONLYOFFICE só pinta um tema próprio (Lube Escuro, Lube Claro) depois de a pessoa
+   escolher no menu: até lá abre com as cores padrão. O painel abre esta página escondida,
+   no mesmo endereço do motor, e ela grava as cores do tema na memória do navegador, onde
+   o editor procura ao abrir. Se a pessoa escolheu outro tema no menu, nada muda.
+   Fica no motor (SRV-IA) em web-apps/apps/common/main/resources/lube/; quem copia é o
+   INSTALAR TEMA LUBE.bat. */
+(function () {
+  function avisar(ok) { try { parent.postMessage({ lubeTema: true, ok: ok }, '*'); } catch (e) {} }
+  try {
+    var tema = (/[?&]tema=(theme-lube-[a-z]+)(?:&|$)/.exec(location.search) || [])[1];
+    if (!tema) { avisar(false); return; }
+    var escolhido = localStorage.getItem('ui-theme-id');
+    if (escolhido && escolhido.indexOf('theme-lube-') !== 0) { avisar(true); return; }
+    var alvo = escolhido || tema;
+    fetch('/themes.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      var t = (d.themes || []).filter(function (x) { return x && x.id === alvo && x.colors; })[0];
+      if (t) localStorage.setItem('ui-theme', JSON.stringify({ id: t.id, type: t.type, text: t.name, colors: t.colors }));
+      avisar(!!t);
+    })['catch'](function () { avisar(false); });
+  } catch (e) { avisar(false); }
+})();
+</script>
+</body>
+</html>

@@ -25,10 +25,12 @@
   function editor() { return (plugin.info && plugin.info.editorType) || ''; }
   function pausa(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
 
-  // callCommand com promessa (o editor chama a função num escopo próprio: só Api e Asc.scope)
+  // callCommand com promessa (o editor chama a função num escopo próprio: só Api e Asc.scope).
+  // Escopo novo a cada comando: nada de um botão da Lube Fácil vaza para a IA (e vice-versa).
   function comando(fn, dados) {
     return new Promise(function (ok) {
       Asc.scope = Asc.scope || {};
+      Object.keys(Asc.scope).forEach(function (k) { if (k !== 'prototype') delete Asc.scope[k]; });
       Object.keys(dados || {}).forEach(function (k) { Asc.scope[k] = dados[k]; });
       plugin.callCommand(fn, false, true, function (r) { ok(r); });
     });
@@ -458,7 +460,8 @@
     var p = Api.GetPresentation();
     if (Asc.scope.primeiro && Asc.scope.criar) tentar(function () { p.SetSizes(W, H); }, 'tamanho');
     var sl = Api.CreateSlide();
-    p.AddSlide(sl);
+    // a aba Lube Fácil põe o slide logo depois do que está aberto; a IA, no fim
+    if (Asc.scope.posicao != null) p.AddSlide(sl, Asc.scope.posicao); else p.AddSlide(sl);
     var anim = [];
     function animar(sh, ef, gat, dur, atr) { if (sh) anim.push([sh, ef, gat || 'afterprevious', dur || 500, atr || 0]); }
     function forma(tipo, x, y, w, h, hex) {
@@ -714,4 +717,10 @@
       return { slides: slides.length, avisos: unicos.slice(0, 20) };
     });
   }
+
+  // a aba "Lube Fácil" (facil.js) usa as mesmas peças, com a mesma cara
+  window.LUBE_IA = {
+    comando: comando, metodo: metodo, avisar: avisar, editor: editor, ORIGEM: ORIGEM,
+    htmlDoBloco: htmlDoBloco, slideDesenhar: slideDesenhar, TRANSICAO: TRANSICAO
+  };
 })(window);

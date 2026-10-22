@@ -84,6 +84,49 @@ function Motor-Saudavel([string]$base) {
     } catch { return $false }
 }
 
+# tema da Lube no editor (Lube Claro): um JSON por tema na pasta de temas do
+# ONLYOFFICE. O motor relista a pasta sozinho (themes.json, cache de ~5 minutos); nao reinicia nada.
+# A tema-lube.html vai numa pasta propria (lube): o painel abre ela escondida antes do editor,
+# para as cores do tema ja estarem prontas na primeira abertura.
+$OFFICE.Temas      = Join-Path $OFFICE.Pasta 'temas'
+$OFFICE.TemasMotor = Join-Path $OFFICE.Motor 'web-apps\apps\common\main\resources\themes'
+$OFFICE.LubeMotor  = Join-Path $OFFICE.Motor 'web-apps\apps\common\main\resources\lube'
+
+function Instalar-TemasLube([string]$origem) {
+    if (-not (Test-Path -LiteralPath $OFFICE.TemasMotor)) { throw ('Pasta de temas do ONLYOFFICE nao encontrada: ' + $OFFICE.TemasMotor) }
+    $ids = @()
+    foreach ($f in @(Get-ChildItem -LiteralPath $origem -Filter 'theme-lube-*.json' -File)) {
+        $t = [IO.File]::ReadAllText($f.FullName) | ConvertFrom-Json
+        if ($t.id -ne $f.BaseName -or $null -eq $t.colors) { throw ('Tema invalido: ' + $f.Name) }
+        Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $OFFICE.TemasMotor $f.Name) -Force
+        $ids += [string]$t.id
+    }
+    # tema da Lube que saiu do kit sai do motor tambem (o Lube Escuro, retirado em 2026-10-22)
+    foreach ($velho in @(Get-ChildItem -LiteralPath $OFFICE.TemasMotor -Filter 'theme-lube-*.json' -File)) {
+        if ($ids -notcontains $velho.BaseName) { Remove-Item -LiteralPath $velho.FullName -Force }
+    }
+    $pagina = Join-Path $origem 'tema-lube.html'
+    if (Test-Path -LiteralPath $pagina) {
+        New-Item -ItemType Directory -Force -Path $OFFICE.LubeMotor | Out-Null
+        Copy-Item -LiteralPath $pagina -Destination (Join-Path $OFFICE.LubeMotor 'tema-lube.html') -Force
+    }
+    return $ids
+}
+
+# a pagina tema-lube.html responde pelo motor?
+function Pagina-TemaNoMotor {
+    try {
+        $r = Invoke-WebRequest -UseBasicParsing -Uri ($OFFICE.Local + '/web-apps/apps/common/main/resources/lube/tema-lube.html') -TimeoutSec 15
+        return ($r.StatusCode -eq 200)
+    } catch { return $false }
+}
+
+# ids dos temas que o motor ja oferece ({"themes":[conteudo de cada arquivo da pasta]})
+function Temas-NoMotor {
+    try { $r = Invoke-RestMethod -UseBasicParsing -Uri ($OFFICE.Local + '/themes.json') -TimeoutSec 15 } catch { return @() }
+    return @($r.themes | ForEach-Object { $_.id } | Where-Object { $_ })
+}
+
 function Memoria-GB {
     $so = Get-CimInstance Win32_OperatingSystem
     return @{ total = [math]::Round($so.TotalVisibleMemorySize / 1MB, 1); livre = [math]::Round($so.FreePhysicalMemory / 1MB, 1) }

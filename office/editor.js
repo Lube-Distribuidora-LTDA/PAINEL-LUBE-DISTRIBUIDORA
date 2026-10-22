@@ -95,9 +95,30 @@
     });
   }
 
+  // tema da Lube: o ONLYOFFICE só pinta tema próprio depois de a pessoa escolher no menu
+  // (teste de 2026-10-22). A página tema-lube.html, no motor, grava as cores do tema na
+  // memória do editor antes de ele abrir; se ela não responder em 2,5 s, o editor abre assim mesmo.
+  function prepararTema(m) {
+    var c = m.config && m.config.editorConfig && m.config.editorConfig.customization;
+    var tema = c && c.uiTheme;
+    if (!/^theme-lube-[a-z]+$/.test(String(tema || ''))) return Promise.resolve();
+    var origem = new URL(m.api).origin;
+    return new Promise(function (ok) {
+      var f = document.createElement('iframe');
+      var fim = function () { window.removeEventListener('message', ouvir); f.remove(); ok(); };
+      var ouvir = function (ev) { if (ev.origin === origem && ev.source === f.contentWindow && ev.data && ev.data.lubeTema) fim(); };
+      window.addEventListener('message', ouvir);
+      setTimeout(fim, 2500);
+      f.hidden = true;
+      f.setAttribute('aria-hidden', 'true');
+      f.src = origem + '/web-apps/apps/common/main/resources/lube/tema-lube.html?tema=' + encodeURIComponent(tema);
+      document.body.appendChild(f);
+    });
+  }
+
   function abrirMotor(m) {
     $('[data-carga-txt]').textContent = 'Abrindo o editor';
-    return carregarScript(m.api, 20000).then(function () {
+    return Promise.all([carregarScript(m.api, 20000), prepararTema(m)]).then(function () {
       if (!window.DocsAPI) throw new Error('O motor de edição respondeu sem o editor.');
       var cfg = Object.assign({}, m.config, {
         events: {
@@ -160,9 +181,11 @@
     }, function () {});
   }
 
-  // abre pela porta de teste (sem login): cria um "Teste do motor" novo ou reabre o indicado
+  // abre pela porta de teste (sem login): cria um "Teste do motor" novo ou reabre o indicado;
+  // #teste=...&tema=theme-lube-claro mostra um tema da Lube antes de ele valer para todos
   function iniciarTeste() {
-    return O.apiTeste({ token: TESTE, arquivo: /^[0-9a-f-]{36}$/i.test(id) ? id : null, extensao: u.get('ext') || 'docx' }).then(function (r) {
+    var tema = (/(?:^#|&)tema=(theme-[a-z-]+)/.exec(location.hash) || [])[1];
+    return O.apiTeste({ token: TESTE, arquivo: /^[0-9a-f-]{36}$/i.test(id) ? id : null, extensao: u.get('ext') || 'docx', tema: tema }).then(function (r) {
       id = r.arquivo.id;
       u.set('id', id);
       u.delete('ext');

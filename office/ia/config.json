@@ -6,7 +6,7 @@
   "baseUrl": "",
   "variations": [
     {
-      "description": "Executa no documento o que a IA da Lube monta (LUBE OFFICE)",
+      "description": "Executa no documento o que a IA da Lube monta e traz a aba Lube Fácil (LUBE OFFICE)",
       "url": "index.html",
       "icons": ["icone.png", "icone@2x.png"],
       "isViewer": false,
@@ -19,6 +19,7 @@
       "initDataType": "none",
       "initData": "",
       "isUpdateOleOnResize": false,
+      "events": ["onToolbarMenuClick"],
       "buttons": []
     }
   ]

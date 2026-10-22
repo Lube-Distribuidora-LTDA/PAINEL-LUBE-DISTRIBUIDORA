@@ -19,7 +19,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk@0.132.0';
 import JSZip from 'npm:jszip@3.10.1';
 import { assinarHS256, verificarHS256 } from './jwt.ts';
-import { lerRetorno, montarEditor, motorVivo, origemDoPlugin, tipoDocumento, urlMotorValida, uuidValido } from './motor.ts';
+import { lerRetorno, montarEditor, motorVivo, origemDoPlugin, tipoDocumento, urlMotorValida, uuidValido, visualDoEditor } from './motor.ts';
 import { LIMITE_EMAIL_BYTES, linhaUnica, montarEmail, tipoMime } from './email.ts';
 import { enviarEmails, smtpPronto } from './correio.ts';
 import {
@@ -81,6 +81,16 @@ async function motorAtual(fresco = false): Promise<Motor> {
   const m: Motor = { url, vivo, visto_em: r?.visto_em ?? null, situacao: !url ? 'nao_instalado' : vivo ? 'ligado' : 'fora' };
   motorCache = { quando: Date.now(), m };
   return m;
+}
+
+// visual do editor (office.config 'editor'): troca sem publicar código, vale em até 1 minuto
+let visualCache: { quando: number; v: ReturnType<typeof visualDoEditor> } | null = null;
+async function visualAtual() {
+  if (visualCache && Date.now() - visualCache.quando < 60_000) return visualCache.v;
+  let v = visualDoEditor(null);
+  try { v = visualDoEditor(await rpc('office_srv_editor', {})); } catch (e) { console.error('office visual:', e); }
+  visualCache = { quando: Date.now(), v };
+  return v;
 }
 
 function horaBrasilia(iso: string | null) {
@@ -359,6 +369,7 @@ async function acaoDoPortal(req: Request) {
           voltarUrl: `${PORTAL}/office/`,
           pessoa: { id: pessoa.id, nome: pessoa.nome },
           pluginIa: await pluginIaDe(req),
+          visual: await visualAtual(),
         });
         const token = await assinarHS256(config, MOTOR_CHAVE);
         return json({ arquivo, situacao: m.situacao, motor: { api: `${m.url}/web-apps/apps/api/documents/api.js`, config: { ...config, token } } });
@@ -561,6 +572,8 @@ async function testeMotor(req: Request) {
       callbackUrl: `${URL_SB}/functions/v1/office/motor?arquivo=${a.id}`,
       voltarUrl: `${PORTAL}/office/`, pessoa: { id: pessoa.id, nome: pessoa.nome },
       pluginIa: await pluginIaDe(req),
+      // o teste pode pedir um tema da Lube antes de ele valer para todos
+      visual: typeof c.tema === 'string' ? visualDoEditor({ visual: 'lube', tema: c.tema }) : await visualAtual(),
     });
     const arquivo = { ...a };
     delete arquivo.caminho;

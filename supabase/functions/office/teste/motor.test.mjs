@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assinarHS256, verificarHS256 } from '../jwt.ts';
-import { lerRetorno, montarEditor, motorVivo, permissoes, tipoDocumento, urlMotorValida } from '../motor.ts';
+import { lerRetorno, montarEditor, motorVivo, permissoes, tipoDocumento, urlMotorValida, visualDoEditor } from '../motor.ts';
 import { linhaUnica, montarEmail, tipoMime } from '../email.ts';
 
 const CHAVE = 'chave-de-teste-com-tamanho-suficiente';
@@ -68,6 +68,27 @@ test('configuração do editor', () => {
   assert.equal(cfg.document.permissions.edit, false);
   assert.throws(() => montarEditor({ ...cfgBase(), arquivo: { ...cfgBase().arquivo, extensao: 'exe' } }));
   assert.throws(() => montarEditor({ ...cfgBase(), arquivo: { ...cfgBase().arquivo, chave: 'a/b' } }));
+});
+
+test('visual do editor: o de antes até ligar, e o da Lube só com tema conhecido', () => {
+  assert.deepEqual(visualDoEditor(null), { lube: false, tema: 'theme-dark' });
+  assert.deepEqual(visualDoEditor({ visual: 'classico' }), { lube: false, tema: 'theme-dark' });
+  assert.deepEqual(visualDoEditor({ visual: 'lube' }), { lube: true, tema: 'theme-lube-claro' });
+  assert.deepEqual(visualDoEditor({ visual: 'lube', tema: 'theme-lube-escuro' }), { lube: true, tema: 'theme-lube-claro' });
+  assert.deepEqual(visualDoEditor({ visual: 'lube', tema: '"><script>' }), { lube: true, tema: 'theme-lube-claro' });
+
+  const antes = montarEditor(cfgBase()).editorConfig.customization;
+  assert.equal(antes.uiTheme, 'theme-dark');
+  assert.equal(antes.compactHeader, false);
+  assert.equal(antes.goback.text, 'Voltar ao LUBE OFFICE');
+
+  const lube = montarEditor({ ...cfgBase(), visual: visualDoEditor({ visual: 'lube' }) }).editorConfig.customization;
+  assert.equal(lube.uiTheme, 'theme-lube-claro');
+  assert.equal(lube.compactHeader, true);
+  assert.equal(lube.toolbarHideFileName, true);
+  assert.equal(lube.features.tabStyle, 'line');
+  assert.equal(lube.features.spellcheck.mode, true);
+  assert.equal(lube.autosave, true);
 });
 
 function cfgBase() {

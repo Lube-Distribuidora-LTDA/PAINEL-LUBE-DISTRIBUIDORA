@@ -178,7 +178,7 @@ avisos não lidos.
   seções (View Transitions), o ícone que "decola" ao abrir um arquivo e **arrastar um
   arquivo ou pasta para outra pasta** (ou para a trilha) para mover, com Desfazer.
   Quem pede menos movimento no sistema (`prefers-reduced-motion`) não vê animação.
-- **Banco**: schema `office` neste Supabase (`db/04_office.sql`, `db/05_office_envio_motor.sql` e `db/07_office_ia.sql`), separado das
+- **Banco**: schema `office` neste Supabase (`db/04_office.sql`, `db/05_office_envio_motor.sql`, `db/07_office_ia.sql` e `db/08_office_visual.sql`), separado das
   tabelas do portal. RLS ligado e sem políticas: o navegador **nunca** fala com o
   schema. Tudo passa pela Edge Function `office`, que chama as funções
   `public.office_srv_*` com a chave de serviço; cada função confere o papel de
@@ -248,6 +248,29 @@ avisos não lidos.
     ponta sem login: `office/editor.html?ext=pptx#teste=<senha temporária>` abre um
     "Teste do motor" com a IA (só arquivos "Teste do motor", também como origem do
     Transformar).
+- **Topo do editor e aba Lube Fácil** (desde 2026-10-22, aprovado pelo Júlio):
+  - **Visual**: tema **Lube Claro** (o tema clássico claro do ONLYOFFICE com o marinho
+    da Lube; `office/ferramentas/gerar_temas.py` gera `office/srv-ia/temas/`),
+    cabeçalho compacto (sem a barra que repetia o nome do arquivo) e abas em linha.
+    Liga e desliga em `office.config` (`editor`, `db/08_office_visual.sql`), sem
+    publicar. Tema escuro próprio não serve: o ONLYOFFICE volta a barra ao cinza a cada
+    abertura. O tema e a página `tema-lube.html` vão para o motor pelo
+    `INSTALAR TEMA LUBE.bat`; o editor do portal abre a página escondida antes do
+    editor (até 2,5 s) para as cores já saírem prontas, porque o ONLYOFFICE só pinta
+    tema próprio depois de escolhido no menu.
+  - **Aba Lube Fácil** (`office/ia/facil.js`, no plugin da IA, pelo
+    `AddToolbarMenuItem`; ícones em `office/ia/facil/`, gerados por
+    `office/ferramentas/gerar_icones_facil.py`): botões prontos com a cara da Lube no
+    Documento (título, seção, listas, tabela, destaque, citação, data, assinatura,
+    papel timbrado), na Planilha (cabeçalho, tabela com filtro, reais, porcentagem,
+    somar sem escrever por cima de dado, fixar linhas, ajustar colunas, gráfico) e na
+    Apresentação (8 modelos de slide, logo, animar, transição em todos), mais o botão
+    da IA. Aparece para quem pode editar, mesmo com o visual desligado.
+  - **Teste**: `office/editor.html?ext=docx#teste=<senha>&tema=theme-lube-claro`
+    abre com o visual novo antes de ele valer para todos. Plugin servido do
+    `localhost` não carrega no editor do motor (o Chrome bloqueia site público
+    chamando a máquina): para testar a aba antes de publicar, servir o portal por
+    um túnel.
 - **Modelos** (`office/modelos/`): em branco e com a marca da Lube (proposta,
   ata, relatório mensal, apresentação). Gerados por
   `python office/ferramentas/gerar_modelos.py` (precisa de python-docx,

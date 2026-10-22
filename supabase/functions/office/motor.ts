@@ -65,9 +65,33 @@ export function origemDoPlugin(origem: string | null, portal: string) {
   return portal;
 }
 
+// visual do editor (office.config 'editor'): "lube" = tema da Lube, cabeçalho compacto
+// (o nome do arquivo já está no topo do portal), abas em linha e sem dicas de novidade
+// do ONLYOFFICE; qualquer outro valor = o visual de antes. Só tema claro: tema escuro
+// próprio volta ao cinza do ONLYOFFICE a cada abertura (teste de 2026-10-22).
+export const TEMAS_LUBE = ['theme-lube-claro'];
+
+export function visualDoEditor(v: unknown) {
+  const c = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  if (c.visual !== 'lube') return { lube: false, tema: 'theme-dark' };
+  return { lube: true, tema: TEMAS_LUBE.includes(String(c.tema)) ? String(c.tema) : TEMAS_LUBE[0] };
+}
+
+function personalizar(visual: { lube: boolean; tema: string }) {
+  if (!visual.lube) return { compactHeader: false, uiTheme: visual.tema, features: { spellcheck: { mode: true } } };
+  return {
+    compactHeader: true,
+    toolbarHideFileName: true,
+    uiTheme: visual.tema,
+    feedback: false,
+    suggestFeature: false,
+    features: { spellcheck: { mode: true }, tabStyle: 'line', tabBackground: 'toolbar', featuresTips: false },
+  };
+}
+
 export function montarEditor(o: {
   arquivo: Arquivo; urlArquivo: string; callbackUrl: string; voltarUrl: string;
-  pessoa: { id: string; nome: string }; pluginIa?: string;
+  pessoa: { id: string; nome: string }; pluginIa?: string; visual?: { lube: boolean; tema: string };
 }) {
   const a = o.arquivo;
   const tipo = tipoDocumento(a.extensao);
@@ -101,10 +125,8 @@ export function montarEditor(o: {
       customization: {
         autosave: true,
         comments: true,
-        compactHeader: false,
-        uiTheme: 'theme-dark',
         goback: { url: o.voltarUrl, text: 'Voltar ao LUBE OFFICE', blank: false },
-        features: { spellcheck: { mode: true } },
+        ...personalizar(o.visual ?? visualDoEditor(null)),
       },
       // a IA só escreve para quem pode editar (o servidor confere de novo)
       ...(o.pluginIa && p.permissions.edit
