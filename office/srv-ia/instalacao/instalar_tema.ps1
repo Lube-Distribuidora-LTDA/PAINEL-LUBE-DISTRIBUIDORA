@@ -44,6 +44,8 @@ if (-not $JaElevado) {
         Pausar; return
     }
     New-Item -ItemType Directory -Force -Path $OFFICE.Temas | Out-Null
+    # a pasta local espelha o kit: tema que saiu do kit sai daqui (e, na parte 2, do motor)
+    Get-ChildItem -LiteralPath $OFFICE.Temas -File -ErrorAction SilentlyContinue | Remove-Item -Force
     foreach ($a in @('office_comum.ps1', 'instalar_tema.ps1')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $a) -Destination (Join-Path $OFFICE.Pasta $a) -Force
         Write-Host ('  copiado  ' + $a) -ForegroundColor Green
