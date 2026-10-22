@@ -9,7 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261021" />
+<link rel="stylesheet" href="styles.css?v=20261022" />
+<link rel="stylesheet" href="shell.css?v=20261022" />
+<script>try{if(window.self!==window.top)document.documentElement.className+=' em-moldura';}catch(e){document.documentElement.className+=' em-moldura';}</script>
 </head>
 <body class="is-loading">
 
@@ -158,229 +160,112 @@
   </div>
 </div>
 
-<!-- ============ NAVBAR (marca centralizada) ============ -->
-<header class="nav" id="topo">
-  <div class="nav__side nav__side--l">
-    <span class="conta mono" data-conta></span>
-  </div>
+<!-- ============ PAINEL (depois do login): menu flutuante + palco ============ -->
+<div class="app" data-app>
 
-  <a class="nav__brand" href="#topo" aria-label="Lube Distribuidora — início">
-    <span class="nav__mark" data-logo-mark></span>
-    <span class="nav__brandtext">LUBE<em>Distribuidora</em></span>
-  </a>
+  <!-- menu lateral flutuante -->
+  <aside class="side" data-side aria-label="Menu do painel">
+    <div class="side__aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
-  <div class="nav__side nav__side--r">
-    <nav class="nav__links" aria-label="Navegação principal">
-      <a class="nav__office" href="office/">Office<span class="nav__badge" data-office-n hidden></span></a>
-      <a href="#sistemas" data-nav>Sistemas</a>
-      <a href="#manifesto" data-nav>A Empresa</a>
-      <a href="#acesso" data-nav>Acesso</a>
-    </nav>
-    <button class="nav__burger" type="button" aria-label="Abrir menu" aria-expanded="false" data-burger>
-      <span></span><span></span>
+    <button class="side__brand" type="button" data-ir-inicio title="Início">
+      <span class="side__mark" data-logo-mark></span>
+      <span class="side__brandtext">LUBE<em>Painel de Sistemas</em></span>
     </button>
-  </div>
-</header>
 
-<!-- ============ MENU MOBILE ============ -->
-<div class="menu" data-menu data-surface="dark">
-  <a href="office/">Office</a>
-  <a href="#sistemas" data-nav>Sistemas</a>
-  <a href="#manifesto" data-nav>A Empresa</a>
-  <a href="#acesso" data-nav>Acesso</a>
-</div>
+    <label class="side__busca" title="Buscar BI (Ctrl+K)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" placeholder="Buscar BI" autocomplete="off" spellcheck="false" aria-label="Buscar BI" data-side-busca />
+      <kbd class="mono">Ctrl K</kbd>
+    </label>
 
-<main>
+    <nav class="side__nav" data-side-nav>
+      <button class="side__item is-on" type="button" data-ir-inicio data-dica="Início">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1Z"/></svg>
+        <span class="side__rot">Início</span>
+      </button>
 
-<!-- ============ HERO ============ -->
-<section class="hero" data-hero data-surface="dark">
-  <div class="hero__bg" data-hero-bg aria-hidden="true">
-    <div class="hero__glow"></div>
-    <div class="hero__grid"></div>
-  </div>
-
-  <div class="hero__content" data-hero-title>
-    <h1 class="hero__title">
-      <span class="mask"><span data-rise="2">SISTEMAS</span></span>
-      <span class="mask hero__title--alt"><span data-rise="3">CORPORATIVOS</span></span>
-    </h1>
-  </div>
-
-  <div class="hero__foot">
-    <span class="hero__cue" data-rise="5" aria-hidden="true"><i></i></span>
-    <div class="hero__meta" data-rise="6">
-      <div><span class="mono" data-stat-sistemas>00</span><small>Sistemas ativos</small></div>
-      <div><span class="mono" data-stat-areas>00</span><small>Áreas atendidas</small></div>
-      <div><span class="mono">24/7</span><small>Disponibilidade</small></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ TRANSIÇÃO — O CAMINHÃO ============ -->
-<section class="haul" data-haul aria-label="Transição">
-  <div class="haul__stage">
-    <div class="haul__dark" data-surface="dark">
-      <p class="haul__type" data-haul-type-dark>
-        <span>EM MOVIMENTO</span>
-        <em>desde 1959</em>
-      </p>
-    </div>
-
-    <div class="haul__light" data-haul-light data-surface="light">
-      <p class="haul__type haul__type--dark" data-haul-type-light>
-        <span>NOSSOS</span>
-        <em>sistemas</em>
-      </p>
-    </div>
-
-    <div class="haul__road" data-haul-road><i></i></div>
-
-    <div class="haul__truck" data-truck>
-      <div class="haul__speed" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <div class="haul__vehicle" data-vehicle></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ SISTEMAS ============ -->
-<section class="works" id="sistemas" data-surface="light">
-  <header class="works__head">
-    <div class="works__bar">
-      <h2 class="works__title">
-        <span class="mask"><span data-reveal>SISTEMAS</span></span>
-        <span class="mask"><span data-reveal class="ital">internos</span></span>
-      </h2>
-
-      <div class="search" data-reveal>
-        <label class="search__field" for="busca">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span class="search__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
-            </svg>
-          </span>
-          <input id="busca" type="search" autocomplete="off" spellcheck="false"
-                 placeholder="Buscar sistema, área ou palavra-chave"
-                 aria-label="Buscar sistema" data-search />
-          <button class="search__clear" type="button" aria-label="Limpar busca" data-search-clear>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
-          </button>
-        </label>
+      <div class="side__grupo is-aberto" data-grupo-bi>
+        <button class="side__item" type="button" data-toggle-bi aria-expanded="true" data-dica="BI LUBE">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 16v-4M12 16V8M15.5 16v-6"/></svg>
+          <span class="side__rot">BI LUBE</span>
+          <em class="side__qtd mono" data-bi-qtd></em>
+          <svg class="side__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+        <div class="side__sub" data-bi-lista></div>
       </div>
-    </div>
-  </header>
 
-  <!-- barra de visualização: filtro por área + formato da lista -->
-  <div class="tools" data-tools>
-    <div class="chips" data-chips role="group" aria-label="Filtrar por área"></div>
-    <div class="views" role="group" aria-label="Formato da lista">
-      <button class="views__btn" type="button" data-vista-btn="area" aria-pressed="true" title="Agrupados por área">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h7M14 12h6M4 18h7M14 18h6"/></svg>
-        <span>Por área</span>
-      </button>
-      <button class="views__btn" type="button" data-vista-btn="grade" aria-pressed="false" title="Todos os cartões numa grade">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
-        <span>Grade</span>
-      </button>
-      <button class="views__btn" type="button" data-vista-btn="compacta" aria-pressed="false" title="Cartões pequenos, cabem mais na tela">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v4H4zM4 11h16v4H4zM4 17h16v3H4z"/></svg>
-        <span>Compacta</span>
-      </button>
-    </div>
-  </div>
+      <a class="side__item" href="office/" data-dica="Office">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+        <span class="side__rot">Office</span>
+        <em class="side__badge mono" data-office-n hidden></em>
+      </a>
 
-  <!-- sistemas -->
-  <div class="rail">
-    <div class="rail__track" data-track data-stagger data-vista="area" aria-label="Sistemas"></div>
+      <a class="side__item" href="admin.html" data-admin-link hidden data-dica="Administração">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6Z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span class="side__rot">Administração</span>
+      </a>
+    </nav>
 
-    <p class="rail__empty" data-empty hidden>
-      <span class="mono">Nenhum sistema encontrado</span>
-      Tente outro termo — por exemplo
-      <button type="button" data-suggest="rh">RH</button>,
-      <button type="button" data-suggest="fiscal">fiscal</button> ou
-      <button type="button" data-suggest="frota">frota</button>.
-    </p>
-  </div>
-</section>
-
-<!-- ============ MANIFESTO ============ -->
-<section class="manifesto" id="manifesto" data-surface="dark">
-  <blockquote class="manifesto__text">
-    <span class="mask"><span data-reveal>Mais de seis décadas</span></span>
-    <span class="mask"><span data-reveal>movendo a distribuição</span></span>
-    <span class="mask"><span data-reveal>com <em>precisão</em> e <em>tecnologia</em>.</span></span>
-  </blockquote>
-  <div class="manifesto__line" data-line><i></i></div>
-  <p class="manifesto__sign mono" data-reveal>LUBE DISTRIBUIDORA · TECNOLOGIA DA INFORMAÇÃO</p>
-</section>
-
-</main>
-
-<!-- ============ RODAPÉ ============ -->
-<footer class="foot" id="acesso" data-surface="light">
-  <div class="foot__hero">
-    <h2 class="foot__big">PRECISA DE ACESSO?</h2>
-    <div class="contact" data-contact>
-      <button class="btn" type="button" aria-expanded="false" aria-controls="contatos-ti" data-contact-toggle>
-        <span class="btn__label">Falar com o TI</span>
-        <span class="btn__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </button>
-
-      <div class="contact__list" id="contatos-ti">
-        <div class="contact__inner">
-          <p class="mono contact__hint">Fale no WhatsApp</p>
-        <a class="contact__item" href="https://wa.me/5527988819807?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20com%20um%20sistema%20da%20Lube%20Distribuidora." target="_blank" rel="noopener">
-          <span class="contact__ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-          </span>
-          <span class="contact__txt">
-            <strong>Júlio</strong>
-            <em>+55 (27) 98881-9807</em>
-          </span>
-          <span class="contact__go" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </span>
-        </a>
-        <a class="contact__item" href="https://wa.me/5527992736082?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20com%20um%20sistema%20da%20Lube%20Distribuidora." target="_blank" rel="noopener">
-          <span class="contact__ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-          </span>
-          <span class="contact__txt">
-            <strong>Alexandre</strong>
-            <em>+55 (27) 99273-6082</em>
-          </span>
-          <span class="contact__go" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </span>
-        </a>
+    <div class="side__rodape">
+      <div class="suporte" data-suporte>
+        <button class="side__item" type="button" data-suporte-btn aria-expanded="false" data-dica="Suporte TI">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="1.5"/><rect x="17" y="13" width="4" height="6" rx="1.5"/><path d="M19 19c0 1.5-1.5 2-4 2h-2"/></svg>
+          <span class="side__rot">Suporte TI</span>
+        </button>
+        <div class="suporte__caixa" role="dialog" aria-label="Falar com o TI">
+          <p class="mono suporte__dica">Fale no WhatsApp</p>
+          <a class="suporte__item" href="https://wa.me/5527988819807?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20com%20um%20sistema%20da%20Lube%20Distribuidora." target="_blank" rel="noopener">
+            <span class="suporte__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span>
+            <span><strong>Júlio</strong><em>+55 (27) 98881-9807</em></span>
+          </a>
+          <a class="suporte__item" href="https://wa.me/5527992736082?text=Ol%C3%A1%21%20Preciso%20de%20suporte%20com%20um%20sistema%20da%20Lube%20Distribuidora." target="_blank" rel="noopener">
+            <span class="suporte__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span>
+            <span><strong>Alexandre</strong><em>+55 (27) 99273-6082</em></span>
+          </a>
+          <a class="suporte__mail mono" href="mailto:cpd@lube.com.br">cpd@lube.com.br</a>
         </div>
       </div>
+      <div class="conta" data-conta></div>
     </div>
-  </div>
-  <div class="foot__cols">
-    <div class="foot__col">
-      <p class="mono foot__label">Sistemas</p>
-      <a class="wavy" href="https://gestao-de-saidas-de-veiculos.vercel.app/" target="_blank" rel="noopener">Saída de Veículos</a>
-      <a class="wavy" href="https://rh-absentismo.vercel.app/" target="_blank" rel="noopener">Controle RH</a>
-      <a class="wavy" href="https://painel-icms.vercel.app/" target="_blank" rel="noopener">Painel ICMS</a>
+
+    <button class="side__recolher" type="button" data-recolher aria-label="Recolher menu" title="Recolher menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+    </button>
+  </aside>
+  <div class="side__fundo" data-fechar-menu aria-hidden="true"></div>
+
+  <!-- palco: início e os BIs abertos -->
+  <main class="stage" data-stage>
+    <header class="stage__top">
+      <button class="stage__menu" type="button" data-abrir-menu aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+      <div class="abas" role="tablist" aria-label="BIs abertos" data-abas></div>
+      <div class="stage__acoes" data-acoes hidden>
+        <button class="acao" type="button" data-acao="recarregar" title="Recarregar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>
+        </button>
+        <button class="acao" type="button" data-acao="fora" title="Abrir em nova aba">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        </button>
+        <button class="acao" type="button" data-acao="tela" title="Tela cheia (Esc sai)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="stage__corpo">
+      <section class="inicio is-on" data-inicio aria-label="Início"></section>
+      <div class="quadros" data-quadros></div>
     </div>
-    <div class="foot__col foot__col--mail">
-      <p class="mono foot__label">Suporte TI</p>
-      <a class="foot__mail" href="mailto:cpd@lube.com.br">cpd@lube.com.br</a>
-    </div>
-    <div class="foot__col foot__col--end">
-      <span class="foot__mark" data-logo-mark></span>
-      <p class="mono foot__rights">© <span data-year>2026</span> Lube Distribuidora<br />Todos os direitos reservados</p>
-    </div>
-  </div>
-</footer>
+  </main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=20261006"></script>
 <script src="icones.js?v=20261006"></script>
-<script src="app.js?v=20261020"></script>
-<script src="portal.js?v=20261021"></script>
+<script src="app.js?v=20261022"></script>
+<script src="shell.js?v=20261022"></script>
+<script src="portal.js?v=20261022"></script>
 </body>
 </html>

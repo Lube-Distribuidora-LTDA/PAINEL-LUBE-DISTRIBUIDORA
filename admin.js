@@ -409,7 +409,8 @@
         '<td><a class="adm__link" href="' + esc(s.url) + '" target="_blank" rel="noopener">abrir</a></td>' +
         '<td>' + s.ordem + '</td>' +
         '<td>' + (s.ativo ? '<span class="tag tag--ok">Ativo</span>'
-                          : '<span class="tag tag--off">Inativo</span>') + '</td>' +
+                          : '<span class="tag tag--off">Inativo</span>') +
+            (s.abre_no_painel ? ' <span class="tag tag--ok" title="Abre dentro do painel">No painel</span>' : '') + '</td>' +
         '<td><div class="cel-acoes">' +
           '<button class="adm__link" data-edit-sis="' + s.id + '">Editar</button>' +
           '<button class="adm__link adm__link--perigo" data-del-sis="' + s.id + '">Excluir</button>' +
@@ -451,7 +452,10 @@
       '<label class="campo"><span>Ordem na vitrine</span>' +
       '<input type="number" name="ordem" value="' + s.ordem + '" min="0" /></label>' +
       '<label class="campo-inline"><input type="checkbox" name="ativo"' + (s.ativo ? ' checked' : '') +
-      ' /><span>Sistema ativo</span></label>';
+      ' /><span>Sistema ativo</span></label>' +
+      '<label class="campo-inline"><input type="checkbox" name="abre_no_painel"' + (s.abre_no_painel ? ' checked' : '') +
+      ' /><span>Abrir dentro do painel (o sistema precisa aceitar ser mostrado no portal; ' +
+      'desmarcado, abre em nova aba)</span></label>';
   }
 
   function dadosSistema() {
@@ -466,7 +470,8 @@
       url: url,
       badge: (($('input[name="badge"]:checked', mForm) || {}).value) || 'saida',
       ordem: parseInt($('input[name="ordem"]', mForm).value, 10) || 0,
-      ativo: $('input[name="ativo"]', mForm).checked
+      ativo: $('input[name="ativo"]', mForm).checked,
+      abre_no_painel: $('input[name="abre_no_painel"]', mForm).checked
     };
   }
 

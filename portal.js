@@ -4,6 +4,20 @@
 (function () {
   'use strict';
 
+  /* ---------- portal carregado DENTRO de um BI do painel ----------
+     Acontece quando o guarda do sistema não aceitou a entrada e mandou
+     de volta ao portal (?abrir=<slug>, ou só "/" se o passe falhou). Quem
+     resolve é o painel de cima (mesma origem): pede um passe novo ou
+     mostra o erro naquela aba. Aqui não monta nada. */
+  if (document.documentElement.classList.contains('em-moldura')) {
+    try {
+      var pai = window.parent && window.parent !== window ? window.parent.LubeShell : null;
+      var slugM = new URL(location.href).searchParams.get('abrir');
+      if (pai) pai.reentrar(slugM, window);
+    } catch (e) {}
+    return;
+  }
+
   var CFG = window.LUBE_CFG;
   var sb  = window.supabase.createClient(CFG.url, CFG.key);
   window.LUBE_SB = sb;
@@ -20,8 +34,6 @@
   var okBox    = $('[data-gate-ok]');
   var okTexto  = $('[data-gate-ok-texto]');
   var modos    = $('.gate__modos');
-  var track    = $('[data-track]');
-  var conta    = $('[data-conta]');
 
   var perfil = null;
   var icones = {};
@@ -43,11 +55,6 @@
     if (!btnEntrar) return;
     btnEntrar.disabled = on;
     btnEntrar.classList.toggle('is-loading', on);
-  }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
   }
 
   /* ---------- estatísticas do hero (sistemas ativos / áreas) ---------- */
@@ -149,29 +156,16 @@
     central('tentativa', { usuario: u }, null, 5000).catch(function () {});
   }
 
-  // abre o sistema do cartão: a janela nasce em branco já no clique (senão o
+  // abre o sistema em nova aba: a janela nasce em branco já no clique (senão o
   // bloqueador de pop-up barra) e recebe o endereço com passe; sem passe, a URL normal
-  function abrirPeloCartao(ev, a) {
-    var s = sistemasPorId[a.getAttribute('data-sistema')];
-    // sem slug ou sem endereço https não há passe: o link segue como sempre
-    if (!s || !s.slug || !origemHttps(s.url) || ev.defaultPrevented) return;
-    // Ctrl/Shift/Cmd/Alt-clique: o navegador faz o que sempre fez
-    if (ev.button || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
-
-    var alvo   = a.getAttribute('target') || '_self';
-    var normal = a.href;
-
-    if (alvo === '_self') {
-      ev.preventDefault();
-      pedirPasse(s.slug, s.url).then(function (url) { location.assign(url || normal); });
-      return;
-    }
+  function abrirJanela(s) {
+    if (!s) return;
+    if (!s.slug || !origemHttps(s.url)) { window.open(s.url, '_blank', 'noopener'); return; }
 
     var janela = null;
-    try { janela = window.open('', alvo); } catch (e) { janela = null; }
-    // não abriu, ou o bloqueador já fechou: segue o link como hoje
-    if (!janela || janela.closed) return;
-    ev.preventDefault();
+    try { janela = window.open('', '_blank'); } catch (e) { janela = null; }
+    // o bloqueador barrou: tenta o link direto (sem passe o guarda manda ao portal)
+    if (!janela || janela.closed) { window.open(s.url, '_blank', 'noopener'); return; }
     try {
       janela.opener = null;              // mesmo efeito do rel="noopener"
       var d = janela.document;
@@ -189,10 +183,10 @@
         // fechada no meio do caminho (pela pessoa ou por um bloqueador): sem gesto
         // não dá para abrir outra, então só avisa
         if (janela.closed) {
-          aviso('A janela de ' + s.nome + ' foi fechada antes de abrir. Clique de novo no cartão.');
+          aviso('A janela de ' + s.nome + ' foi fechada antes de abrir. Clique de novo.');
           return;
         }
-        janela.location.replace(url || normal);
+        janela.location.replace(url || s.url);
       } catch (e) {}
     });
   }
@@ -290,6 +284,10 @@
       aviso('Não foi possível entrar em ' + s.nome + ' agora. Tente pelo cartão.');
       return;
     }
+    if (s.abre_no_painel && window.LubeShell) {
+      window.LubeShell.abrir(s.id);
+      return;
+    }
     aviso('Abrindo ' + s.nome + '…');
     var reg = registrar('abriu_sistema', s.id);
     Promise.all([pedirPasse(s.slug, s.url), limite(reg, 1500)]).then(function (rs) {
@@ -297,78 +295,14 @@
     });
   }
 
-  /* ---------- montagem dos cartões ---------- */
-  function cartao(s, i) {
-    var liberado = !!s._liberado;
-    var tag  = liberado ? 'a' : 'div';
-    var abre = liberado
-      ? ' href="' + esc(s.url) + '" target="_blank" rel="noopener"'
-      : ' role="group" aria-label="' + esc(s.nome) + ' — sem autorização"';
-
-    var acao = liberado
-      ? '<span class="card__go" aria-hidden="true">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-          '<path d="M7 17 17 7M9 7h8v8"/></svg></span>'
-      : '<span class="card__lock" aria-hidden="true">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-          '<rect x="4" y="10" width="16" height="11" rx="2"/>' +
-          '<path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>';
-
-    return '' +
-      '<' + tag + ' class="card' + (liberado ? '' : ' card--bloqueado') + '"' + abre +
-         ' data-card data-surface="dark" data-sistema="' + esc(s.id) + '"' +
-         ' data-cat="' + esc(s.categoria || '') + '" title="' + esc(s.nome + (s.descricao ? ' — ' + s.descricao : '')) + '"' +
-         ' data-keys="' + esc([s.nome, s.categoria, s.descricao, s.slug].join(' ')) + '">' +
-        '<div class="card__visual">' +
-          '<span class="card__num mono">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' +
-          '<span class="card__badge">' + window.LUBE_ICONE.html(icones[s.badge]) + '</span>' +
-          '<span class="card__pattern" aria-hidden="true"></span>' +
-          (liberado ? '' :
-            '<span class="card__selo mono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-            'stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/>' +
-            '<path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Sem autorização</span>') +
-        '</div>' +
-        '<div class="card__info">' +
-          '<p class="mono card__cat">' + esc(s.categoria) + '</p>' +
-          '<h3 class="card__title">' + esc(s.nome) + '</h3>' +
-          '<div class="card__bottom">' +
-            '<p class="card__desc">' +
-              (liberado ? esc(s.descricao)
-                        : 'Você não tem autorização para entrar neste sistema. ' +
-                          'Peça a liberação ao TI pelo botão no rodapé.') +
-            '</p>' + acao +
-          '</div>' +
-        '</div>' +
-      '</' + tag + '>';
-  }
-
-  function montarSistemas(lista) {
-    if (!track) return;
-    var vazio = $('[data-empty]');
-
-    if (!lista.length) {
-      track.innerHTML = '';
-      if (vazio) {
-        vazio.hidden = false;
-        vazio.innerHTML = '<span class="mono">Nenhum sistema cadastrado</span>' +
-          'Assim que o TI cadastrar as plataformas, elas aparecem aqui.';
-      }
-      return;
-    }
-    if (vazio) vazio.hidden = true;
-
+  /* ---------- menu "BI LUBE" e palco (shell.js) ---------- */
+  function montarSistemas(lista, favoritos) {
     sistemasPorId = {};
     lista.forEach(function (s) { sistemasPorId[s.id] = s; });
-
-    track.innerHTML = lista.map(cartao).join('');
-    if (window.LubePainel) window.LubePainel.indexCards();
-
-    $$('.card', track).forEach(function (a) {
-      a.addEventListener('click', function (ev) {
-        if (a.classList.contains('card--bloqueado')) return;
-        registrar('abriu_sistema', a.getAttribute('data-sistema'));
-        abrirPeloCartao(ev, a);
-      });
+    if (!window.LubeShell) return;
+    window.LubeShell.montar({
+      sb: sb, perfil: perfil, icones: icones, lista: lista, favoritos: favoritos,
+      registrar: registrar, pedirPasse: pedirPasse, abrirJanela: abrirJanela
     });
   }
 
@@ -380,22 +314,18 @@
   function mostrarGate() {
     document.body.classList.remove('autenticado');
     if (gate) gate.classList.add('is-on');
-    if (track) track.innerHTML = '';
+    if (window.LubeShell) window.LubeShell.limpar();
   }
 
-  function barraConta() {
-    if (!conta || !perfil) return;
-    var nome = perfil.nome || perfil.email.split('@')[0];
-    conta.innerHTML =
-      '<span class="conta__nome">' + esc(nome) + '</span>' +
-      (perfil.is_admin ? '<a class="conta__admin" href="admin.html">Painel admin</a>' : '') +
-      '<button type="button" class="conta__sair" data-sair>Sair</button>';
-    var sair = $('[data-sair]', conta);
-    if (sair) sair.addEventListener('click', function () {
-      registrar('logout');
-      sb.auth.signOut().then(function () { location.reload(); });
-    });
-  }
+  // o botão Sair fica no rodapé do menu (montado pelo shell.js)
+  document.addEventListener('click', function (ev) {
+    var sair = ev.target.closest ? ev.target.closest('[data-sair]') : null;
+    if (!sair) return;
+    sair.disabled = true;
+    Promise.resolve(registrar('logout')).then(function () {
+      return sb.auth.signOut();
+    }).then(function () { location.reload(); }, function () { location.reload(); });
+  });
 
   // Conta sem perfil do painel: em geral é conta do SAC (RCA/supervisor), que
   // só abre chamado no SAC. Sai da sessão e diz para onde ir (2026-10-09).
@@ -436,7 +366,6 @@
           return;
         }
         mostrarPortal();
-        barraConta();
         informarIdentidade(sessao.access_token);
         avisosOffice(sessao.access_token);
 
@@ -444,7 +373,9 @@
           sb.from('sistemas').select('*').eq('ativo', true).order('ordem', { ascending: true }),
           sb.from('permissoes').select('sistema_id').eq('user_id', perfil.id),
           sb.from('icones').select('*'),
-          sb.from('permissoes_excecao').select('sistema_id').eq('user_id', perfil.id)
+          sb.from('permissoes_excecao').select('sistema_id').eq('user_id', perfil.id),
+          sb.from('favoritos').select('sistema_id, criado_em').eq('user_id', perfil.id)
+            .order('criado_em', { ascending: true })
         ]).then(function (rs) {
             (rs[2].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
 
@@ -467,7 +398,10 @@
               if (a._liberado !== b._liberado) return a._liberado ? -1 : 1;
               return a.ordem - b.ordem;
             });
-            montarSistemas(lista);
+            // sem a tabela (ou com erro) os fixados ficam só no navegador
+            var favoritos = rs[4] && !rs[4].error
+              ? (rs[4].data || []).map(function (f) { return f.sistema_id; }) : null;
+            montarSistemas(lista, favoritos);
             try { processarAbrir(lista); } catch (e) {}
           });
       })
