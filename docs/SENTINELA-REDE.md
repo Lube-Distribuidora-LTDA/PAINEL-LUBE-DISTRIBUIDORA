@@ -1250,6 +1250,25 @@ deploy, migração e mudança de modo). Quem publica é o Claude principal. Regr
   (`tr -d '\r' < arquivo | sha256sum`).
 - **Commits locais feitos em 2026-10-23** (nenhum push): ver a tabela "Commits da fase Corrigir" logo abaixo.
 
+**Commits da fase Corrigir** (locais; o push é o passo de cada sistema, com o OK do Júlio):
+
+| repositório (pasta) | commit | o que leva |
+|---|---|---|
+| Portal (`1. PAINEL LUBE DISTRIBUIDORA`) | `7f4b374` | tudo do 20.1 (o commit seguinte só anota esta tabela) |
+| BI Compras (`6. COMPRAS`) | `151adee` | `web/sentinela-guarda.ts` (ficaram de fora `README.md` e `etl/*`, do Júlio) |
+| BI Comercial (`8. COMERCIAL`) | `5c45a2b` | `web/sentinela-guarda.ts` |
+| Gestão Financeiro (`7. GESTÃO FINANCEIRO`) | `0d1923a` | `web/sentinela-guarda.ts` |
+| RH (`4. RH\GESTAO-RH`) | `871d173` | `sentinela-guarda.ts` |
+| Saída de Veículos (`3. ARAUJO\GESTAO SAIDA VEICULOS`) | `68517a2` | `sentinela-guarda.ts` |
+| Painel ICMS (`2. SERGIO LUBE\PAINEL-ICMS`) | `39f4603` | `src/lib/sentinela-guarda.ts` |
+| Gestão Comercial Trade (`11. TRADE`) | `78b79fc` | `web/sentinela-guarda.ts` |
+| Movimentação de Inventário (`16. INVENTARIO`) | `8f497ca` | `web/sentinela-guarda.ts` |
+| Gestão Fiscal (`17. FISCAL`) | `f9e910e` | `web/sentinela-guarda.ts` |
+| Gestão TI (`5. GESTÃO TI`) | `144f186` | `src/lib/sentinela-guarda.ts` + `src/middleware.ts` (`maquina: true`) |
+| Reposições (`9. REPOSICOES`) | `7d1455b` | `web/sentinela-guarda.ts`, `web/middleware.ts`, `web/app.js`, `README.md` (ficou de fora `etl/aquecer_painel.py`) |
+
+Em todos, o guarda commitado tem o SHA-256 `9b712b0443a0fa62…` (em LF), o mesmo do `guarda/sentinela-guarda.ts`.
+
 ### 20.2 Passo 0 — antes de tudo (não muda nada)
 
 1. **Invariante 2** (§15.4): provar que o Supabase sobrescreve um `cf-connecting-ip` forjado no `POST /tentativa`.
