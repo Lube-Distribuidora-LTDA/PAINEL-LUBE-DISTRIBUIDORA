@@ -1227,7 +1227,7 @@ deploy, migração e mudança de modo). Quem publica é o Claude principal. Regr
 | Portal | raiz: `sentinela-guarda.ts` (1.1.0 → 1.3.0), `rede.js`, `fora-da-rede.html`, `portal.js`, `index.html`, `admin.*`, `sentinela/*` | integração: prévia local com Supabase de mentira (login de fora barrado, emergência, liberado, iframe, admin barrado, central fora). v1.1, demo `?demo=1#rede`: "Todos em exigir (menos o portal)" deixa o Painel Lube de fora e avisa do Office; em observar, "Seriam barrados em 24 h"; remover a rede de onde o admin está avisa em vermelho e a linha "Você está em" vira "fora da rede"; `fora-da-rede.html` com a dica; console sem erro |
 | 10 sistemas | guarda 1.3.0 v1.1 copiado byte a byte (SHA-256 igual nos 12 lugares) | Gestão TI e ICMS: `tsc --noEmit` sem erro; Gestão TI com `ROBO_AGENDADOR` `maquina: true` |
 | Reposições | `web/sentinela-guarda.ts` + `web/middleware.ts` (novo) + `web/app.js` (401 da sessão) + README "Acesso" | teste do middleware com o guarda v1.1 (scratchpad, 4/4, 18 verificações): sem login 302/401, aquecedor só com o segredo certo e só em `GET /api/dados` (passa de fora como `rede_maquina`), pessoa de fora 403 de rede, liberada e de dentro seguem, arquivos proibidos 403; `tsc --strict` sem erro |
-| Commits locais | os 12 repositórios (lista e hashes no fim deste passo, §20.1) | `git log -1` em cada um; **nenhum push** |
+| Commits locais | branch `sentinela-rede-1.3.0` dos 12 repositórios (lista e hashes no §20.1); a `main` local ficou como estava | `git log -1 sentinela-rede-1.3.0` em cada um; **nenhum push** |
 
 ### 20.1 Arquivos de cada commit (fase Corrigir)
 
@@ -1250,7 +1250,11 @@ deploy, migração e mudança de modo). Quem publica é o Claude principal. Regr
   (`tr -d '\r' < arquivo | sha256sum`).
 - **Commits locais feitos em 2026-10-23** (nenhum push): ver a tabela "Commits da fase Corrigir" logo abaixo.
 
-**Commits da fase Corrigir** (locais; o push é o passo de cada sistema, com o OK do Júlio):
+**Commits da fase Corrigir** (locais; o push é o passo de cada sistema, com o OK do Júlio). Ficam no **branch local
+`sentinela-rede-1.3.0`** de cada repositório; a `main` local continua onde estava, para um `git push` da `main` por
+outra conversa (o Office no portal, o aquecedor no Reposições) não publicar nada disto. Publicar = `git push origin
+sentinela-rede-1.3.0` (preview) e, conferido, o merge na `main` (produção). No Reposições, publicar antes da migração
+tranca o sistema: a central ainda não conhece o `reposicoes-web`.
 
 | repositório (pasta) | commit | o que leva |
 |---|---|---|
@@ -1318,7 +1322,7 @@ devolver a URL sem passe (o portal já abria a URL do mesmo jeito).
 
 | ação | conferir | voltar atrás |
 |---|---|---|
-| Push num branch (o commit local já está feito, §20.1): o deploy de **preview** sai sozinho | no preview: `/.sentinela/saude` → `guarda: "sentinela-guarda/1.3.0"`, `oidc: true`, `lista.ok: true`, `lista.rede: "desligado"`, `lista.rede_idade_s` pequeno; login do escritório abre o painel; `/fora-da-rede.html?de=painel` abre sem sessão. **O `POST .../sentinela/rede` do preview é recusado pela central** (`403 origem_nao_permitida`: o endereço `...-git-<branch>-....vercel.app` não está em `ORIGENS_PERMITIDAS`) **e o painel abre mesmo assim**: é a prova da falha aberta. O `200` com `acao: "seguir"` fica para a produção (ou para `http://localhost:4321` com a central real). Pelo mesmo motivo, no preview as ações que afrouxam a regra no painel da Sentinela dão "A central só aceita esta ação vinda do endereço do portal" | apagar o branch |
+| `git push origin sentinela-rede-1.3.0` (o commit local já está nesse branch, §20.1): o deploy de **preview** sai sozinho | no preview: `/.sentinela/saude` → `guarda: "sentinela-guarda/1.3.0"`, `oidc: true`, `lista.ok: true`, `lista.rede: "desligado"`, `lista.rede_idade_s` pequeno; login do escritório abre o painel; `/fora-da-rede.html?de=painel` abre sem sessão. **O `POST .../sentinela/rede` do preview é recusado pela central** (`403 origem_nao_permitida`: o endereço `...-git-<branch>-....vercel.app` não está em `ORIGENS_PERMITIDAS`) **e o painel abre mesmo assim**: é a prova da falha aberta. O `200` com `acao: "seguir"` fica para a produção (ou para `http://localhost:4321` com a central real). Pelo mesmo motivo, no preview as ações que afrouxam a regra no painel da Sentinela dão "A central só aceita esta ação vinda do endereço do portal" | apagar o branch |
 | Merge na `main` → produção | os mesmos itens no endereço de produção, agora com `POST .../sentinela/rede` 200 (`acao: "seguir"`, `modo: "desligado"`); Sentinela › **Rede da Lube** abre (chip "REDE · DESLIGADA", 0 redes), o Painel Lube aparece com guarda 1.3.0 em "Modo por sistema"; "Tentativas de fora" mostra a **prévia** (`regra_desligada`) com os casos já conhecidos (§2); `sentinela.sistemas.guarda_versao` do portal = 1.3.0 e `ultimo_ambiente = production`; nenhum evento `fora_da_rede` | Instant Rollback para o deployment anotado (o guarda volta ao 1.1.0 e as telas antigas voltam). Com o banco e a central novos, as telas antigas funcionam igual |
 
 ### 20.6 Passo 4 — os 10 sistemas internos, um por um
@@ -1329,7 +1333,7 @@ BI Compras → RH → Saída de Veículos → Painel ICMS → Gestão TI.
 
 | ação | conferir | voltar atrás |
 |---|---|---|
-| Push do commit local (só o arquivo do guarda; Gestão TI: guarda + `src/middleware.ts`) num branch, **preview** | `/.sentinela/saude` do preview: `guarda` 1.3.0, `oidc: true`, `lista.ok: true`, `lista.rede: "desligado"`. (Preview do Gestão TI pode dar "Configuração ausente": é a falta das variáveis de produção, já conhecida) | apagar o branch |
+| `git push origin sentinela-rede-1.3.0` (o commit local tem só o arquivo do guarda; Gestão TI: guarda + `src/middleware.ts`), **preview** | `/.sentinela/saude` do preview: `guarda` 1.3.0, `oidc: true`, `lista.ok: true`, `lista.rede: "desligado"`. (Preview do Gestão TI pode dar "Configuração ausente": é a falta das variáveis de produção, já conhecida) | apagar o branch |
 | Produção | `/.sentinela/saude` de produção com os mesmos valores e `lista.modo: "proteger"`; abrir o sistema **pelo cartão do portal**, do escritório: entra (302 do passe para a página); sem login, numa aba anônima, `/` → 302 para o portal; nenhum evento `fora_da_rede`; em Sentinela › Rede da Lube › Modo por sistema, o guarda 1.3.0 **sem** "sinal de prévia" (abrir o endereço de produção uma vez, depois do preview, para o último sinal vir da produção) | Instant Rollback para o deployment anotado (volta o 1.2.0) |
 | **Gestão TI, no dia seguinte** | eventos de `/api/cron/ler-emails` (08:29) e `/api/cron/cobrar` (09:27): identidade `robo do gestao ti (agendador da vercel)`, regra `cron`, decisão `liberado`; o e-mail e a cobrança saíram (o resumo do Telegram chega) | Instant Rollback |
 
@@ -1362,7 +1366,7 @@ BI Compras → RH → Saída de Veículos → Painel ICMS → Gestão TI.
 
 | ação | conferir | voltar atrás |
 |---|---|---|
-| Push do commit local (Reposições, §20.1) num branch, **preview** | `/.sentinela/saude` do preview: guarda 1.3.0, `oidc: true`, `lista.ok: true`, `lista.rede: "desligado"` | apagar o branch |
+| `git push origin sentinela-rede-1.3.0` (o commit local do Reposições, §20.1), **preview**, só com a migração aplicada | `/.sentinela/saude` do preview: guarda 1.3.0, `oidc: true`, `lista.ok: true`, `lista.rede: "desligado"` | apagar o branch |
 | Produção | sem login: `/` → 302 para o portal com `?abrir=reposicoes`, `/api/dados` → 401 `login_necessario`; pelo cartão REPOSIÇÕES do portal, do escritório: abre e carrega o dado; "Atualizar" depois de 8 h diz "Sua sessão do Painel Lube expirou. Entre de novo pelo portal."; `guarda_versao` = 1.3.0; com o segredo: no `aquecer_painel.log`, status 200 e `cdn=HIT` na maior parte das chamadas, sem `ssl=sem-verificar`, e o evento do aquecedor com identidade `robo do reposicoes (aquecedor da srv-ia)` | Instant Rollback para o deployment anotado (sem guarda). A linha da central pode ficar: com `ultimo_sinal` preenchido o portal manda o passe na URL, e o site sem guarda só ignora o parâmetro |
 | **Guardião**, logo depois da produção (banco DATA WAREHOUSE): o SQL "trocar" abaixo, e o mesmo no `12. GUARDIAO/db/03_catalogo.sql` (e no teste `guardiao.test.ts`) | `select saude.painel()`: o item `site:reposicoes-web` volta `ok` ("a guarda respondeu ... com a lista da central") na próxima rodada | o SQL "voltar" abaixo |
 
