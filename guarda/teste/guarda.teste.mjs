@@ -168,7 +168,7 @@ caso('evento liberado tem os campos do contrato (§3.3)', async () => {
   const ch = c.rota('/evento')[0];
   assert.match(ch.headers.get('authorization'), /^Bearer ey/);
   assert.equal(ch.headers.get('content-type'), 'application/json');
-  assert.equal(ch.headers.get('x-sentinela-guarda'), 'sentinela-guarda/1.2.0');
+  assert.equal(ch.headers.get('x-sentinela-guarda'), 'sentinela-guarda/1.3.0');
   assert.equal(ch.headers.get('x-sentinela-runtime'), 'nodejs');
   assert.equal(ch.init.method, 'POST');
   conta(15);
@@ -833,8 +833,8 @@ caso('GET /.sentinela/saude → JSON no-store, sem expor listas, sem evento', as
   const txt = await r.text();
   const j = JSON.parse(txt);
   assert.deepEqual(Object.keys(j), ['guarda', 'runtime', 'oidc', 'lista', 'ip', 'pais', 'cidade']);
-  assert.deepEqual(Object.keys(j.lista), ['ok', 'idade_s', 'modo']);
-  assert.equal(j.guarda, 'sentinela-guarda/1.2.0');
+  assert.deepEqual(Object.keys(j.lista), ['ok', 'idade_s', 'modo', 'rede', 'rede_idade_s']);
+  assert.equal(j.guarda, 'sentinela-guarda/1.3.0');
   assert.equal(j.runtime, 'nodejs');
   assert.equal(j.oidc, true);
   assert.equal(j.lista.ok, true);
@@ -850,7 +850,7 @@ caso('GET /.sentinela/saude → JSON no-store, sem expor listas, sem evento', as
   const c2 = centralFalsa(lista());
   const j2 = await (await rodar(g2, req('x.vercel.app', '/.sentinela/saude', { oidc: false }))).json();
   assert.equal(j2.oidc, false);
-  assert.deepEqual(j2.lista, { ok: false, idade_s: null, modo: null });
+  assert.deepEqual(j2.lista, { ok: false, idade_s: null, modo: null, rede: null, rede_idade_s: null });
   assert.equal(c2.chamadas.length, 0);
   conta(19);
 });
@@ -1451,7 +1451,7 @@ caso('navegadores reais (' + UAS_REAIS.length + ': desktop, celular, WebView, In
 caso('nao_navegador: página GET/HEAD sem sec-fetch-mode e sem accept-language → suspeito; um dos dois basta; api/arquivo/POST não', async () => {
   for (const modo of ['observar', 'proteger']) {
     const g = await novoGuarda();
-    const c = centralFalsa(lista({ modo, projeto: 'painel-lube-distribuidora', slug: null, confiaveis: [{ t: 'cidr', v: '131.255.253.0/24' }] }));
+    const c = centralFalsa(lista({ modo, projeto: 'painel-lube-distribuidora', slug: null, confiaveis: [{ t: 'cidr', v: '203.0.113.0/24' }] }));
     const H = 'painel-lube-distribuidora.vercel.app';
     let i = 0;
     const ip = () => '45.50.' + (modo === 'proteger' ? 1 : 0) + '.' + (++i);
@@ -1488,7 +1488,7 @@ caso('nao_navegador: página GET/HEAD sem sec-fetch-mode e sem accept-language �
       conta(3);
     }
     // IP confiável (o escritório): a regra não vale, sem marca no evento
-    assert.equal(await rodar(g, req(H, '/', { ip: '131.255.253.169', headers: SEM_NAVEGADOR })), null);
+    assert.equal(await rodar(g, req(H, '/', { ip: '203.0.113.169', headers: SEM_NAVEGADOR })), null);
     assert.equal(c.eventos.at(-1).decisao, 'liberado');
     assert.equal(c.eventos.at(-1).regra, null);
     conta(3);
@@ -1621,9 +1621,9 @@ caso('prévia de link (WhatsApp, Telegram, Slack, Facebook, X, LinkedIn, Discord
 
 caso('rede confiável (escritório): robô e buscador ignorados, não-navegador nem marca; ataque certo continua 403', async () => {
   const g = await novoGuarda();
-  const c = centralFalsa(lista({ modo: 'proteger', projeto: 'painel-lube-distribuidora', slug: null, confiaveis: [{ t: 'ip', v: '131.255.253.169' }] }));
+  const c = centralFalsa(lista({ modo: 'proteger', projeto: 'painel-lube-distribuidora', slug: null, confiaveis: [{ t: 'ip', v: '203.0.113.169' }] }));
   const H = 'painel-lube-distribuidora.vercel.app';
-  const ip = '131.255.253.169';
+  const ip = '203.0.113.169';
   for (const [o, regra] of [[{ ua: 'Mozilla/5.0 (compatible)' }, 'robo'], [{ ua: 'Vercel MCP Fetch', caminho: '/a' }, 'robo'],
     [{ ua: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', caminho: '/b' }, 'buscador'],
     [{ headers: SEM_NAVEGADOR, caminho: '/c' }, null]]) {
@@ -1720,8 +1720,8 @@ caso('bloqueio suspeito da lista (IP dividido, CGNAT): com identidade segue obse
     { id: 77, t: 'ip', v: '177.37.200.10', n: 'suspeito', ate },
     { id: 78, t: 'cidr', v: '2804:14c:1:2::/64', n: 'suspeito', ate },
     { id: 79, t: 'ip', v: '177.37.200.11', n: 'certo', ate },
-    { id: 80, t: 'ip', v: '131.255.253.169', n: 'suspeito', ate },
-  ], confiaveis: [{ t: 'ip', v: '131.255.253.169' }] });
+    { id: 80, t: 'ip', v: '203.0.113.169', n: 'suspeito', ate },
+  ], confiaveis: [{ t: 'ip', v: '203.0.113.169' }] });
   const cookie = '__Host-sentinela=' + (await assinarJwt(sessaoPayload(), chave));
   const app = { identidade: { email: 'ana@lube.com.br', origem: 'sessao_app' } };
   // pessoa com sessão da Sentinela ou login do app: segue, evento observado com a regra lista
@@ -1752,7 +1752,7 @@ caso('bloqueio suspeito da lista (IP dividido, CGNAT): com identidade segue obse
   assert.equal(c.eventos.at(-1).regra, 'lista');
   bloqueio403(await rodar(g, req(H, '/y', { ip: '177.37.200.11' }), app), 'outro');
   // rede confiável com bloqueio suspeito: ignorado (liberado), com ou sem identidade
-  assert.equal(await rodar(g, req(H, '/', { cookie, ip: '131.255.253.169' })), null);
+  assert.equal(await rodar(g, req(H, '/', { cookie, ip: '203.0.113.169' })), null);
   assert.equal(c.eventos.at(-1).decisao, 'liberado');
   assert.match(c.eventos.at(-1).motivo, /^rede confiável: .*\(ignorado\)$/);
   // com identidade, ataque certo continua 403 no IP com bloqueio suspeito

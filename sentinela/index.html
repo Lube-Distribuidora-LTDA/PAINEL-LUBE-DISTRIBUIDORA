@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@500;600;700&family=JetBrains+Mono:wght@600;800&family=Noto+Color+Emoji&display=swap">
-<link rel="stylesheet" href="sentinela.css?v=20261007a">
+<link rel="stylesheet" href="sentinela.css?v=20261023a">
 </head>
 <body>
 
@@ -93,6 +93,10 @@
         IA
       </button>
       <div class="side-grupo">Proteger</div>
+      <button class="side-item" type="button" data-ir="rede">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M6.5 8h3M6.5 11.5h3M6.5 15h3"/><path d="M2 21h11"/><path d="M15.2 14.6a5 5 0 0 1 6.6 0M16.8 16.8a2.4 2.4 0 0 1 3.4 0"/><path d="M18.5 19.4h.01"/></svg></span>
+        Rede da Lube <span class="qtd mono alerta" data-qtd="rede" title="Pessoas barradas fora da rede nas últimas 24 h"></span>
+      </button>
       <button class="side-item" type="button" data-ir="exposicoes">
         <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17h.01"/></svg></span>
         Exposições <span class="qtd mono alerta" data-qtd="exposicoes"></span>
@@ -132,6 +136,7 @@
         </div>
         <div class="topbar-dir">
           <button class="modo" type="button" data-modo title="">—</button>
+          <button class="chip-rede" type="button" data-chip-rede hidden title="Regra de rede da Lube">REDE</button>
           <span class="vivo" data-vivo title="Atualização do painel"><i></i><b>—</b></span>
           <button class="chip-ia" type="button" data-chip-ia title="">IA</button>
         </div>
@@ -273,6 +278,134 @@
         </div>
       </section>
 
+      <!-- ============ REDE DA LUBE (docs/SENTINELA-REDE.md, §8) ============ -->
+      <section class="modulo" data-modulo="rede" hidden>
+        <div class="aviso" data-rd-estado hidden></div>
+        <div class="kpis kpis-3" data-rd-kpis></div>
+        <div class="rede-onde" data-rd-onde></div>
+
+        <div class="abas-r" role="tablist" aria-label="Rede da Lube">
+          <button class="aba-r on" type="button" role="tab" aria-selected="true" data-rd-aba="redes">Redes e sistemas</button>
+          <button class="aba-r" type="button" role="tab" aria-selected="false" data-rd-aba="liberados">Liberados fora da rede <span class="qtd mono" data-rd-qtd="liberados"></span></button>
+          <button class="aba-r" type="button" role="tab" aria-selected="false" data-rd-aba="fora">Tentativas de fora <span class="qtd mono" data-rd-qtd="fora"></span></button>
+        </div>
+
+        <!-- aba 1: redes e modo de cada sistema -->
+        <div class="rd-painel" data-rd-painel="redes">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Redes da Lube</h2>
+                <div class="sub" data-rd-redes-sub></div>
+              </div>
+              <div class="acoes-head">
+                <button class="btn link small" type="button" data-rd-onde-add hidden>Adicionar a rede de onde estou</button>
+                <button class="btn blue small" type="button" data-rd-nova>Adicionar rede</button>
+              </div>
+            </div>
+            <div class="scroll-x">
+              <table class="tbl tbl-rd">
+                <thead><tr><th>Rede</th><th>Descrição</th><th>Origem</th><th>Cadastrada</th><th class="r" data-rd-uso-th>Uso</th><th class="r col-acao"></th></tr></thead>
+                <tbody data-rd-redes><tr><td colspan="6" class="vazio">Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel" data-rd-sug-panel hidden>
+            <div class="panel-head">
+              <div>
+                <h2>Parece rede da Lube</h2>
+                <div class="sub">IPs fora das redes cadastradas, com várias pessoas da Lube em dias diferentes</div>
+              </div>
+            </div>
+            <div class="sugestoes" data-rd-sug-lista></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Modo por sistema</h2>
+                <div class="sub" data-rd-sis-sub></div>
+              </div>
+              <div class="acoes-head">
+                <button class="btn link small" type="button" data-rd-todos="desligado">Desligar todos</button>
+                <button class="btn link small" type="button" data-rd-todos="observar">Todos em observar</button>
+                <button class="btn red small" type="button" data-rd-todos="exigir" title="Todos os sistemas que exigem login. O Painel Lube (o login) passa a exigir à parte, por último">Todos em exigir (menos o portal)</button>
+              </div>
+            </div>
+            <div class="scroll-x">
+              <table class="tbl tbl-rd">
+                <thead><tr><th>Sistema</th><th>Guarda</th><th>Modo</th><th class="r" data-rd-fora-th>Fora da rede</th><th>Desde</th></tr></thead>
+                <tbody data-rd-sistemas><tr><td colspan="5" class="vazio">Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- aba 2: liberados fora da rede -->
+        <div class="rd-painel" data-rd-painel="liberados" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Liberados fora da rede</h2>
+                <div class="sub" data-rd-lib-sub></div>
+              </div>
+              <button class="btn blue small" type="button" data-rd-liberar>Liberar pessoa</button>
+            </div>
+            <div class="scroll-x">
+              <table class="tbl tbl-rd">
+                <thead><tr><th>Pessoa</th><th>Desde</th><th>Até</th><th>Motivo</th><th>Liberado por</th><th class="r">Entradas de fora</th><th class="r col-acao"></th></tr></thead>
+                <tbody data-rd-lib-ativas><tr><td colspan="7" class="vazio">Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <details class="panel recolhida" data-rd-lib-velhas-box>
+            <summary class="panel-head"><div><h2>Encerradas e vencidas (30 dias)</h2><div class="sub" data-rd-lib-velhas-sub></div></div><span class="seta" aria-hidden="true"></span></summary>
+            <div class="scroll-x">
+              <table class="tbl tbl-rd">
+                <thead><tr><th>Pessoa</th><th>Desde</th><th>Até</th><th>Motivo</th><th>Liberado por</th><th class="r">Entradas de fora</th><th>Situação</th></tr></thead>
+                <tbody data-rd-lib-velhas></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+
+        <!-- aba 3: tentativas de fora -->
+        <div class="rd-painel" data-rd-painel="fora" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 data-rd-fora-titulo>Tentativas de fora</h2>
+                <div class="sub" data-rd-fora-sub></div>
+              </div>
+              <div class="filtros">
+                <select data-rd-f-dias aria-label="Período">
+                  <option value="1">24 h</option>
+                  <option value="7">7 dias</option>
+                  <option value="14" selected>14 dias</option>
+                  <option value="30">30 dias</option>
+                </select>
+                <select data-rd-f-sit aria-label="Situação">
+                  <option value="">Todas as situações</option>
+                  <option value="barrado">⛔ Barrado</option>
+                  <option value="seria_barrado">👁 Seria barrado</option>
+                  <option value="liberado">✓ Liberado</option>
+                  <option value="regra_desligada">— Regra desligada</option>
+                </select>
+                <select data-rd-f-sis aria-label="Sistema"><option value="">Todos os sistemas</option></select>
+                <input type="search" data-rd-f-busca placeholder="Buscar pessoa, IP, cidade…" aria-label="Buscar">
+              </div>
+            </div>
+            <div class="scroll-x">
+              <table class="tbl tbl-rd tbl-fora">
+                <thead><tr><th>Pessoa</th><th>Local</th><th>IP</th><th>Sistemas</th><th class="r">Vezes</th><th>Último</th><th>Situação</th><th class="r col-acao"></th></tr></thead>
+                <tbody data-rd-fora><tr><td colspan="8" class="vazio">Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ============ 5. EXPOSIÇÕES ============ -->
       <section class="modulo" data-modulo="exposicoes" hidden>
         <div class="kpis kpis-4" data-ex-resumo></div>
@@ -370,8 +503,9 @@
 
 <script src="vendor/supabase-js@2.45.4/supabase.js"></script>
 <script src="../config.js?v=20261005d"></script>
-<script src="util.js?v=20261005d"></script>
+<script src="util.js?v=20261023a"></script>
 <script src="globo.js?v=20261005d"></script>
-<script src="sentinela.js?v=20261007a"></script>
+<script src="../rede.js?v=20261023a"></script>
+<script src="sentinela.js?v=20261023a"></script>
 </body>
 </html>

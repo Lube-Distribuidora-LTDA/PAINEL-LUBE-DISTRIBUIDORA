@@ -20,6 +20,8 @@ export const ROTAS: Record<string, DefRota> = {
   passe: { metodo: 'POST', navegador: true },
   identidade: { metodo: 'POST', navegador: true },
   tentativa: { metodo: 'POST', navegador: true },
+  // regra de rede (1.1.0): o portal pergunta se a pessoa está na rede da Lube
+  rede: { metodo: 'POST', navegador: true },
 };
 
 /** Rota pelo final do pathname: /functions/v1/sentinela/lista → "lista". */

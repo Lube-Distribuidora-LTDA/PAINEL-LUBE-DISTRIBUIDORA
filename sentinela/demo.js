@@ -12,7 +12,8 @@
    de arquivos e exposições daqui são FICTÍCIOS. O inventário real só
    existe no banco, atrás de is_admin().
    Parâmetros extras de teste: &ia=sem_chave|erro, &cadeia=quebrada|vazia,
-   &falhar=rpc:codigo (ex.: sentinela_painel:57014), &rede=0.
+   &falhar=rpc:codigo (ex.: sentinela_painel:57014), &rede=0 (sem conexão),
+   &onde=fora|sem e &migracao=0 (regra de rede da Lube, módulo #rede).
    ========================================================= */
 (function () {
   'use strict';
@@ -90,13 +91,19 @@
     ['203.0.113.77', 'Belo Horizonte', 'MG', 'BR', -19.9167, -43.9345, FIREFOX_LINUX, 'pt-BR', ['demo-portal'], 9, { caminhos: ['/', '/', '/index.html', '/app.js'] }],
     ['203.0.113.88', 'Rio de Janeiro', 'RJ', 'BR', -22.9068, -43.1729, IPHONE, 'pt-BR', ['demo-comercial'], 12, { caminhos: PUBLICAS }],
     ['203.0.113.95', 'Colatina', 'ES', 'BR', -19.5389, -40.6306, ANDROID, 'pt-BR', ['demo-comercial', 'demo-portal'], 18, { identidade: 'rca.colatina.demo@lube.com.br', origem: 'passe' }],
-    ['203.0.113.120', 'Lisboa', 'LIS', 'PT', 38.7223, -9.1393, MAC_SAFARI, 'pt-PT,pt;q=0.9', ['demo-compras', 'demo-portal'], 14, { identidade: 'diretoria.demo@lube.com.br', origem: 'passe' }],
+    ['203.0.113.120', 'Lisboa', 'LIS', 'PT', 38.7223, -9.1393, MAC_SAFARI, 'pt-PT,pt;q=0.9', ['demo-compras', 'demo-portal'], 14, { identidade: 'diretoria.demo@lube.com.br', origem: 'passe', rede: 'observado' }],
+    // regra de rede da Lube (guarda 1.3.0): liberado pelo TI viajando e um barrado num sistema que exige a rede
+    ['198.51.100.71', 'Vitória da Conquista', 'BA', 'BR', -14.8661, -40.8394, ANDROID, 'pt-BR', ['demo-comercial', 'demo-portal'], 30, { identidade: 'gestor.comercial.demo@lube.com.br', origem: 'passe', rede: 'liberado' }],
+    ['203.0.113.60', 'Cariacica', 'ES', 'BR', -20.2700, -40.4200, CHROME_WIN, 'pt-BR,pt;q=0.9', ['demo-saidas'], 8, { identidade: 'logistica.demo@lube.com.br', origem: 'sessao_app', rede: 'bloqueado' }],
     ['203.0.113.140', 'Miami', 'FL', 'US', 25.7617, -80.1918, CHROME_WIN, '', ['demo-portal'], 5, { semFetch: true, caminhos: ['/', '/index.html'] }],
     // robôs aceitos: o agendador do Gestão TI chega com o segredo conferido pelo próprio sistema
     // (identidade de robô); o do Financeiro e a prévia de link só alcançam rota/página pública
     ['198.51.100.30', 'Ashburn', 'VA', 'US', 39.0438, -77.4874, CRON, '', ['demo-ti'], 24,
-      { identidade: 'robo do gestao ti (agendador da vercel)', origem: 'sessao_app', caminhos: ['/api/cron/ler-emails', '/api/cron/cobrar', '/api/cron/resumo'] }],
+      { identidade: 'robo do gestao ti (agendador da vercel)', origem: 'sessao_app', rede: 'maquina', caminhos: ['/api/cron/ler-emails', '/api/cron/cobrar', '/api/cron/resumo'] }],
     ['198.51.100.33', 'Ashburn', 'VA', 'US', 39.0438, -77.4874, CRON, '', ['demo-financeiro'], 6, { caminhos: ['/api/cron/fechamento'] }],
+    // aquecedor de exemplo: máquina que o próprio sistema autenticou pelo segredo dele (regra rede_maquina)
+    ['192.0.2.20', 'Cariacica', 'ES', 'BR', -20.2632, -40.4165, 'Mozilla/5.0 (compatible; aquecedor-exemplo/1.0)', 'pt-BR', ['demo-compras'], 12,
+      { identidade: 'robo do compras (aquecedor de exemplo)', origem: 'sessao_app', rede: 'maquina', caminhos: ['/api/dados'] }],
     ['203.0.113.97', 'Vitória', 'ES', 'BR', -20.3155, -40.3128, 'WhatsApp/2.24.19.86 A', '', ['demo-portal'], 7, { caminhos: ['/'] }],
     // robôs e ataques
     ['198.51.100.23', 'Amsterdã', 'NH', 'NL', 52.3676, 4.9041, CHROME_WIN, '', ['demo-portal', 'demo-compras'], 16, { caminhos: VARREDURA, desde: 3.2 * HORA }],
@@ -115,7 +122,7 @@
     return { ip: a[0], cidade: a[1], regiao: a[2], pais: a[3], lat: a[4], lon: a[5], ua: a[6], idioma: a[7],
              sistemas: a[8], n: a[9], identidade: x.identidade || null, origem: x.origem || null,
              provavel: x.provavel || null, caminhos: x.caminhos || PAGINAS, consulta: x.consulta || '',
-             desde: x.desde || 0, rajada: !!x.rajada, semFetch: !!x.semFetch };
+             desde: x.desde || 0, rajada: !!x.rajada, semFetch: !!x.semFetch, rede: x.rede || null };
   });
 
   // atacantes que aparecem durante a demonstração (varredura → bloqueio certo → anel vermelho)
@@ -283,6 +290,17 @@
       identidade: a.identidade, identidade_origem: a.origem
     };
     var dec = decidir(ev, t);
+    // regra de rede da Lube: só decide quem ia passar (§6.3), com as regras e os motivos do guarda 1.3.0
+    if (a.rede && ev.identidade) {
+      var R = {
+        observado: ['observado', 'fora_da_rede', 'seria bloqueado: fora da rede da Lube'],
+        bloqueado: ['bloqueado', 'fora_da_rede', 'fora da rede da Lube'],
+        liberado: ['liberado', 'rede_liberado', 'fora da rede da Lube · liberado pelo TI até ' + iso(t + 4 * DIA)],
+        maquina: ['liberado', 'rede_maquina', 'fora da rede da Lube: máquina autenticada pelo sistema']
+      }[a.rede];
+      if (R && dec.decisao === 'liberado' && !dec.regra) dec = { decisao: R[0], regra: R[1], motivo: R[2] };
+      else if (a.rede === 'maquina' && dec.regra === 'cron') dec.motivo += ' · fora da rede da Lube: máquina autenticada pelo sistema';
+    }
     ev.decisao = dec.decisao; ev.regra = dec.regra; ev.motivo = dec.motivo;
     var perfil = ips[a.ip];
     var conf = confiavel(a.ip, t);
@@ -743,6 +761,286 @@
     }
   }
 
+  /* ---------------- regra de rede da Lube (docs/SENTINELA-REDE.md, §4.4) ----------------
+     sentinela_rede_painel e sentinela_rede_acao com as mesmas chaves do SQL. Pessoas,
+     e-mails e IPs inventados (blocos de documentação); nada aqui é real.
+     Parâmetros: &onde=fora|sem (de onde o admin "está"), &migracao=0 (funções ausentes). */
+  var REDE_MAX_DIAS = 30;
+  var rdSeq = { rede: 1, lib: 13 };
+  var GUARDA_RD = 'sentinela-guarda/';
+  // [projeto, nome, url, modo, isento, guarda, exige_login, modo há (h)]
+  var REDE_SIS = [
+    ['demo-portal', 'Painel Lube', 'https://portal.exemplo.example', 'observar', false, '1.3.0', false, 50],
+    ['demo-compras', 'BI Compras', 'https://compras.exemplo.example', 'observar', false, '1.3.0', true, 50],
+    ['demo-comercial', 'BI Comercial', 'https://comercial.exemplo.example', 'observar', false, '1.3.0', true, 50],
+    ['demo-financeiro', 'Gestão Financeiro', 'https://financeiro.exemplo.example', 'observar', false, '1.3.0', true, 50],
+    ['demo-ti', 'Gestão TI', 'https://ti.exemplo.example', 'observar', false, '1.3.0', true, 50],
+    ['demo-rh', 'RH Absenteísmo', 'https://rh.exemplo.example', 'observar', false, '1.3.0', true, 50],
+    ['demo-saidas', 'Saída de Veículos', 'https://saidas.exemplo.example', 'exigir', false, '1.3.0', true, 26],
+    ['demo-icms', 'Painel ICMS', 'https://icms.exemplo.example', 'desligado', false, '1.2.0', true, 0],
+    ['demo-reposicoes', 'Reposições e Chamados', 'https://reposicoes.exemplo.example', 'desligado', false, null, true, 0],
+    ['demo-sac', 'SAC (RCA, sem login)', 'https://sac.exemplo.example', 'desligado', true, '1.1.0', false, 0],
+    ['demo-supervisor', 'Supervisor Lube', 'https://supervisor.exemplo.example', 'desligado', true, '1.2.0', false, 0]
+  ].map(function (s, i) {
+    var t = s[7] ? iso(inicio - s[7] * HORA) : null;
+    return { projeto: s[0], projeto_id: 'prj_demo_rd_' + i, nome: s[1], url: s[2], modo: s[3], isento: s[4],
+             guarda_versao: s[5] ? GUARDA_RD + s[5] : null, ultimo_ambiente: s[5] ? 'production' : null,
+             exige_login: s[6], modo_em: t, modo_por: t ? 'demo@lube.com.br' : null };
+  });
+  var PESSOAS = [
+    ['compras', 'Compras (exemplo)'], ['financeiro', 'Financeiro (exemplo)'], ['rh', 'RH (exemplo)'], ['vendas', 'Vendas (exemplo)'],
+    ['logistica', 'Logística (exemplo)'], ['diretoria', 'Diretoria (exemplo)'], ['gestor.comercial', 'Gestor Comercial (exemplo)'],
+    ['ti', 'TI (exemplo)'], ['demo', 'Demonstração (você)']
+  ].map(function (p, i) {
+    return { id: '00000000-0000-4000-8000-' + ('00000000000' + (i + 1)).slice(-12), nome: p[1], email: p[0] + '.demo@lube.com.br' };
+  });
+  PESSOAS[8].email = 'demo@lube.com.br';
+  PESSOAS.push({ id: '00000000-0000-4000-8000-000000000010', nome: 'Consultoria externa (exemplo)', email: 'consultoria@exemplo.example' });
+  function pessoa(chave) { return PESSOAS.filter(function (p) { return p.email.indexOf(chave) === 0; })[0]; }
+
+  var redes = [{ id: 1, rede: '203.0.113.0/28', descricao: 'Escritório Cariacica (exemplo)', origem: 'manual',
+                 criado_em: iso(inicio - 20 * DIA), criado_por: 'demo@lube.com.br', removido_em: null, acessos: 3344, pessoas: 9, ultimo: iso(inicio - 2 * MIN) }];
+  var liberacoes = [];
+  function novaLib(p, ini, fim, motivo, extra) {
+    var l = Object.assign({ id: ++rdSeq.lib, user_id: p.id, email: p.email, nome: p.nome, inicio: iso(ini), fim: iso(fim), motivo: motivo,
+      criado_em: iso(Math.min(ini, inicio)), criado_por: 'demo@lube.com.br', encerrado_em: null, encerrado_por: null, entradas: 0, ultima_entrada: null }, extra || {});
+    liberacoes.push(l);
+    return l;
+  }
+  // às 18:00 de Brasília, daqui a n dias
+  function as18(n) {
+    var d = new Date(inicio + n * DIA - 3 * HORA);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 21, 0, 0);
+  }
+  novaLib(pessoa('ti.'), inicio - 12 * DIA, inicio - 11 * DIA, 'Plantão do TI à noite (exemplo)', { entradas: 5, ultima_entrada: iso(inicio - 11.2 * DIA) });
+  novaLib(pessoa('rh.'), inicio - 6 * DIA, inicio + DIA, 'Treinamento externo (exemplo)',
+          { encerrado_em: iso(inicio - 5 * DIA), encerrado_por: 'demo@lube.com.br', entradas: 2, ultima_entrada: iso(inicio - 5.5 * DIA) });
+  novaLib(pessoa('gestor.'), inicio - 3 * DIA, as18(4), 'Viagem ao cliente de Vitória da Conquista (exemplo)',
+          { entradas: 121, ultima_entrada: iso(inicio - 3 * HORA) });
+  novaLib(pessoa('diretoria'), inicio + 2 * DIA, inicio + 9 * DIA, 'Férias com acesso ao BI Compras (exemplo)');
+  novaLib(pessoa('consultoria'), inicio - DIA, inicio + 20 * HORA, 'Consultoria externa: renovação a cada 30 dias (exemplo)',
+          { entradas: 3, ultima_entrada: iso(inicio - 26 * HORA) });
+
+  // tentativas de fora: [pessoa | null, ip, cidade, uf, país, {projeto: [barrados, observados, liberados, sem_regra]}, primeiro (h), último (h), situação]
+  var FORA = [
+    ['gestor.', '198.51.100.71', 'Vitória da Conquista', 'BA', 'BR', { 'demo-portal': [0, 0, 8, 0], 'demo-comercial': [0, 0, 113, 0] }, 76, 3, 'liberado'],
+    ['logistica', '203.0.113.60', 'Cariacica', 'ES', 'BR', { 'demo-saidas': [6, 0, 0, 0], 'demo-portal': [0, 3, 0, 0] }, 52, 1.5, 'barrado'],
+    ['financeiro', '203.0.113.60', 'Cariacica', 'ES', 'BR', { 'demo-saidas': [3, 0, 0, 0], 'demo-financeiro': [0, 4, 0, 0] }, 50, 2, 'barrado'],
+    ['compras', '203.0.113.60', 'Cariacica', 'ES', 'BR', { 'demo-compras': [0, 9, 0, 0] }, 74, 2.5, 'seria_barrado'],
+    ['rh.', '2001:db8:4f2a::90', 'Cariacica', 'ES', 'BR', { 'demo-rh': [0, 7, 0, 0] }, 9, 5, 'seria_barrado'],
+    [null, '192.0.2.150', 'Joanesburgo', 'GP', 'ZA', { 'demo-saidas': [2, 0, 0, 0] }, 8.2, 8, 'barrado'],
+    ['ti.', '203.0.113.200', 'Cariacica', 'ES', 'BR', { 'demo-portal': [0, 2, 0, 0], 'demo-rh': [0, 3, 0, 0] }, 34, 33.5, 'seria_barrado'],
+    ['diretoria', '203.0.113.120', 'Lisboa', 'LIS', 'PT', { 'demo-compras': [0, 14, 0, 0], 'demo-portal': [0, 2, 0, 0] }, 100, 20, 'seria_barrado'],
+    ['vendas', '203.0.113.25', 'Vitória', 'ES', 'BR', { 'demo-icms': [0, 0, 0, 5], 'demo-reposicoes': [0, 0, 0, 3] }, 30, 6, 'regra_desligada'],
+    ['consultoria', '198.51.100.140', 'São Paulo', 'SP', 'BR', { 'demo-reposicoes': [0, 0, 0, 6] }, 150, 140, 'regra_desligada']
+  ].map(function (f) {
+    var p = f[0] ? pessoa(f[0]) : null;
+    return { pessoa: p, ip: f[1], cidade: f[2], regiao: f[3], pais: f[4], por: f[5], primeiro: inicio - f[6] * HORA, ultimo: inicio - f[7] * HORA, situacao: f[8] };
+  });
+  var SUGESTOES = [{ ip: '203.0.113.60', pais: 'BR', regiao: 'ES', cidade: 'Cariacica', pessoas: 3, acessos: 25, dias: 3,
+                     primeiro: iso(inicio - 74 * HORA), ultimo: iso(inicio - 1.5 * HORA) }];
+
+  function redeAtiva(r) { return !r.removido_em; }
+  function naRede(ip) { return redes.some(function (r) { return redeAtiva(r) && SNT.u.contem(r.rede, ip); }); }
+  function estadoLib(l, t) {
+    if (l.encerrado_em) return 'encerrada';
+    if (new Date(l.fim).getTime() <= t) return 'vencida';
+    if (new Date(l.inicio).getTime() > t) return 'agendada';
+    return 'ativa';
+  }
+  function libAberta(userId, t) {
+    return liberacoes.filter(function (l) { return l.user_id === userId && !l.encerrado_em && new Date(l.fim).getTime() > t; })[0] || null;
+  }
+  function libAtiva(userId, t) {
+    return liberacoes.filter(function (l) { return l.user_id === userId && estadoLib(l, t) === 'ativa'; })[0] || null;
+  }
+
+  function painelRede(dias) {
+    dias = +dias;
+    if (!(dias >= 1 && dias <= 90)) falha('sentinela: p_dias vai de 1 a 90');
+    var t = Date.now(), desde = t - dias * DIA, dia1 = t - DIA;
+    // a prévia ("regra desligada") some quando o IP entra numa rede; o histórico fica
+    var linhas = FORA.filter(function (f) { return f.ultimo >= desde && !(f.situacao === 'regra_desligada' && naRede(f.ip)); });
+    var porIp = {};
+    linhas.forEach(function (f) { if (f.pessoa) (porIp[f.ip] = porIp[f.ip] || {})[f.pessoa.id] = true; });
+    function soma(f, i) { return Object.keys(f.por).reduce(function (a, k) { return a + f.por[k][i]; }, 0); }
+    var fora = linhas.map(function (f) {
+      var l = f.pessoa ? libAtiva(f.pessoa.id, t) : null;
+      return { email: f.pessoa ? f.pessoa.email : null, nome: f.pessoa ? f.pessoa.nome : null, user_id: f.pessoa ? f.pessoa.id : null,
+               ip: f.ip, pais: f.pais, regiao: f.regiao, cidade: f.cidade, projetos: Object.keys(f.por),
+               vezes: soma(f, 0) + soma(f, 1) + soma(f, 2) + soma(f, 3), barrados: soma(f, 0), observados: soma(f, 1),
+               liberados: soma(f, 2), sem_regra: soma(f, 3), primeiro: iso(f.primeiro), ultimo: iso(f.ultimo), situacao: f.situacao,
+               liberacao: l ? { id: l.id, fim: l.fim } : null, pessoas_no_ip: Object.keys(porIp[f.ip] || {}).length };
+    }).sort(function (a, b) { return a.ultimo < b.ultimo ? 1 : -1; });
+
+    var sistemas = REDE_SIS.map(function (s) {
+      var c = { pessoas: 0, barrados: 0, observados: 0, liberados: 0, sem_regra: 0 }, quem = {};
+      linhas.forEach(function (f) {
+        var x = f.por[s.projeto];
+        if (!x) return;
+        quem[f.pessoa ? f.pessoa.id : f.ip] = true;
+        c.barrados += x[0]; c.observados += x[1]; c.liberados += x[2]; c.sem_regra += x[3];
+      });
+      c.pessoas = Object.keys(quem).length;
+      var sis = SISTEMAS.filter(function (x) { return x.projeto === s.projeto; })[0];
+      return { projeto: s.projeto, projeto_id: s.projeto_id, nome: s.nome, url: s.url, modo: s.isento ? 'desligado' : s.modo, isento: s.isento,
+               modo_em: s.modo_em, modo_por: s.modo_por, exige_login: s.exige_login, guarda_versao: s.guarda_versao,
+               guarda_rede: guardaConfere(s), ultimo_ambiente: s.ultimo_ambiente,
+               ultimo_sinal: sis && sis.ultimo_sinal ? sis.ultimo_sinal : (s.guarda_versao ? iso(t - 4 * MIN) : null), fora: c };
+    });
+    var naoIsentos = sistemas.filter(function (s) { return !s.isento; });
+    function conta(m) { return naoIsentos.filter(function (s) { return s.modo === m; }).length; }
+    // barrados (exigir) e "seriam barrados" (observar) nas últimas 24 h, como o SQL
+    var barr24 = 0, pessoas24 = {}, seriam24 = 0, pessoasSeriam = {};
+    FORA.forEach(function (f) {
+      if (f.ultimo < dia1) return;
+      var b = Object.keys(f.por).reduce(function (a, k) { return a + f.por[k][0]; }, 0);
+      var o = Object.keys(f.por).reduce(function (a, k) { return a + f.por[k][1]; }, 0);
+      barr24 += b;
+      seriam24 += o;
+      if (b && f.pessoa) pessoas24[f.pessoa.id] = true;
+      if (o && f.pessoa) pessoasSeriam[f.pessoa.id] = true;
+    });
+    var libs = liberacoes.filter(function (l) {
+      var e = estadoLib(l, t);
+      return e === 'ativa' || e === 'agendada' || new Date(l.encerrado_em || l.fim).getTime() >= t - 30 * DIA;
+    }).map(function (l) { return Object.assign({}, l, { estado: estadoLib(l, t) }); })
+      .sort(function (a, b) { return b.id - a.id; });
+
+    return {
+      agora: iso(t), max_dias: REDE_MAX_DIAS,
+      redes: redes.filter(redeAtiva).map(function (r) {
+        return { id: r.id, rede: r.rede, descricao: r.descricao, origem: r.origem, criado_em: r.criado_em, criado_por: r.criado_por,
+                 acessos: r.acessos, pessoas: r.pessoas, ultimo: r.ultimo };
+      }),
+      sistemas: sistemas,
+      liberacoes: libs,
+      fora: fora.slice(0, 300),
+      sugestoes: SUGESTOES.filter(function (s) { return !naRede(s.ip); }),
+      pessoas: PESSOAS.slice(),
+      contagens: { exigir: conta('exigir'), observar: conta('observar'), desligado: conta('desligado'), isentos: sistemas.length - naoIsentos.length,
+                   redes: redes.filter(redeAtiva).length, liberacoes_ativas: libs.filter(function (l) { return l.estado === 'ativa'; }).length,
+                   barrados_24h: barr24, pessoas_barradas_24h: Object.keys(pessoas24).length,
+                   seriam_barrados_24h: seriam24, pessoas_seriam_24h: Object.keys(pessoasSeriam).length,
+                   exigir_sem_guarda: naoIsentos.filter(function (s) { return s.modo === 'exigir' && !s.guarda_rede; }).length }
+    };
+  }
+  // guarda 1.3.0 ou mais novo, visto na produção (como guarda_ok do SQL)
+  function guardaConfere(s) {
+    var v = (s.guarda_versao || '').match(/(\d+)\.(\d+)\.(\d+)/);
+    return !!v && (+v[1] > 1 || (+v[1] === 1 && +v[2] >= 3)) && s.ultimo_ambiente === 'production';
+  }
+
+  // como sentinela.rede_lube_valida: devolve o cidr no formato do banco ou dá erro 22023
+  function validarRede(v) {
+    var u = SNT.u;
+    v = u.semMapeado(String(v || '').trim());
+    var info = u.ipOuCidr(v) ? u.infoRede(v) : null;
+    if (!info) falha('sentinela: rede inválida: use um IP (203.0.113.7) ou uma faixa (203.0.113.0/24)');
+    if (u.reservado(v)) falha('sentinela: é um IP interno da rede; cadastre o IP público, que aparece em <portal>/.sentinela/saude');
+    if ((info.familia === 4 && info.bits < 24) || (info.familia === 6 && info.bits < 48)) {
+      falha('sentinela: rede ampla demais: incluiria outros clientes da operadora (mínimo /24 em IPv4 e /48 em IPv6)');
+    }
+    if (info.hostLigado) falha('sentinela: a faixa tem bits de host ligados' + (info.certa ? ' (use ' + info.certa + ')' : ''));
+    return v.indexOf('/') > -1 ? v.toLowerCase() : v.toLowerCase() + (info.familia === 4 ? '/32' : '/128');
+  }
+
+  function acaoRede(nome, d) {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) falha('sentinela: dados devem ser um objeto JSON');
+    var r = executarRede(nome, d);
+    acoes.push({ id: acoes.length + 1, criado_em: iso(Date.now()), email: 'demo@lube.com.br', acao: 'rede_' + nome.replace(/^rede_/, ''), dados: d });
+    return r;
+  }
+  function executarRede(nome, d) {
+    var t = Date.now();
+    switch (nome) {
+      case 'rede_nova': {
+        var cidr = validarRede(d.rede);
+        var desc = String(d.descricao || '').trim();
+        if (desc.length < 3 || desc.length > 120) falha('sentinela: descrição de 3 a 120 caracteres');
+        var cobre = redes.filter(function (r) { return redeAtiva(r) && (SNT.u.contem(r.rede, cidr) || SNT.u.contem(cidr, r.rede)); })[0];
+        if (cobre) falha('sentinela: já coberta pela rede #' + cobre.id);
+        var origem = d.origem === 'sugestao' ? 'sugestao' : 'manual';
+        var vistos = FORA.filter(function (f) { return SNT.u.contem(cidr, f.ip); });
+        var quem = {};
+        vistos.forEach(function (f) { if (f.pessoa) quem[f.pessoa.id] = true; });
+        var n = { id: ++rdSeq.rede, rede: cidr, descricao: desc, origem: origem, criado_em: iso(t), criado_por: 'demo@lube.com.br', removido_em: null,
+                  acessos: vistos.reduce(function (a, f) { return a + Object.keys(f.por).reduce(function (b, k) { return b + f.por[k].reduce(function (c, x) { return c + x; }, 0); }, 0); }, 0),
+                  pessoas: Object.keys(quem).length, ultimo: vistos.length ? iso(Math.max.apply(null, vistos.map(function (f) { return f.ultimo; }))) : null };
+        redes.push(n);
+        return { ok: true, id: n.id, rede: n.rede };
+      }
+      case 'rede_remover': {
+        var alvo = redes.filter(function (r) { return r.id === +d.id && redeAtiva(r); })[0];
+        if (!alvo) falha('sentinela: rede não encontrada ou já removida', 'P0002');
+        var ativas = redes.filter(redeAtiva).length;
+        if (ativas === 1 && REDE_SIS.some(function (s) { return !s.isento && s.modo === 'exigir'; })) {
+          falha('sentinela: é a última rede da Lube e há sistemas exigindo a rede; passe os sistemas para observar antes');
+        }
+        alvo.removido_em = iso(t);
+        return { ok: true };
+      }
+      case 'rede_modo': {
+        if (['desligado', 'observar', 'exigir'].indexOf(d.modo) < 0) falha('sentinela: modo inválido (desligado, observar ou exigir)');
+        var lista;
+        // "*" em exigir: só os que exigem login (o portal exige à parte, por último), como o SQL
+        if (d.projeto === '*') lista = REDE_SIS.filter(function (s) { return !s.isento && (d.modo !== 'exigir' || s.exige_login); });
+        else {
+          var s = REDE_SIS.filter(function (x) { return x.projeto === d.projeto; })[0];
+          if (!s) falha('sentinela: sistema não encontrado', 'P0002');
+          if (s.isento) falha('sentinela: ' + s.projeto + ' está fora da regra de rede (usado na rua)');
+          lista = [s];
+        }
+        if (d.modo === 'exigir') {
+          if (!redes.some(redeAtiva)) falha('sentinela: cadastre uma rede da Lube antes de exigir a rede');
+          var velhos = lista.filter(function (x) { return !guardaConfere(x); });
+          if (velhos.length) {
+            falha('sentinela: precisa do guarda 1.3.0 em produção antes de exigir a rede em: ' + velhos.map(function (x) { return x.projeto; }).join(', ') +
+                  ' (o último sinal tem de vir do endereço de produção)');
+          }
+        }
+        var alterados = [];
+        lista.forEach(function (x) {
+          if (x.modo === d.modo) return;
+          x.modo = d.modo; x.modo_em = iso(t); x.modo_por = 'demo@lube.com.br';
+          alterados.push(x.projeto);
+        });
+        return { ok: true, alterados: alterados };
+      }
+      case 'liberar': {
+        var p = PESSOAS.filter(function (x) { return x.id === d.user_id; })[0];
+        if (!p) falha('sentinela: pessoa não encontrada ou inativa', 'P0002');
+        var ini = d.inicio ? new Date(d.inicio).getTime() : t, fim = new Date(d.fim).getTime();
+        if (isNaN(ini) || ini < t - 5 * MIN || ini > t + 30 * DIA) falha('sentinela: início vai de agora até 30 dias à frente');
+        if (isNaN(fim) || fim <= t + 5 * MIN) falha('sentinela: o fim precisa ser pelo menos 5 minutos à frente');
+        if (fim <= ini) falha('sentinela: o fim precisa ser depois do início');
+        if (fim - ini > REDE_MAX_DIAS * DIA) falha('sentinela: prazo máximo de ' + REDE_MAX_DIAS + ' dias');
+        var motivo = String(d.motivo || '').trim();
+        if (motivo.length < 5 || motivo.length > 300) falha('sentinela: motivo de 5 a 300 caracteres');
+        var antiga = libAberta(p.id, t);
+        var nova = novaLib(p, ini, fim, motivo, { criado_em: iso(t) });
+        if (antiga) { antiga.encerrado_em = iso(t); antiga.encerrado_por = 'substituída por #' + nova.id; }
+        return { ok: true, id: nova.id, fim: nova.fim, substituida: antiga ? antiga.id : null };
+      }
+      case 'encerrar': {
+        var l = liberacoes.filter(function (x) { return x.id === +d.id && !x.encerrado_em && new Date(x.fim).getTime() > t; })[0];
+        if (!l) falha('sentinela: liberação não encontrada, já encerrada ou vencida', 'P0002');
+        l.encerrado_em = iso(t); l.encerrado_por = 'demo@lube.com.br';
+        return { ok: true };
+      }
+      default:
+        falha('sentinela: ação desconhecida');
+    }
+  }
+
+  // de onde o admin "está" na demonstração (o rede.js simulado vence, se estiver ligado)
+  function minhaRede() {
+    var onde = Q.get('onde');
+    if (onde === 'sem') return null;
+    if (onde === 'fora') return { acao: 'observar', modo: 'observar', na_rede: false, liberado: null, ip: '198.51.100.200', emergencia: null };
+    return { acao: 'seguir', modo: 'observar', na_rede: true, liberado: null, ip: '203.0.113.10', emergencia: null };
+  }
+
   /* ---------------- RPC falsa (mesmo formato do supabase-js) ---------------- */
   var ROTAS = {
     sentinela_painel: function (a) { return painel(a.p_horas == null ? 24 : a.p_horas); },
@@ -779,6 +1077,12 @@
                detalhe: quebrada ? 'o selo não confere com o conteúdo do registro' : null };
     }
   };
+
+  // regra de rede: &migracao=0 imita o banco sem a migração sentinela_v2_rede (funções ausentes)
+  if (Q.get('migracao') !== '0') {
+    ROTAS.sentinela_rede_painel = function (a) { return painelRede(a.p_dias == null ? 14 : a.p_dias); };
+    ROTAS.sentinela_rede_acao = function (a) { return acaoRede(String(a.p_acao || ''), a.p_dados); };
+  }
 
   var falhas = {};     // RPC → código de erro forçado (teste: SNT.demo.falhar('sentinela_painel', '57014'))
   var chamadas = [];   // registro das chamadas (teste do ritmo do polling)
@@ -821,6 +1125,7 @@
     rede: function (ligada) { redeLigada = !!ligada; return redeLigada; },
     falhar: function (nome, codigo) { if (codigo) falhas[nome] = String(codigo); else delete falhas[nome]; },
     chamadas: chamadas,
-    inicio: inicio
+    inicio: inicio,
+    minhaRede: minhaRede
   };
 })();

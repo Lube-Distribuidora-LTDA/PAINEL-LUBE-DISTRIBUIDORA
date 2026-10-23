@@ -82,7 +82,8 @@
      fora do ar o portal entra e abre os sistemas como sempre. */
   var CENTRAL = 'https://wkkdcsqwlxjxorutrbnx.supabase.co/functions/v1/sentinela';
 
-  // POST na central; resolve com o JSON da resposta ou rejeita (erro, não-2xx, tempo)
+  // POST na central; resolve com o JSON da resposta ou rejeita (erro, não-2xx, tempo).
+  // No não-2xx o erro leva status e o código da central (ex.: 403 fora_da_rede)
   function central(rota, corpo, token, ms) {
     return new Promise(function (ok, falha) {
       var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
@@ -96,8 +97,13 @@
         method: 'POST', headers: cab, body: JSON.stringify(corpo || {}),
         credentials: 'omit', cache: 'no-store', signal: ctrl ? ctrl.signal : undefined
       }).then(function (r) {
-        if (!r.ok) throw new Error('central ' + r.status);
-        return r.json();
+        if (r.ok) return r.json();
+        return r.json().catch(function () { return null; }).then(function (j) {
+          var e = new Error('central ' + r.status);
+          e.status = r.status;
+          e.codigo = j && typeof j.erro === 'string' ? j.erro : '';
+          throw e;
+        });
       }).then(function (j) { clearTimeout(timer); ok(j); },
               function (e) { clearTimeout(timer); falha(e); });
     });
@@ -119,7 +125,17 @@
     } catch (e) { return null; }
   }
 
-  // pede o passe do sistema; resolve com a URL de entrada ou null (nunca rejeita).
+  // página "só abre na rede da Lube" do próprio portal (rede.js; sem ele, o mesmo endereço)
+  function paginaFora(de) {
+    if (window.LubeRede) return window.LubeRede.pagina(de);
+    return new URL('/fora-da-rede.html?de=' + (de || 'sistema'), location.href).href;
+  }
+  function ehFora(url) {
+    return !!url && (window.LubeRede ? window.LubeRede.ehPagina(url) : String(url).indexOf('/fora-da-rede.html') > -1);
+  }
+
+  // pede o passe do sistema; resolve com a URL de entrada, com a página de "fora da
+  // rede" (a central respondeu 403 fora_da_rede) ou null (nunca rejeita).
   // O endereço que vale é o do admin (public.sistemas.url): vai como destino, e a
   // resposta só é aceita se for https na mesma origem dele
   function pedirPasse(slug, urlSistema) {
@@ -132,7 +148,10 @@
     }).then(function (j) {
       var url = j && typeof j.url === 'string' ? j.url : '';
       return origemHttps(url) === origem ? url : null;
-    }, function () { return null; });
+    }, function (e) {
+      // o sistema exige a rede da Lube e a pessoa está fora: nova aba e BI do painel vão para a página
+      return e && e.status === 403 && e.codigo === 'fora_da_rede' ? paginaFora('sistema') : null;
+    });
     return limite(pedido, 3000).then(function (url) { return url || null; });
   }
 
@@ -183,7 +202,8 @@
         // fechada no meio do caminho (pela pessoa ou por um bloqueador): sem gesto
         // não dá para abrir outra, então só avisa
         if (janela.closed) {
-          aviso('A janela de ' + s.nome + ' foi fechada antes de abrir. Clique de novo.');
+          if (ehFora(url) && window.LubeRede) window.LubeRede.avisoFora(s.nome);
+          else aviso('A janela de ' + s.nome + ' foi fechada antes de abrir. Clique de novo.');
           return;
         }
         janela.location.replace(url || s.url);
@@ -291,6 +311,13 @@
     aviso('Abrindo ' + s.nome + '…');
     var reg = registrar('abriu_sistema', s.id);
     Promise.all([pedirPasse(s.slug, s.url), limite(reg, 1500)]).then(function (rs) {
+      // fora da rede: o portal fica (pode estar só observando) e mostra o aviso no painel
+      if (ehFora(rs[0])) {
+        if (avisoEl) avisoEl.style.opacity = '0';   // tira o "Abrindo…" de baixo do aviso
+        if (window.LubeRede) window.LubeRede.avisoFora(s.nome);
+        else aviso('Este sistema só abre na rede da Lube. Se precisa acessar, fale com o TI.');
+        return;
+      }
       location.assign(rs[0] || s.url);
     });
   }
@@ -341,6 +368,35 @@
     });
   }
 
+  /* ---------- regra de rede da Lube (docs/SENTINELA-REDE.md, §7.1) ----------
+     Antes de qualquer outra coisa do painel. Resolve true = segue; false = fora da
+     rede e não liberado (o rede.js sai da sessão e leva para a página). Central fora,
+     tempo ou "indisponível" = segue: quem barra de verdade são os guardas. */
+  var avisoRede = '';
+  function conferirRede(sessao) {
+    avisoRede = '';
+    if (!window.LubeRede) return Promise.resolve(true);
+    return window.LubeRede.verificar(sessao.access_token, 3000).then(function (r) {
+      if (!r || r.acao !== 'bloquear') {
+        if (r && r.acao === 'seguir' && r.liberado) avisoRede = window.LubeRede.textoLiberado(r.liberado.ate);
+        return true;
+      }
+      // administrador fora da rede, com pessoas da Lube barradas do mesmo IP: o IP do escritório pode ter mudado
+      if (r.emergencia && r.emergencia.possivel && perfil && perfil.is_admin) {
+        return new Promise(function (ok) {
+          window.LubeRede.cartaoEmergencia({
+            pessoas: r.emergencia.pessoas, ip: r.ip, token: sessao.access_token,
+            aoEntrar: function () { ok(true); },
+            aoSair: function () { perfil = null; window.LubeRede.sair(sb, 'painel'); ok(false); }
+          });
+        });
+      }
+      perfil = null;                 // nada de registrar "login" de quem não entrou
+      window.LubeRede.sair(sb, 'painel');
+      return false;
+    });
+  }
+
   function carregarSessao(sessao) {
     if (!sessao) { mostrarGate(); return Promise.resolve(); }
 
@@ -358,57 +414,67 @@
               : 'Seu acesso está desativado. Procure o TI.');
           });
         }
-        window.LUBE_PERFIL = perfil;
-        if (voltarPara) {
-          var destino = voltarPara;
-          voltarPara = null;
-          location.assign(destino);
-          return;
-        }
-        mostrarPortal();
-        informarIdentidade(sessao.access_token);
-        avisosOffice(sessao.access_token);
-
-        return Promise.all([
-          sb.from('sistemas').select('*').eq('ativo', true).order('ordem', { ascending: true }),
-          sb.from('permissoes').select('sistema_id').eq('user_id', perfil.id),
-          sb.from('icones').select('*'),
-          sb.from('permissoes_excecao').select('sistema_id').eq('user_id', perfil.id),
-          sb.from('favoritos').select('sistema_id, criado_em').eq('user_id', perfil.id)
-            .order('criado_em', { ascending: true })
-        ]).then(function (rs) {
-            (rs[2].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
-
-            var meus = {};
-            (rs[1].data || []).forEach(function (p) { meus[p.sistema_id] = true; });
-
-            // só faz sentido quando acesso_total está ligado — fora disso é ignorada
-            var fora = {};
-            (rs[3].data || []).forEach(function (e) { fora[e.sistema_id] = true; });
-
-            var lista = (rs[0].data || []).map(function (s) {
-              s._liberado = perfil.acesso_total ? !fora[s.id] : !!meus[s.id];
-              return s;
-            });
-            // "sistemas ativos" e "áreas atendidas" contam a empresa toda,
-            // não só o que esta pessoa pode abrir
-            atualizarStats(lista);
-            // liberados primeiro, mantendo a ordem definida pelo TI
-            lista.sort(function (a, b) {
-              if (a._liberado !== b._liberado) return a._liberado ? -1 : 1;
-              return a.ordem - b.ordem;
-            });
-            // sem a tabela (ou com erro) os fixados ficam só no navegador
-            var favoritos = rs[4] && !rs[4].error
-              ? (rs[4].data || []).map(function (f) { return f.sistema_id; }) : null;
-            montarSistemas(lista, favoritos);
-            try { processarAbrir(lista); } catch (e) {}
-          });
+        return conferirRede(sessao).then(function (segue) {
+          if (!segue) return;
+          return montarPainel(sessao);
+        });
       })
       .catch(function () {
         mostrarGate();
         erro('Não foi possível carregar seu perfil.');
       });
+  }
+
+  // perfil ativo e rede conferida: abre o painel
+  function montarPainel(sessao) {
+    window.LUBE_PERFIL = perfil;
+    if (voltarPara) {
+      var destino = voltarPara;
+      voltarPara = null;
+      location.assign(destino);
+      return;
+    }
+    mostrarPortal();
+    if (avisoRede) aviso(avisoRede);
+    // a identidade só vai depois de um /rede que não mandou bloquear (login de fora não vira "confiável")
+    informarIdentidade(sessao.access_token);
+    avisosOffice(sessao.access_token);
+
+    return Promise.all([
+      sb.from('sistemas').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+      sb.from('permissoes').select('sistema_id').eq('user_id', perfil.id),
+      sb.from('icones').select('*'),
+      sb.from('permissoes_excecao').select('sistema_id').eq('user_id', perfil.id),
+      sb.from('favoritos').select('sistema_id, criado_em').eq('user_id', perfil.id)
+        .order('criado_em', { ascending: true })
+    ]).then(function (rs) {
+      (rs[2].data || []).forEach(function (ic) { icones[ic.slug] = ic; });
+
+      var meus = {};
+      (rs[1].data || []).forEach(function (p) { meus[p.sistema_id] = true; });
+
+      // só faz sentido quando acesso_total está ligado — fora disso é ignorada
+      var fora = {};
+      (rs[3].data || []).forEach(function (e) { fora[e.sistema_id] = true; });
+
+      var lista = (rs[0].data || []).map(function (s) {
+        s._liberado = perfil.acesso_total ? !fora[s.id] : !!meus[s.id];
+        return s;
+      });
+      // "sistemas ativos" e "áreas atendidas" contam a empresa toda,
+      // não só o que esta pessoa pode abrir
+      atualizarStats(lista);
+      // liberados primeiro, mantendo a ordem definida pelo TI
+      lista.sort(function (a, b) {
+        if (a._liberado !== b._liberado) return a._liberado ? -1 : 1;
+        return a.ordem - b.ordem;
+      });
+      // sem a tabela (ou com erro) os fixados ficam só no navegador
+      var favoritos = rs[4] && !rs[4].error
+        ? (rs[4].data || []).map(function (f) { return f.sistema_id; }) : null;
+      montarSistemas(lista, favoritos);
+      try { processarAbrir(lista); } catch (e) {}
+    });
   }
 
   /* ---------- login ---------- */
@@ -427,8 +493,8 @@
       carregando(true);
       sb.auth.signInWithPassword({ email: email, password: senha })
         .then(function (r) {
-          carregando(false);
           if (r.error) {
+            carregando(false);
             if (r.error.message === 'Invalid login credentials' ||
                 r.error.code === 'invalid_credentials') informarTentativa(email);
             erro(r.error.message === 'Invalid login credentials'
@@ -436,7 +502,9 @@
               : r.error.message);
             return;
           }
+          // o botão segue "carregando" enquanto a rede é conferida (até 3 s)
           return carregarSessao(r.data.session).then(function () {
+            carregando(false);
             registrar('login');
             campoPwd.value = '';
           });

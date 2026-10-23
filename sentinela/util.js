@@ -223,6 +223,46 @@
     return (a.n >> corte) === (b.n >> corte);
   }
 
+  /* ---------- rede da Lube: conferência leve na tela (o banco confere de verdade) ---------- */
+  // ::ffff:a.b.c.d vira a.b.c.d, como no banco
+  function semMapeado(v) {
+    var s = String(v || '').trim(), m = s.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})(\/\d{1,3})?$/i);
+    if (!m) return s;
+    var bits = m[2] ? +m[2].slice(1) - 96 : null;
+    return m[1] + (bits != null ? '/' + Math.max(0, bits) : '');
+  }
+  // faixas internas e reservadas: a Vercel só vê o IP público
+  var RESERVADAS = ['0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8', '169.254.0.0/16', '172.16.0.0/12',
+                    '192.168.0.0/16', '224.0.0.0/4', '240.0.0.0/4', '::/128', '::1/128', 'fc00::/7', 'fe80::/10', 'ff00::/8'];
+  function reservado(v) {
+    v = semMapeado(v);
+    return RESERVADAS.some(function (r) { return contem(r, v); });
+  }
+  function ip4Texto(n) {
+    n = Number(n);
+    return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+  }
+  // { familia: 4|6, bits, hostLigado, certa } ou null. "certa" = a forma com os bits de host zerados (só IPv4)
+  function infoRede(v) {
+    var r = rede(semMapeado(v));
+    if (!r) return null;
+    var resto = BigInt(r.w - r.bits);
+    var hostLigado = (r.n & ((BigInt(1) << resto) - BigInt(1))) !== B0;
+    var certa = null;
+    if (r.v === 4 && hostLigado) certa = ip4Texto((r.n >> resto) << resto) + '/' + r.bits;
+    return { familia: r.v, bits: r.bits, hostLigado: hostLigado, certa: certa };
+  }
+  // IPv6 solto → o /64 dele ("2001:db8:1:2::/64"): cada computador do escritório sai com um endereço
+  // próprio dentro do mesmo prefixo (o botão de emergência e a emergência por SQL fazem igual).
+  // IPv4, faixa ou inválido → null.
+  function prefixo64(v) {
+    var r = rede(semMapeado(v));
+    if (!r || r.v !== 6 || r.bits !== 128) return null;
+    var alto = r.n >> BigInt(64), g = [];
+    for (var i = 3; i >= 0; i--) g.push(((alto >> BigInt(16 * i)) & BigInt(0xffff)).toString(16));
+    return g.join(':') + '::/64';
+  }
+
   /* ---------- estados ---------- */
   var STATUS = {
     bloqueado: { cor: '#ff6b74', icone: '⛔', nome: 'Bloqueado', peso: 4 },
@@ -237,7 +277,10 @@
     ferramenta: 'ferramenta de ataque', varredura: 'varredura', injecao: 'injeção', lista: 'lista',
     arquivo_proibido: 'arquivo proibido', robo: 'robô', rajada: 'rajada', tor: 'Tor', forca_bruta: 'força bruta',
     ia: 'IA', sem_login: 'sem login', cron: 'cron', previa_link: 'prévia de link', buscador: 'buscador',
-    passe_invalido: 'passe inválido'
+    passe_invalido: 'passe inválido',
+    // regra de rede da Lube (guarda 1.3.0)
+    fora_da_rede: 'Fora da rede da Lube', rede_liberado: 'Fora da rede · liberado pelo TI',
+    rede_maquina: 'Fora da rede · máquina autenticada'
   };
   function regra(r) { return r ? (REGRAS[r] || r) : ''; }
 
@@ -245,6 +288,7 @@
     FUSO: FUSO, esc: esc, corta: corta, numeros: numeros, num: num, qtd: qtd, pct: pct, pct01: pct01,
     hora: hora, horaSeg: horaSeg, dataHora: dataHora, dia: dia, curta: curta, ate: ate, ha: ha,
     horarioComercial: horarioComercial, bandeira: bandeira, nomePais: nomePais, local: local,
-    dispositivo: dispositivo, ipOuCidr: ipOuCidr, contem: contem, status: status, STATUS: STATUS, regra: regra
+    dispositivo: dispositivo, ipOuCidr: ipOuCidr, contem: contem, status: status, STATUS: STATUS, regra: regra,
+    reservado: reservado, infoRede: infoRede, semMapeado: semMapeado, prefixo64: prefixo64
   };
 })();

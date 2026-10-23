@@ -14,7 +14,7 @@ import {
   montarUrlPasse, origemPermitida, RE_SLUG, RE_UUID, rotaDe, ROTAS,
 } from './http.ts';
 
-export const VERSAO = '1.0.0';
+export const VERSAO = '1.1.0';
 export const EMISSOR = 'sentinela-lube';
 export const TEAM_ID = 'team_k8YNfCDhgFwOScWnM5iHGqLC';
 export const PASSE_S = 90;
@@ -40,6 +40,34 @@ export const AMBIENTES_OIDC = new Set(['production', 'preview']);
 
 /** Motivos do srv_permissao que dizem que a conta não tem perfil ativo. */
 const PERFIL_SEM_ACESSO = new Set(['perfil_inexistente', 'perfil_inativo']);
+
+// ---------- regra de rede (docs/SENTINELA-REDE.md §5) ----------
+/** Projeto do portal na central: o login do portal é decidido como "portal". */
+export const PROJETO_PORTAL = 'painel-lube-distribuidora';
+/**
+ * Cache do bloco "rede" da /lista, por projeto. Encerrar uma liberação chega aos
+ * guardas em até ~30 s: 10 s aqui + 20 s da lista do guarda.
+ */
+export const REDE_CACHE_MS = 10_000;
+/** POST /rede por IP (IPv6 pelo /64) por minuto */
+export const MAX_REDE_MIN = 30;
+const MODOS_REDE = new Set(['desligado', 'observar', 'exigir']);
+const ACOES_REDE = new Set(['seguir', 'observar', 'bloquear']);
+/**
+ * Ações do painel da Sentinela que passam pela central (POST /rede com "acao"): a central manda
+ * ao banco o IP do próprio pedido, e o banco recusa afrouxar a regra de fora da rede da Lube
+ * quando algum sistema exige a rede (sentinela_srv_rede_acao).
+ */
+export const ACOES_PAINEL_REDE = new Set(['rede_nova', 'rede_remover', 'rede_modo', 'liberar', 'encerrar']);
+const RE_SQLSTATE = /^[0-9A-Z]{5}$/;
+const RE_HASH = /^[0-9a-f]{64}$/;
+/** Recusas do botão de emergência (srv_rede_emergencia), com o texto para a tela. */
+export const DETALHE_EMERGENCIA: Record<string, string> = {
+  so_admin: 'Só administrador cadastra a rede da Lube por aqui.',
+  sem_provas: 'Poucas pessoas da Lube foram barradas deste endereço nas últimas horas. Use o passo a passo por SQL.',
+  ja_cadastrada: 'Este endereço já é uma rede da Lube.',
+  ip_invalido: 'Não deu para ler o endereço público desta conexão.',
+};
 
 /** Projetos do §0 (claim `project` → `project_id`): conferência extra do OIDC. */
 export const PROJETOS = new Map<string, string>([
@@ -86,6 +114,26 @@ const ehObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.i
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const iso = (seg: number) => new Date(seg * 1000).toISOString();
 
+/**
+ * Bloco "rede" da /lista no formato do guarda (§6.2), ou null se o banco mandou outra
+ * coisa. Dos liberados só passam o hash do e-mail e o prazo: nada que identifique a
+ * pessoa vai para o guarda, mesmo que o banco um dia mande campo a mais.
+ */
+export function blocoRede(r: unknown): Obj | null {
+  if (!ehObj(r) || typeof r.modo !== 'string' || !MODOS_REDE.has(r.modo)) return null;
+  if (!Array.isArray(r.redes) || !Array.isArray(r.liberados)) return null;
+  return {
+    v: typeof r.v === 'number' ? r.v : 1,
+    gerado_em: typeof r.gerado_em === 'string' ? r.gerado_em : null,
+    modo: r.modo,
+    redes: r.redes.filter((x): x is string => typeof x === 'string' && x.length <= 64).slice(0, 200),
+    liberados: r.liberados
+      .filter((x): x is Obj => ehObj(x) && typeof x.h === 'string' && RE_HASH.test(x.h) && typeof x.ate === 'string')
+      .slice(0, 500)
+      .map((x) => ({ h: x.h, ate: x.ate })),
+  };
+}
+
 /** Só os campos públicos da JWK (nunca deixa passar um "d" por engano). */
 export function publicaLimpa(j: JwkPublica): JwkPublica {
   return { kty: 'EC', crv: 'P-256', x: j.x, y: j.y, kid: j.kid, alg: 'ES256', use: 'sig' };
@@ -128,6 +176,54 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
   const limIdentidade = criarLimitador(30, MIN);
   const limTentativa = criarLimitador(20, MIN);
   const limTentativaTodas = criarLimitador(MAX_TENTATIVAS_MIN, MIN, 1);
+  const limRede = criarLimitador(MAX_REDE_MIN, MIN);
+
+  // ---------- regra de rede (§5) ----------
+  // Bloco "rede" da /lista: 10 s por projeto (o modo muda por sistema; redes e liberados
+  // são os mesmos). Falha ou formato errado: a lista sai SEM o bloco e o guarda segue com
+  // a última que recebeu (até 24 h). Falha não fica no cache: a próxima /lista tenta de novo.
+  const redeCache = new Map<string, { ate: number; valor: Promise<Obj | null> }>();
+  function redeDaLista(projeto: string): Promise<Obj | null> {
+    const c = redeCache.get(projeto);
+    if (c && c.ate > agora()) return c.valor;
+    const esquecer = () => { if (redeCache.get(projeto)?.valor === valor) redeCache.delete(projeto); };
+    const valor: Promise<Obj | null> = d.rpc('sentinela_srv_rede_lista', { p_projeto: projeto }).then((r) => {
+      const bloco = blocoRede(r);
+      if (!bloco) {
+        esquecer();
+        avisarUmaVez('rede-lista-formato', 'rede: srv_rede_lista fora do formato; a /lista sai sem o bloco rede');
+      }
+      return bloco;
+    }, (e) => {
+      esquecer();
+      if (!avisados.has('rede-lista')) log('rede: srv_rede_lista falhou; a /lista sai sem o bloco rede', e);
+      avisados.add('rede-lista');
+      return null;
+    });
+    if (redeCache.size > 200) redeCache.clear();
+    redeCache.set(projeto, { ate: agora() + REDE_CACHE_MS, valor });
+    return valor;
+  }
+
+  /**
+   * Decisão da rede para um acesso visto pela central (login no portal ou pedido de
+   * passe). Falha do banco ou resposta fora do formato → null: quem chama segue, e quem
+   * barra de verdade é o guarda, a cada pedido.
+   */
+  async function decidirRede(ip: string | null, sub: string, email: string, projeto: string,
+                             origem: 'portal' | 'passe', ua: string | null): Promise<Obj | null> {
+    try {
+      const r = await d.rpc('sentinela_srv_rede_decidir', {
+        p_ip: ip, p_user_id: sub, p_email: email, p_projeto: projeto, p_origem: origem, p_ua: ua,
+      });
+      if (ehObj(r) && typeof r.acao === 'string' && ACOES_REDE.has(r.acao)) return r;
+      avisarUmaVez('rede-decidir-formato', 'rede: srv_rede_decidir fora do formato; segue sem a regra de rede');
+      return null;
+    } catch (e) {
+      log(`rede: srv_rede_decidir falhou (${origem}); segue sem a regra de rede`, e);
+      return null;
+    }
+  }
 
   // ---------- sistemas conhecidos (cache 5 min) ----------
   const sistemas = new Map<string, InfoSistema>();
@@ -470,14 +566,16 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
     const g = await autenticarGuarda(req, corpo);
     if (!g) return erro(401, 'guarda_nao_autenticado');
     // a lista que a autenticação acabou de ler serve (o guarda espera só 700 ms)
-    const [lista, chaves] = await Promise.all([
+    const [lista, chaves, rede] = await Promise.all([
       g.lista !== undefined ? g.lista : d.rpc('sentinela_srv_lista', { p_projeto: g.projeto }),
       chavesParaLista(),
+      redeDaLista(g.projeto),
     ]);
     if (!ehObj(lista)) throw new Error('srv_lista sem resposta');
     if (g.lista === undefined) guardarSistema(g.projeto, lista);
     d.depois(conferirChaveIA());
-    return json({ ...lista, chaves });
+    // guarda antigo ignora a chave "rede" (só lê as chaves que conhece)
+    return json(rede ? { ...lista, chaves, rede } : { ...lista, chaves });
   }
 
   async function rotaEvento(req: Request, corpo: Uint8Array): Promise<Response> {
@@ -549,6 +647,13 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
     if (!projeto || typeof perm.url !== 'string') return erro(404, 'sistema_sem_sentinela', null, cors);
     const email = emailValido(perm.email) ?? u.email;
     if (!email) return erro(400, 'sem_email', null, cors);
+
+    // Regra de rede (§5.2): fora da rede da Lube e sem liberação do TI, nem passe nem
+    // identidade (o IP de fora não vira "confiável"). Observar e liberado seguem normais
+    // (o banco já registrou). Falha do banco aqui não barra: o guarda confere a cada pedido.
+    const rede = await decidirRede(ip, u.sub, email, projeto, 'passe', uaDe(req));
+    if (rede && rede.acao === 'bloquear') return erro(403, 'fora_da_rede', 'Este sistema só abre na rede da Lube.', cors);
+
     const registrarIdentidade = () => {
       if (!ip) return;
       d.depois(d.rpc('sentinela_srv_identidade', { p_ip: ip, p_user_id: u.sub, p_email: email, p_origem: 'portal', p_ua: uaDe(req) })
@@ -611,6 +716,107 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
     return json({ ok: true, bloqueado: ehObj(r) && r.bloqueado === true }, 200, cors);
   }
 
+  /**
+   * Ação do painel da Sentinela pela central ({"acao", "dados"} no POST /rede). O banco confere
+   * o administrador e, com algum sistema exigindo a rede, só deixa afrouxar a regra (rede nova,
+   * liberar, observar, desligar) de dentro de uma rede da Lube ou com liberação: o IP vai daqui,
+   * do pedido. Sem isso, a senha de um admin, de fora, desligaria a regra pelo banco direto.
+   */
+  async function acaoPainelRede(ip: string | null, sub: string, dados: Obj, cors: Record<string, string>): Promise<Response> {
+    const acao = dados.acao as string;
+    const params = dados.dados === undefined ? {} : dados.dados;
+    if (!ACOES_PAINEL_REDE.has(acao) || !ehObj(params)) return erro(400, 'acao_invalida', null, cors);
+    let r: unknown;
+    try {
+      r = await d.rpc('sentinela_srv_rede_acao', { p_user_id: sub, p_ip: ip, p_acao: acao, p_dados: params });
+    } catch (e) {
+      log('rede: srv_rede_acao falhou', e);
+      return erro(503, 'indisponivel', 'O banco não respondeu. Tente de novo.', cors);
+    }
+    if (ehObj(r) && r.ok === true) return json({ ok: true, resultado: r }, 200, cors);
+    if (ehObj(r) && r.ok === false && typeof r.erro === 'string') {
+      const codigo = typeof r.codigo === 'string' && RE_SQLSTATE.test(r.codigo) ? r.codigo : null;
+      // a recusa do banco já vem pronta para a tela ("sentinela: ..."); 42501 = sem permissão (não admin, fora da rede)
+      return json({ erro: 'acao_recusada', codigo, detalhe: texto(r.erro, 400) }, codigo === '42501' ? 403 : 400, cors);
+    }
+    avisarUmaVez('rede-acao-formato', 'rede: srv_rede_acao fora do formato');
+    return erro(503, 'indisponivel', null, cors);
+  }
+
+  /**
+   * POST /rede (§5.3): o portal pergunta, logo depois do login, se a pessoa está na rede
+   * da Lube. Corpo {} decide; {"emergencia": true} é o botão de emergência do
+   * administrador; {"acao", "dados"} é uma ação do painel da Sentinela (acaoPainelRede).
+   * O IP é sempre o do pedido (cabeçalho), nunca o do corpo.
+   */
+  async function rotaRede(req: Request, corpo: Uint8Array, cors: Record<string, string>): Promise<Response> {
+    const ip = ipCliente(req.headers);
+    if (!limRede(chaveLimite(ip), agora())) return erro(429, 'muitas_requisicoes', null, cors);
+    const u = await usuarioDoToken(req);
+    if (!u) return erro(401, 'token_invalido', null, cors);
+    const dados = lerJson(corpo);
+    if (!ehObj(dados)) return erro(400, 'json_invalido', null, cors);
+    const emergencia = dados.emergencia === true;
+    // banco fora: o portal segue (os guardas barram); o botão de emergência não tem como seguir
+    const indisponivel = () => emergencia
+      ? erro(503, 'indisponivel', 'O banco não respondeu. Tente de novo ou use o passo a passo por SQL.', cors)
+      : json({ ok: true, acao: 'seguir', indisponivel: true }, 200, cors);
+
+    // perfil ativo, como no /identidade (o signUp do portal é aberto e o perfil nasce inativo)
+    let perfil: unknown;
+    try {
+      perfil = await d.rpc('sentinela_srv_permissao', { p_user_id: u.sub, p_sistema_slug: null });
+    } catch (e) {
+      log('rede: banco fora (perfil)', e);
+      return indisponivel();
+    }
+    if (!ehObj(perfil) || typeof perfil.motivo !== 'string' || PERFIL_SEM_ACESSO.has(perfil.motivo)) {
+      return erro(403, 'perfil_inativo', null, cors);
+    }
+    const email = emailValido(perfil.email) ?? u.email;
+    if (!email) return erro(400, 'sem_email', null, cors);
+
+    if (typeof dados.acao === 'string') return await acaoPainelRede(ip, u.sub, dados, cors);
+
+    if (emergencia) {
+      let r: unknown;
+      try {
+        r = await d.rpc('sentinela_srv_rede_emergencia', { p_ip: ip, p_user_id: u.sub });
+      } catch (e) {
+        log('rede: srv_rede_emergencia falhou', e);
+        return indisponivel();
+      }
+      if (ehObj(r) && r.ok === true && typeof r.rede === 'string') {
+        return json({ ok: true, cadastrada: { id: num(r.id), rede: rotulo(r.rede, 64) } }, 200, cors);
+      }
+      const motivo = ehObj(r) && typeof r.motivo === 'string' && Object.hasOwn(DETALHE_EMERGENCIA, r.motivo) ? r.motivo : null;
+      if (!motivo || !ehObj(r)) {
+        avisarUmaVez('rede-emergencia-formato', 'rede: srv_rede_emergencia fora do formato');
+        return indisponivel();
+      }
+      return json({ erro: motivo, detalhe: DETALHE_EMERGENCIA[motivo], ...(motivo === 'sem_provas' ? { pessoas: num(r.pessoas) } : {}) },
+        403, cors);
+    }
+
+    const r = await decidirRede(ip, u.sub, email, PROJETO_PORTAL, 'portal', uaDe(req));
+    if (!r) return indisponivel();
+    const lib = ehObj(r.liberado) && typeof r.liberado.ate === 'string' ? { ate: r.liberado.ate } : null;
+    const emerg = ehObj(r.emergencia) && typeof r.emergencia.possivel === 'boolean'
+      ? { possivel: r.emergencia.possivel, pessoas: num(r.emergencia.pessoas) } : null;
+    // o nome da rede ("Escritório") só para quem já está dentro dela
+    const rede = ehObj(r.rede) && typeof r.rede.descricao === 'string' ? { descricao: texto(r.rede.descricao, 120) } : null;
+    return json({
+      ok: true,
+      modo: typeof r.modo === 'string' && MODOS_REDE.has(r.modo) ? r.modo : null,
+      na_rede: r.na_rede === true,
+      acao: r.acao,
+      rede,
+      liberado: lib,
+      ip: ipValido(r.ip) ?? ip,   // o IP da própria pessoa (a página de bloqueio não mostra)
+      emergencia: emerg,           // só vem para administrador fora da rede
+    }, 200, cors);
+  }
+
   return async function tratar(req: Request): Promise<Response> {
     let cors: Record<string, string> = {};
     try {
@@ -648,6 +854,7 @@ export function criarCentral(d: Dependencias): (req: Request) => Promise<Respons
         case 'passe': return await rotaPasse(req, corpo, cors);
         case 'identidade': return await rotaIdentidade(req, cors);
         case 'tentativa': return await rotaTentativa(req, corpo, cors);
+        case 'rede': return await rotaRede(req, corpo, cors);
       }
       return erro(404, 'rota_desconhecida');
     } catch (e) {

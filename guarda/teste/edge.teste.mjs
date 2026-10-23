@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { lista, gerarChave, assinarJwt, sessaoPayload, oidcFalso, UA, UAS_REAIS, caso, conta, executar } from './apoio.mjs';
+import { lista, gerarChave, assinarJwt, sessaoPayload, oidcFalso, hashEmail, UA, UAS_REAIS, caso, conta, executar } from './apoio.mjs';
 
 const CENTRAL = 'https://wkkdcsqwlxjxorutrbnx.supabase.co/functions/v1/sentinela';
 const pastaEdge = process.env.SENTINELA_EDGE_RUNTIME ||
@@ -50,7 +50,7 @@ function novoEdge(listaObj) {
 caso('no Edge Runtime: sem process/Buffer, runtime "edge" na saúde', async () => {
   const { rt, g, pedir } = novoEdge(lista());
   assert.equal(rt.evaluate('typeof process + "/" + typeof Buffer + "/" + typeof require'), 'undefined/undefined/undefined');
-  assert.equal(g.VERSAO, 'sentinela-guarda/1.2.0');
+  assert.equal(g.VERSAO, 'sentinela-guarda/1.3.0');
   const r = await g.sentinela(pedir('/.sentinela/saude'));
   const j = JSON.parse(await r.text());
   assert.equal(j.runtime, 'edge');
@@ -138,6 +138,38 @@ caso('no Edge Runtime (1.1.0, proteger): robô genérico, buscador e não-navega
   const at = await g.sentinela(pedir('/.env', { cookie, ip: '45.31.9.9' }), ctx());
   assert.equal(at.status, 403, 'ataque com sessão continua barrado');
   conta();
+});
+
+caso('no Edge Runtime (1.3.0): rede da Lube no exigir — fora → 403; dentro (IPv4 e IPv6), liberado (SHA-256 pelo crypto.subtle) e máquina seguem', async () => {
+  const fim = new Date(Date.now() + 3600e3).toISOString();
+  const l = lista({ projeto: 'gestao-finaceiro', slug: 'gestao-financeiro', exige: true,
+    rede: { modo: 'exigir', redes: ['203.0.113.169', '2804:14c:abcd:1200::/56'], liberados: [{ h: hashEmail('julio@lube.com.br'), ate: fim }] } });
+  const { g, pedir, ctx, estado } = novoEdge(l);
+  const app = (email, maquina) => ({ identidade: { email, origem: 'sessao_app', maquina } });
+  const FORA = '177.37.10.20';
+  const c1 = ctx();
+  const r = await g.sentinela(pedir('/', { ip: FORA }), c1, app('ana@lube.com.br'));
+  await c1.esperar();
+  assert.equal(r.status, 403);
+  assert.equal(r.headers.get('x-sentinela'), 'rede');
+  assert.equal(r.headers.get('set-cookie'), null);
+  assert.ok((await r.text()).includes('<h1>Este sistema só abre na rede da Lube</h1>'));
+  assert.equal(estado.eventos.at(-1).regra, 'fora_da_rede');
+  const a = await g.sentinela(pedir('/api/dados', { ip: FORA }), ctx(), app('ana@lube.com.br'));
+  assert.equal(JSON.parse(await a.text()).erro, 'fora_da_rede');
+  assert.equal(await g.sentinela(pedir('/', { ip: '203.0.113.169' }), ctx(), app('ana@lube.com.br')), null);
+  assert.equal(await g.sentinela(pedir('/', { ip: '2804:14c:abcd:12aa::7' }), ctx(), app('ana@lube.com.br')), null);
+  const c2 = ctx();
+  assert.equal(await g.sentinela(pedir('/x', { ip: FORA }), c2, app('Julio@Lube.com.br')), null);
+  await c2.esperar();
+  assert.equal(estado.eventos.at(-1).regra, 'rede_liberado');
+  const c3 = ctx();
+  assert.equal(await g.sentinela(pedir('/api/dados', { ip: '3.236.14.77', ua: 'python-requests/2.32.3' }), c3, app('robo do reposicoes (aquecedor da srv-ia)', true)), null);
+  await c3.esperar();
+  assert.equal(estado.eventos.at(-1).regra, 'rede_maquina');
+  const s = JSON.parse(await (await g.sentinela(pedir('/.sentinela/saude', { ip: FORA }))).text());
+  assert.equal(s.lista.rede, 'exigir');
+  conta(12);
 });
 
 const falhas = await executar('Sentinela · guarda · Edge Runtime');

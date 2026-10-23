@@ -1024,6 +1024,31 @@
     sb.auth.signOut().then(function () { location.href = 'index.html'; });
   });
 
+  /* ---------------- regra de rede da Lube (docs/SENTINELA-REDE.md, §7.2) ----------------
+     Depois de conferir que é admin. Fora da rede e sem liberação: sai da sessão e vai para a
+     página de bloqueio; com provas de que o IP do escritório mudou, o cartão de emergência.
+     Central fora ou tempo esgotado: segue (os guardas barram nos sistemas). */
+  function conferirRede(token) {
+    if (!window.LubeRede) return Promise.resolve(true);
+    return window.LubeRede.verificar(token, 3000).then(function (r) {
+      if (!r || r.acao !== 'bloquear') {
+        if (r && r.acao === 'seguir' && r.liberado) setTimeout(function () { toast(window.LubeRede.textoLiberado(r.liberado.ate)); }, 400);
+        return true;
+      }
+      if (r.emergencia && r.emergencia.possivel) {
+        return new Promise(function (ok) {
+          window.LubeRede.cartaoEmergencia({
+            pessoas: r.emergencia.pessoas, ip: r.ip, token: token,
+            aoEntrar: function () { ok(true); },
+            aoSair: function () { window.LubeRede.sair(sb, 'admin'); ok(false); }
+          });
+        });
+      }
+      window.LubeRede.sair(sb, 'admin');
+      return false;
+    });
+  }
+
   /* ---------------- porteiro ---------------- */
   sb.auth.getSession().then(function (r) {
     var s = r.data.session;
@@ -1033,14 +1058,17 @@
         location.href = 'index.html';
         return;
       }
-      eu = p.data;
-      $('[data-adm-quem]').textContent = eu.email;
-      $('[data-carregando]').classList.add('is-off');
-      $('[data-adm]').hidden = false;
-      setInterval(function () {
-        if (!document.hidden) carregarSac().catch(function () {});
-      }, 60000);
-      return carregarTudo();
+      return conferirRede(s.access_token).then(function (segue) {
+        if (!segue) return;
+        eu = p.data;
+        $('[data-adm-quem]').textContent = eu.email;
+        $('[data-carregando]').classList.add('is-off');
+        $('[data-adm]').hidden = false;
+        setInterval(function () {
+          if (!document.hidden) carregarSac().catch(function () {});
+        }, 60000);
+        return carregarTudo();
+      });
     });
   }).catch(function () { location.href = 'index.html'; });
 })();

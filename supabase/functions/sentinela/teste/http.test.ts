@@ -3,8 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   bearer, cabecalhosCors, chaveLimite, criarLimitador, ehJson, ipCliente, lerCorpoLimitado, lerJson, montarUrlPasse,
-  origemPermitida, rotaDe,
+  origemPermitida, rotaDe, ROTAS,
 } from '../http.ts';
+
+test('ROTAS: /rede é POST do navegador (CORS, Origin e JSON obrigatórios)', () => {
+  assert.deepEqual(ROTAS.rede, { metodo: 'POST', navegador: true });
+  assert.deepEqual(Object.keys(ROTAS).sort(), ['evento', 'identidade', 'lista', 'passe', 'rede', 'saude', 'sessao', 'tentativa']);
+  assert.equal(rotaDe('/functions/v1/sentinela/rede'), 'rede');
+});
 
 test('rotaDe: pelo final do pathname', () => {
   assert.equal(rotaDe('/functions/v1/sentinela/lista'), 'lista');

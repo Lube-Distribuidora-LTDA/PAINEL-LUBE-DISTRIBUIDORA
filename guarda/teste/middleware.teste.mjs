@@ -2,7 +2,7 @@
    Rodar na raiz do repositório:  node guarda/teste/middleware.teste.mjs */
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
-import { lista, centralFalsa, req, novoCtx, caso, conta, executar, avancar, dormir, UAS_REAIS, SEM_NAVEGADOR } from './apoio.mjs';
+import { lista, centralFalsa, req, novoCtx, caso, conta, executar, avancar, dormir, UAS_REAIS, SEM_NAVEGADOR, gerarChave, assinarJwt, sessaoPayload } from './apoio.mjs';
 
 // Na Vercel o bundler resolve './sentinela-guarda' sem extensão; no Node puro, não.
 registerHooks({
@@ -88,6 +88,29 @@ caso('1.1.0 no proteger: robô genérico, buscador e página sem cabeçalhos de 
     assert.equal(r.headers.get('x-middleware-next'), '1', ua);
     conta();
   }
+});
+
+caso('1.3.0: sessão fora da rede da Lube no exigir → 403 do guarda (x-sentinela: rede), sem x-middleware-next; dentro segue', async () => {
+  // a lista do caso anterior foi buscada 2 h à frente: só depois de 1 h dela o guarda busca a nova
+  await dormir(30);
+  avancar(4 * 3600000);
+  const chave = await gerarChave('a1b2c3d4e5f60718');
+  const c = centralFalsa(lista({ projeto: 'gestao-finaceiro', slug: 'gestao-financeiro', exige: true, chaves: [chave.jwk],
+    rede: { modo: 'exigir', redes: ['203.0.113.169'] } }));
+  const cookie = '__Host-sentinela=' + (await assinarJwt(sessaoPayload(), chave));
+  const H = 'gestao-finaceiro.vercel.app';
+  const ctx = novoCtx();
+  const fora = await mw.default(req(H, '/', { ip: '177.37.10.20', cookie }), ctx);
+  await ctx.esperar();
+  assert.equal(fora.status, 403);
+  assert.equal(fora.headers.get('x-sentinela'), 'rede');
+  assert.equal(fora.headers.get('x-middleware-next'), null);
+  assert.equal(c.eventos.at(-1).regra, 'fora_da_rede');
+  const dentro = await mw.default(req(H, '/', { ip: '203.0.113.169', cookie }), novoCtx());
+  assert.equal(dentro.headers.get('x-middleware-next'), '1');
+  const semLogin = await mw.default(req(H, '/', { ip: '177.37.10.20' }), novoCtx());
+  assert.equal(semLogin.status, 302, 'sem login: portal (a tela de login abre de qualquer lugar)');
+  conta(6);
 });
 
 const falhas = await executar('Sentinela · guarda · middleware.ts (estático)');

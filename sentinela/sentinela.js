@@ -27,12 +27,14 @@
     visitantes: [], nomes: {}, filtros: { status: '', sistema: '', pais: '', busca: '' },
     blInativos: false, ultimoPainel: 0, proxPainel: 0, tPainel: null, tNovos: null,
     tentativaPainel: 0, falhasPainel: 0, painelEmCurso: null, novosEmCurso: false,
-    rodando: false, parado: false, config: null
+    rodando: false, parado: false, config: null,
+    // regra de rede: de onde o admin está (LubeRede.verificar) e quando o chip do topo foi lido
+    minhaRede: null, minhaRedeEm: 0, chipRedeEm: 0
   };
 
   var TITULOS = {
     visao: 'Visão geral', bloqueios: 'Bloqueios', confiaveis: 'Redes confiáveis', ia: 'Análise por IA',
-    exposicoes: 'Exposições', integridade: 'Integridade do registro', configuracao: 'Configuração'
+    rede: 'Rede da Lube', exposicoes: 'Exposições', integridade: 'Integridade do registro', configuracao: 'Configuração'
   };
   // só os módulos do painel (nada herdado de Object.prototype, como "#constructor")
   function moduloValido(m) { return Object.prototype.hasOwnProperty.call(TITULOS, m); }
@@ -275,6 +277,7 @@
     if (m === 'bloqueios') carregarBloqueios();
     else if (m === 'confiaveis') carregarConfiaveis();
     else if (m === 'ia') carregarIa();
+    else if (m === 'rede') carregarRede(como);
     else if (como === 'ciclo') return;
     else if (m === 'exposicoes') carregarExposicoes();
     else if (m === 'configuracao') carregarConfig();
@@ -462,6 +465,19 @@
   var DICA_PUBLICO = 'Só a tela de login do Painel Lube ou um arquivo público: sem acesso a sistema nem a dados';
   function rotuloEvento(e) {
     var d = e.decisao;
+    // regra de rede da Lube (guarda 1.3.0): rótulo próprio, para não parecer ataque
+    if (e.regra === 'fora_da_rede' && (d === 'bloqueado' || d === 'observado')) {
+      return { cls: d, txt: 'FORA DA REDE', chip: d === 'bloqueado' ? 'vermelho' : 'ambar',
+               dica: (d === 'bloqueado' ? 'Barrado' : 'Seria barrado') + ': fora da rede da Lube' + (e.identidade ? ' · ' + e.identidade : '') };
+    }
+    if (d === 'liberado' && e.regra === 'rede_liberado') {
+      return { cls: 'verificado', txt: 'FORA · LIBERADO', chip: 'azul',
+               dica: 'Fora da rede da Lube, liberado pelo TI' + (e.identidade ? ': ' + e.identidade : '') };
+    }
+    if (d === 'liberado' && e.regra === 'rede_maquina') {
+      return { cls: 'maquina', txt: 'FORA · MÁQUINA', chip: 'neutro',
+               dica: 'Fora da rede da Lube: máquina autenticada pelo próprio sistema' + (e.identidade ? ' (' + e.identidade + ')' : '') };
+    }
     if (d !== 'liberado') {
       return { cls: d || 'cinza', txt: d || '—', dica: '', chip: { bloqueado: 'vermelho', observado: 'ambar' }[d] || 'cinza' };
     }
@@ -568,8 +584,12 @@
   function ehPublico(v) { return (v.status || 'seguro') === 'seguro' && !v.identidade && !v.confiavel; }
   function estadoVis(v) { return ehPublico(v) ? 'publico' : (v.status || 'seguro'); }
   function infoEstado(s) { return s === 'publico' ? ST_PUBLICO : U.status(s); }
-  // identidade de robô que o próprio sistema entrega só depois de conferir o segredo do agendador
-  function roboVerificado(v) { return !!v.identidade && v.identidade_origem === 'sessao_app' && /vercel-cron\//i.test(v.ua || ''); }
+  // identidade de robô que o próprio sistema entrega só depois de conferir o segredo dele
+  // (o agendador da Vercel e, com o guarda 1.3.0, as máquinas como o aquecedor do Reposições)
+  function roboVerificado(v) {
+    return !!v.identidade && v.identidade_origem === 'sessao_app' && (/vercel-cron\//i.test(v.ua || '') || /^rob[oô] /i.test(v.identidade));
+  }
+  function dicaRobo(v) { return /vercel-cron\//i.test(v.ua || '') ? 'Agendador da Vercel com o segredo conferido' : 'Máquina autenticada pelo próprio sistema (segredo conferido)'; }
 
   function pilula(v) {
     var pub = ehPublico(v);
@@ -581,7 +601,10 @@
       var ate = v.bloqueio ? (v.bloqueio.ate ? 'até ' + U.ate(v.bloqueio.ate) : 'permanente') : '';
       sub = (U.regra(cod) || livre || 'bloqueio') + (ate ? ' · ' + ate : '');
     } else if (v.status === 'observado') {
-      sub = cod === 'buscador' ? 'buscador · sem bloqueio' : (cod ? 'seria bloqueado: ' + U.regra(cod) : (livre || 'seria bloqueado'));
+      // a regra de rede barra (exigir) ou só registra (observar): o painel marca os dois como observado
+      sub = cod === 'buscador' ? 'buscador · sem bloqueio'
+        : cod === 'fora_da_rede' ? 'fora da rede da Lube'
+        : (cod ? 'seria bloqueado: ' + U.regra(cod) : (livre || 'seria bloqueado'));
     } else if (v.status === 'analise') {
       sub = 'IA analisando';
     } else if (pub) {
@@ -602,7 +625,7 @@
     var h = '';
     if (roboVerificado(v)) {
       h = '<span class="em" title="' + esc(v.identidade) + '">' + esc(v.identidade) + '</span>' +
-          '<small class="verif" title="Agendador da Vercel com o segredo conferido">✓ robô verificado</small>';
+          '<small class="verif" title="' + esc(dicaRobo(v)) + '">✓ robô verificado</small>';
     } else if (v.identidade && (v.identidade_origem === 'passe' || v.identidade_origem === 'sessao_app')) {
       h = '<span class="em" title="' + esc(v.identidade) + '">' + esc(v.identidade) + '</span>' +
           '<small class="ok" title="' + (v.identidade_origem === 'passe' ? 'Entrou pelo Painel Lube (passe ES256)' : 'Sessão do próprio sistema') + '">✓ confirmado pelo login</small>';
@@ -1625,6 +1648,879 @@
   });
 
   /* =========================================================
+     8. rede da Lube (docs/SENTINELA-REDE.md, §8)
+     Lê sentinela_rede_painel(p_dias) ao entrar, depois de cada ação e a cada
+     60 s com a aba visível (no ciclo do painel); as ações vão por
+     sentinela_rede_acao. A tela confere o óbvio para avisar cedo; quem decide
+     é o banco, e a recusa dele aparece com o texto dele. Sem a migração
+     sentinela_v2_rede, o módulo só diz isso e o resto do painel segue.
+     ========================================================= */
+  var MIN_MS = 60000, DIA_MS = 86400000;
+  var RD = {
+    dados: null, dias: 14, aba: 'redes', f: { sit: '', sis: '', busca: '' },
+    emCurso: null, ausente: false, naoSao: lerNaoSao()
+  };
+  IC.rede = '<path d="M3 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M6.5 8h3M6.5 11.5h3M6.5 15h3"/><path d="M2 21h11"/>' +
+            '<path d="M15.2 14.6a5 5 0 0 1 6.6 0M16.8 16.8a2.4 2.4 0 0 1 3.4 0"/><path d="M18.5 19.4h.01"/>';
+  IC.chave = '<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7M17 6.5l2 2M14.5 9l1.8 1.8"/>';
+  var NOME_MODO = { desligado: 'Desligado', observar: 'Observar', exigir: 'Exigir' };
+  var DICA_MODO = {
+    desligado: 'A regra de rede não vale neste sistema',
+    observar: 'Ninguém é barrado: quem está fora fica registrado como “seria barrado”',
+    exigir: 'Quem está fora da rede e não está liberado vê a página de bloqueio'
+  };
+  var ORIGEM_REDE = { manual: ['cinza', 'manual'], sugestao: ['azul', 'sugestão'], emergencia: ['laranja', 'emergência'] };
+  var SIT = {
+    barrado: { cls: 'bloqueado', ic: '⛔', nome: 'Barrado' },
+    seria_barrado: { cls: 'observado', ic: '👁', nome: 'Seria barrado' },
+    liberado: { cls: 'analise', ic: '✓', nome: 'Liberado' },
+    regra_desligada: { cls: 'publico', ic: '—', nome: 'Regra desligada' }
+  };
+
+  // "Não é da Lube" numa sugestão: some só neste navegador
+  function lerNaoSao() {
+    try { var v = JSON.parse(localStorage.getItem('sentinela-rede-nao-sao') || '[]'); return Array.isArray(v) ? v.slice(0, 200) : []; }
+    catch (e) { return []; }
+  }
+  function guardarNaoSao(ip) {
+    if (RD.naoSao.indexOf(ip) < 0) RD.naoSao.push(ip);
+    try { localStorage.setItem('sentinela-rede-nao-sao', JSON.stringify(RD.naoSao.slice(-200))); } catch (e) {}
+  }
+  function norm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function rotuloDias() { return RD.dias === 1 ? '24 h' : RD.dias + ' dias'; }
+  function versaoCurta(v) { var m = String(v || '').match(/(\d+\.\d+\.\d+)/); return m ? m[1] : ''; }
+  // "1.3.0" ou mais novo (o guarda que confere a rede)
+  function guardaNovo(v) { var m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(v || '')); return !!m && (+m[1] > 1 || (+m[1] === 1 && +m[2] >= 3)); }
+  // "203.0.113.7/32": IP em destaque e a máscara apagada
+  function textoRede(v) {
+    var s = String(v || ''), i = s.indexOf('/');
+    return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<span class="mask">' + esc(s.slice(i)) + '</span>';
+  }
+  function ehPortal(s) { return !!s && (s.projeto === 'painel-lube-distribuidora' || /^painel lube/i.test(s.nome || '')); }
+  function nomeSisRede(projeto) {
+    var s = ((RD.dados && RD.dados.sistemas) || []).filter(function (x) { return x.projeto === projeto; })[0];
+    if (ehPortal(s) || projeto === 'painel-lube-distribuidora') return 'Painel';
+    return (s && s.nome) || est.nomes[projeto] || projeto;
+  }
+  function emQuanto(ms) {
+    if (ms <= 0) return 'agora';
+    var m = Math.round(ms / MIN_MS);
+    if (m < 60) return 'em ' + m + ' min';
+    var h = Math.round(m / 60);
+    if (h < 48) return 'em ' + h + ' h';
+    return 'em ' + Math.round(h / 24) + ' dias';
+  }
+  // campo datetime-local ↔ data, sempre no horário de Brasília (UTC−3, sem horário de verão desde 2019)
+  var fmtCampo = new Intl.DateTimeFormat('en-CA', { timeZone: U.FUSO, year: 'numeric', month: '2-digit', day: '2-digit',
+                                                     hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  function paraCampo(d) {
+    var p = {};
+    fmtCampo.formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+    return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute;
+  }
+  function deCampo(v) {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v || ''))) return null;
+    var d = new Date(v + ':00-03:00');
+    return isNaN(d) ? null : d;
+  }
+  function pessoaHtml(x) {
+    if (!x.email) return '<span class="sem">sem login</span>';
+    return '<b>' + esc(x.nome || x.email) + '</b>' + (x.nome ? '<small>' + esc(x.email) + '</small>' : '');
+  }
+  function liberacaoAberta(userId) {
+    return ((RD.dados && RD.dados.liberacoes) || []).filter(function (l) {
+      return l.user_id === userId && (l.estado === 'ativa' || l.estado === 'agendada');
+    })[0] || null;
+  }
+
+  /* ---------- leitura ---------- */
+  function carregarRede(como) {
+    if (RD.emCurso) return RD.emCurso;
+    var dias = RD.dias;
+    if (como === 'entrada') atualizarMinhaRede();
+    RD.emCurso = chamar('sentinela_rede_painel', { p_dias: dias }).then(function (d) {
+      RD.emCurso = null;
+      marcarOk();
+      // o período mudou enquanto lia: lê de novo com o novo
+      if (dias !== RD.dias) return carregarRede('acao');
+      RD.ausente = false;
+      RD.dados = d || {};
+      pintarChipRede(RD.dados.contagens);
+      pintarRede();
+    }, function (err) {
+      RD.emCurso = null;
+      if (err.ausente) { RD.ausente = true; pintarRedeAusente(); $('[data-chip-rede]').hidden = true; return; }
+      pintarRedeErro(err);
+      marcarFalha(err);
+    });
+    return RD.emCurso;
+  }
+
+  function obterToken() {
+    if (DEMO || !sb) return Promise.resolve(null);
+    return sb.auth.getSession().then(function (r) {
+      var s = r && r.data && r.data.session;
+      return s ? s.access_token : null;
+    }, function () { return null; });
+  }
+  // Afrouxar a regra (rede nova, liberar pessoa, observar, desligar) vai pela central, que manda ao
+  // banco o IP de onde o admin está: com algum sistema exigindo a rede, o banco só aceita de dentro da
+  // rede da Lube (ou com liberação). Direto pelo banco, ele recusa (não sabe o IP). Apertar (remover
+  // rede, encerrar, exigir) vai direto ao banco, como o resto do painel.
+  function afrouxaRede(acao, dados) {
+    return acao === 'rede_nova' || acao === 'liberar' || (acao === 'rede_modo' && !(dados && dados.modo === 'exigir'));
+  }
+  var ERROS_CENTRAL = {
+    rede: 'Sem conexão com a central. Tente de novo.',
+    sessao: 'Sua sessão expirou. Entre de novo.',
+    token_invalido: 'Sua sessão expirou. Entre de novo.',
+    perfil_inativo: 'Sua conta não está ativa no Painel Lube.',
+    muitas_requisicoes: 'Muitas ações seguidas. Espere 1 minuto e tente de novo.',
+    indisponivel: 'A central não conseguiu falar com o banco. Tente de novo.',
+    origem_nao_permitida: 'A central só aceita esta ação vinda do endereço do portal (não de uma prévia).'
+  };
+  function acaoRede(acao, dados) {
+    if (DEMO || !afrouxaRede(acao, dados)) return chamar('sentinela_rede_acao', { p_acao: acao, p_dados: dados });
+    if (!window.LubeRede || !window.LubeRede.acao) return Promise.reject(new Error('O rede.js não carregou: recarregue a página.'));
+    return obterToken().then(function (t) { return window.LubeRede.acao(t, acao, dados); }).then(function (r) {
+      if (r.ok) return r.resultado;
+      var e = new Error(r.erro === 'acao_recusada' && r.detalhe ? r.detalhe : (ERROS_CENTRAL[r.erro] || r.detalhe || 'A central recusou a ação.'));
+      e.codigo = r.codigo || '';
+      e.sessao = r.erro === 'token_invalido' || r.erro === 'sessao';
+      throw e;
+    });
+  }
+  // depois de cadastrar ou remover uma rede, "Você está em ..." pergunta de novo à central
+  function renovarMinhaRede() { est.minhaRedeEm = 0; atualizarMinhaRede(); }
+
+  // de onde o admin está agora (no máximo uma pergunta à central por minuto)
+  function atualizarMinhaRede() {
+    if (est.minhaRedeEm && Date.now() - est.minhaRedeEm < MIN_MS) { pintarOnde(); return; }
+    if (!window.LubeRede) return;
+    obterToken().then(function (t) { return window.LubeRede.verificar(t, 3000); }).then(function (r) {
+      est.minhaRede = r;
+      est.minhaRedeEm = Date.now();
+      pintarOnde();
+    });
+  }
+
+  function pintarRedeAusente() {
+    var sec = $('[data-modulo="rede"]'), el = $('[data-rd-estado]');
+    sec.classList.add('rd-ausente');
+    el.hidden = false;
+    el.innerHTML = '<span class="ic">🧩</span><div><b>A regra de rede ainda não está instalada no banco.</b> Falta aplicar a migração ' +
+      '<span class="mono">sentinela_v2_rede</span> (funções <span class="mono">sentinela_rede_painel</span> e ' +
+      '<span class="mono">sentinela_rede_acao</span>). O resto da Sentinela funciona normalmente.</div>';
+  }
+  function pintarRedeErro(err) {
+    if (RD.dados) return;   // mantém a última leitura na tela; a faixa de cima avisa da falha
+    var msg = '<tr><td colspan="8" class="vazio">' + esc(texto(err)) + '</td></tr>';
+    ['[data-rd-redes]', '[data-rd-sistemas]', '[data-rd-lib-ativas]', '[data-rd-fora]'].forEach(function (s) { pintarSeMudou($(s), msg); });
+  }
+
+  /* ---------- chip do topo e selo do menu ---------- */
+  // pessoas de fora nas últimas 24 h: barradas, se algum sistema exige; senão (fase de observar, a de
+  // medir), as que seriam barradas
+  function fora24(c) {
+    c = c || {};
+    return +c.exigir ? { pessoas: +c.pessoas_barradas_24h || 0, tentativas: +c.barrados_24h || 0, seriam: false }
+                     : { pessoas: +c.pessoas_seriam_24h || 0, tentativas: +c.seriam_barrados_24h || 0, seriam: true };
+  }
+  function pintarChipRede(c) {
+    if (!c) return;
+    var chip = $('[data-chip-rede]');
+    var ex = +c.exigir || 0, ob = +c.observar || 0, de = +c.desligado || 0, total = ex + ob + de, semG = +c.exigir_sem_guarda || 0;
+    var cls, html;
+    if (ex) { cls = 'exigindo'; html = 'REDE · EXIGINDO <span class="mono">' + U.num(ex) + '/' + U.num(total) + '</span>'; }
+    else if (ob) { cls = 'observando'; html = 'REDE · OBSERVANDO'; }
+    else { cls = 'desligada'; html = 'REDE · DESLIGADA'; }
+    chip.className = 'chip-rede ' + cls;
+    chip.innerHTML = html;
+    chip.title = 'Regra de rede da Lube: ' + ex + ' exigindo, ' + ob + ' observando, ' + de + ' desligados · ' +
+      U.qtd(c.redes, 'rede cadastrada', 'redes cadastradas') + ' · ' + U.qtd(c.liberacoes_ativas, 'liberado', 'liberados') + ' agora' +
+      (semG ? ' · ATENÇÃO: ' + U.qtd(semG, 'sistema exige', 'sistemas exigem') + ' a rede sem o guarda 1.3.0 em produção' : '') + ' · clique para abrir';
+    chip.hidden = false;
+    var f = fora24(c), q = $('[data-qtd="rede"]');
+    q.textContent = f.pessoas ? U.num(f.pessoas) : '';
+    q.title = f.pessoas ? U.qtd(f.pessoas, 'pessoa', 'pessoas') + (f.seriam ? ' seriam barradas' : ' barradas') + ' fora da rede em 24 h' : '';
+    est.chipRedeEm = Date.now();
+  }
+  function lerChipRede() {
+    est.chipRedeEm = Date.now();
+    return chamar('sentinela_rede_painel', { p_dias: 1 }).then(function (d) {
+      RD.ausente = false;
+      pintarChipRede((d || {}).contagens);
+    }, function (err) {
+      // sem a migração: sem chip; outra falha: o chip fica como estava (a faixa de cima avisa)
+      if (err.ausente) { RD.ausente = true; $('[data-chip-rede]').hidden = true; }
+    });
+  }
+  $('[data-chip-rede]').addEventListener('click', function () { irPara('rede'); });
+
+  /* ---------- pintura ---------- */
+  function pintarRede() {
+    var d = RD.dados || {};
+    $('[data-modulo="rede"]').classList.remove('rd-ausente');
+    $('[data-rd-estado]').hidden = true;
+    pintarRedeKpis(d);
+    pintarOnde();
+    pintarAbasRede(d);
+    pintarRedes(d);
+    pintarSugestoes(d);
+    pintarSistemasRede(d);
+    pintarLiberacoes(d);
+    montarFiltrosFora(d);
+    pintarFora(d);
+  }
+
+  function pintarRedeKpis(d) {
+    var c = d.contagens || {};
+    var ex = +c.exigir || 0, ob = +c.observar || 0, total = ex + ob + (+c.desligado || 0), semG = +c.exigir_sem_guarda || 0;
+    var lib = +c.liberacoes_ativas || 0, f = fora24(c);
+    var defs = [
+      [semG ? 'alert' : ex >= total && total ? 'ok' : ex ? 'brand' : ob ? 'warn' : 'vazio', IC.rede, 'Sistemas exigindo a rede', U.num(ex),
+        'de ' + U.num(total) + (ob ? ' · ' + U.num(ob) + ' observando' : '') + (c.isentos ? ' · ' + U.num(c.isentos) + ' fora da regra' : '') +
+          (semG ? ' · ' + U.num(semG) + ' sem o guarda 1.3.0' : ''),
+        'Sistemas que barram quem está fora da rede da Lube. SAC e Supervisor ficam fora da regra (usados na rua).' +
+          (semG ? ' Em vermelho: exigindo, mas o guarda da produção não confere a rede (Instant Rollback?).' : '')],
+      [lib ? 'new' : 'vazio', IC.chave, 'Liberados agora', U.num(lib), 'fora da rede, com prazo', 'Pessoas liberadas pelo TI para entrar de fora da rede'],
+      f.seriam
+        ? [f.pessoas ? 'warn' : 'vazio', IC.observados, 'Seriam barrados em 24 h', U.num(f.pessoas),
+           U.qtd(f.pessoas, 'pessoa', 'pessoas') + ' · ' + U.qtd(f.tentativas, 'tentativa', 'tentativas'),
+           'Nenhum sistema exige a rede ainda: pessoas e tentativas de fora que seriam barradas nas últimas 24 h']
+        : [f.pessoas ? 'alert' : 'vazio', IC.bloqueados, 'Barrados em 24 h', U.num(f.pessoas),
+           U.qtd(f.pessoas, 'pessoa', 'pessoas') + ' · ' + U.qtd(f.tentativas, 'tentativa', 'tentativas'), 'Pessoas e tentativas barradas fora da rede da Lube nas últimas 24 h']
+    ];
+    pintarSeMudou($('[data-rd-kpis]'), defs.map(function (k, i) {
+      return '<div class="kpi ' + k[0] + '" title="' + esc(k[5]) + '" style="animation-delay:' + (i * 35) + 'ms">' +
+        '<div class="kpi-topo"><span class="kpi-ic">' + svg(k[1]) + '</span><span class="lbl">' + esc(k[2]) + '</span></div>' +
+        '<div class="val">' + k[3] + '</div><div class="sub">' + U.numeros(k[4]) + '</div></div>';
+    }).join(''));
+  }
+
+  function pintarOnde() {
+    var el = $('[data-rd-onde]'), add = $('[data-rd-onde-add]');
+    var r = est.minhaRede || (DEMO && SNT.demo && SNT.demo.minhaRede ? SNT.demo.minhaRede() : null);
+    add.hidden = true;
+    if (!est.minhaRedeEm && !r) { el.className = 'rede-onde'; el.innerHTML = ''; return; }
+    var ic = '<span class="ic">' + svg(IC.rede) + '</span>';
+    if (!r || !r.ip) {
+      el.className = 'rede-onde';
+      el.innerHTML = ic + '<span class="txt">Não foi possível conferir de onde você está agora' +
+        (r && r.indisponivel ? ' (a central está sem o banco)' : ' (a central não respondeu)') + '.</span>';
+      return;
+    }
+    var redeDe = ((RD.dados && RD.dados.redes) || []).filter(function (x) { return U.contem(x.rede, r.ip); })[0];
+    // com o painel lido, quem decide é a lista de redes dele (a resposta da central pode ser de antes de
+    // uma rede nova ou removida); sem ele, a resposta da central
+    if (RD.dados ? !!redeDe : r.na_rede) {
+      el.className = 'rede-onde dentro';
+      el.innerHTML = ic + '<span class="txt">Você está em <span class="mono">' + esc(r.ip) + '</span> — <b>rede da Lube' +
+        (redeDe ? ': ' + esc(redeDe.descricao) : '') + '</b></span>';
+      return;
+    }
+    el.className = 'rede-onde fora';
+    el.innerHTML = ic + '<span class="txt">Você está em <span class="mono">' + esc(r.ip) + '</span> — <b>fora da rede da Lube</b>' +
+      (r.liberado && window.LubeRede ? ' · ' + esc(window.LubeRede.textoLiberado(r.liberado.ate)) : '') + '</span>';
+    add.hidden = U.reservado(r.ip);
+  }
+
+  function pintarAbasRede(d) {
+    $$('[data-rd-aba]').forEach(function (b) {
+      var on = b.getAttribute('data-rd-aba') === RD.aba;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    $$('[data-rd-painel]').forEach(function (p) { p.hidden = p.getAttribute('data-rd-painel') !== RD.aba; });
+    var c = (d && d.contagens) || {}, f = fora24(c);
+    $('[data-rd-qtd="liberados"]').textContent = +c.liberacoes_ativas ? U.num(c.liberacoes_ativas) : '';
+    var qf = $('[data-rd-qtd="fora"]');
+    qf.textContent = f.pessoas ? U.num(f.pessoas) : '';
+    qf.className = 'qtd mono' + (f.pessoas && !f.seriam ? ' alerta' : '');
+    qf.title = f.pessoas ? U.qtd(f.pessoas, 'pessoa', 'pessoas') + (f.seriam ? ' seriam barradas' : ' barradas') + ' em 24 h' : '';
+  }
+
+  function pintarRedes(d) {
+    var redes = d.redes || [], ja = rotuloDias();
+    $('[data-rd-uso-th]').textContent = 'Uso em ' + ja;
+    subtitulo('[data-rd-redes-sub]', redes.length
+      ? U.qtd(redes.length, 'rede cadastrada', 'redes cadastradas') + ' · quem acessa delas está na empresa'
+      : 'nenhuma rede cadastrada');
+    pintarSeMudou($('[data-rd-redes]'), redes.length ? redes.map(function (r) {
+      var o = ORIGEM_REDE[r.origem] || ['cinza', r.origem || '—'];
+      var uso = +r.acessos || +r.pessoas
+        ? U.numeros(U.qtd(r.acessos, 'acesso', 'acessos') + ' · ' + U.qtd(r.pessoas, 'pessoa', 'pessoas')) +
+          (r.ultimo ? '<br><span class="fraco">último ' + esc(U.ha(r.ultimo)) + '</span>' : '')
+        : '<span class="fraco">nenhum acesso</span>';
+      return '<tr>' +
+        '<td data-rot="Rede"><span class="alvo">' + textoRede(r.rede) + '</span><br><span class="fraco">#' + esc(r.id) + '</span></td>' +
+        '<td data-rot="Descrição" class="larga-m">' + esc(r.descricao || '') + '</td>' +
+        '<td data-rot="Origem"><span class="chip ' + o[0] + '">' + esc(o[1]) + '</span></td>' +
+        '<td data-rot="Cadastrada" class="quando">' + esc(U.dataHora(r.criado_em)) + '<br><span class="fraco">' + esc(r.criado_por || '') + '</span></td>' +
+        '<td data-rot="Uso em ' + esc(ja) + '" class="r numeros">' + uso + '</td>' +
+        '<td class="r col-acao"><button class="acao perigo" type="button" data-rd-remover="' + esc(r.id) + '">Remover</button></td></tr>';
+    }).join('') : '<tr><td colspan="6" class="vazio">Nenhuma rede da Lube cadastrada. Sem rede, nenhum sistema pode exigir a rede (o banco recusa).</td></tr>');
+  }
+
+  function pintarSugestoes(d) {
+    var l = (d.sugestoes || []).filter(function (s) { return RD.naoSao.indexOf(s.ip) < 0; });
+    $('[data-rd-sug-panel]').hidden = !l.length;
+    pintarSeMudou($('[data-rd-sug-lista]'), l.map(function (s) {
+      return '<div class="sug"><div class="sug-topo"><span class="flag">' + U.bandeira(s.pais) + '</span><div>' +
+          '<div class="sug-ip">' + esc(s.ip) + '</div><div class="sug-local">' + esc(U.local(s)) + '</div></div></div>' +
+        '<div class="sug-n">' + U.numeros(U.qtd(s.pessoas, 'pessoa', 'pessoas') + ' · ' + U.qtd(s.dias, 'dia', 'dias') + ' · ' +
+          U.qtd(s.acessos, 'acesso', 'acessos') + ' · último ' + U.ha(s.ultimo)) + '</div>' +
+        '<div class="acoes"><button class="acao info" type="button" data-rd-sug="' + esc(s.ip) + '">Isto é uma rede da Lube?</button></div></div>';
+    }).join(''));
+  }
+
+  function seletorModo(s, temRede) {
+    return '<div class="modos-r" role="group" aria-label="' + esc('Modo de rede de ' + (s.nome || s.projeto)) + '">' +
+      ['desligado', 'observar', 'exigir'].map(function (m) {
+        var on = s.modo === m;
+        var travado = m === 'exigir' && !on && (!temRede || !s.guarda_rede);
+        var dica = !travado ? DICA_MODO[m] : !temRede ? 'Cadastre uma rede da Lube antes de exigir' : 'Precisa do guarda 1.3.0 visto na produção deste sistema';
+        return '<button type="button" class="modo-r ' + m + (on ? ' on' : '') + '" data-rd-modo="' + m + '" data-projeto="' + esc(s.projeto) + '"' +
+          ' aria-pressed="' + on + '"' + (travado ? ' aria-disabled="true"' : '') + ' title="' + esc(dica) + '">' + NOME_MODO[m] + '</button>';
+      }).join('') + '</div>';
+  }
+
+  function pintarSistemasRede(d) {
+    var sis = d.sistemas || [], temRede = (d.redes || []).length > 0, ja = rotuloDias(), c = d.contagens || {};
+    $('[data-rd-fora-th]').textContent = 'Fora da rede em ' + ja;
+    subtitulo('[data-rd-sis-sub]', U.num(c.exigir) + ' exigindo · ' + U.num(c.observar) + ' observando · ' +
+      U.qtd(c.desligado, 'desligado', 'desligados') + (c.isentos ? ' · ' + U.num(c.isentos) + ' fora da regra' : ''));
+    pintarSeMudou($('[data-rd-sistemas]'), sis.length ? sis.map(function (s) {
+      var v = versaoCurta(s.guarda_versao);
+      // guarda_rede (do banco) = 1.3.0 ou mais novo E o último sinal veio da produção
+      var guarda = s.isento ? '<span class="fraco">' + esc(v || '—') + '</span>'
+        : !s.guarda_versao ? '<span class="chip ambar" title="Este sistema ainda não tem o guarda da Sentinela">sem guarda</span>'
+        : s.guarda_rede ? '<span class="mono">' + esc(v) + '</span>'
+        : guardaNovo(v) && s.ultimo_ambiente !== 'production'
+          ? '<span class="mono">' + esc(v) + '</span><br><span class="chip ambar" title="O último sinal veio de um deploy de prévia. Abra o sistema no endereço de produção para o banco ver o guarda que responde lá.">sinal de prévia</span>'
+        : '<span class="mono">' + esc(v || '?') + '</span><br><span class="chip ambar" title="Exigir a rede só com o guarda 1.3.0 ou mais novo">precisa do 1.3.0</span>';
+      // exigindo com um guarda que não confere a rede (Instant Rollback para o 1.2.0, por exemplo):
+      // a sessão pega na empresa e levada para casa volta a valer neste sistema
+      if (!s.isento && s.modo === 'exigir' && !s.guarda_rede) {
+        guarda += '<br><span class="chip vermelho" title="' + esc('Em exigir, mas o guarda que responde na produção não confere a rede (' + (v || 'sem versão') +
+          '). Publique o guarda 1.3.0 de novo ou passe o sistema para observar.') + '">exigindo sem conferir</span>';
+      }
+      var modo = s.isento ? '<span class="isento-txt">fora da regra (usado na rua)</span>' : seletorModo(s, temRede);
+      var f = s.fora || {};
+      var fora = (+f.pessoas || +f.barrados || +f.observados || +f.liberados || +f.sem_regra)
+        ? U.numeros(U.qtd(f.pessoas, 'pessoa', 'pessoas') + ' · ' + U.qtd(f.barrados, 'barrada', 'barradas') + ' · ' + U.num(f.observados) + ' seriam')
+        : '<span class="fraco">—</span>';
+      var dicaFora = U.num(f.liberados) + ' liberados pelo TI · ' + U.num(f.sem_regra) + ' com a regra desligada';
+      var desde = s.modo_em ? esc(U.dataHora(s.modo_em)) + (s.modo_por ? '<br><span class="fraco">' + esc(s.modo_por) + '</span>' : '') : '<span class="fraco">—</span>';
+      return '<tr class="' + (s.isento ? 'isento' : '') + '">' +
+        '<td data-rot="Sistema"><b>' + esc(s.nome || s.projeto) + '</b><br><span class="fraco">' + esc(s.projeto) + '</span></td>' +
+        '<td data-rot="Guarda">' + guarda + '</td>' +
+        '<td data-rot="Modo" class="larga-m">' + modo + '</td>' +
+        '<td data-rot="' + esc('Fora da rede em ' + ja) + '" class="r numeros" title="' + esc(dicaFora) + '">' + fora + '</td>' +
+        '<td data-rot="Desde" class="quando">' + desde + '</td></tr>';
+    }).join('') : '<tr><td colspan="5" class="vazio">Nenhum sistema cadastrado.</td></tr>');
+  }
+
+  function cidadeDaLiberacao(id) {
+    var x = ((RD.dados && RD.dados.fora) || []).filter(function (f) { return f.liberacao && +f.liberacao.id === +id; })[0];
+    return x ? U.local(x) : '';
+  }
+  function linhaLiberacao(x, velha) {
+    var falta = new Date(x.fim).getTime() - Date.now();
+    var vence = x.estado === 'ativa' && falta < 3 * DIA_MS ? '<span class="vence">vence ' + esc(emQuanto(falta)) + '</span>' : '';
+    var ag = x.estado === 'agendada' ? '<br><span class="chip azul">agendada</span>' : '';
+    var cidade = x.ultima_entrada ? cidadeDaLiberacao(x.id) : '';
+    var entradas = '<span class="c-num">' + U.num(x.entradas) + '</span>' +
+      (x.ultima_entrada ? '<br><span class="fraco">' + esc(U.ha(x.ultima_entrada) + (cidade ? ', ' + cidade : '')) + '</span>' : '');
+    var sit = '';
+    if (velha) {
+      var subst = /^substitu/i.test(x.encerrado_por || '');
+      sit = x.estado === 'encerrada'
+        ? '<span class="chip cinza" title="' + esc('Encerrada em ' + U.dataHora(x.encerrado_em) + (x.encerrado_por ? ' por ' + x.encerrado_por : '')) + '">' + (subst ? 'substituída' : 'encerrada') + '</span>'
+        : '<span class="chip cinza tracejado">vencida</span>';
+    }
+    return '<tr' + (velha ? ' class="inativo"' : '') + '>' +
+      '<td data-rot="Pessoa" class="pessoa">' + pessoaHtml(x) + '</td>' +
+      '<td data-rot="Desde" class="quando">' + esc(U.dataHora(x.inicio)) + ag + '</td>' +
+      '<td data-rot="Até" class="quando">' + esc(U.dataHora(x.fim)) + vence + '</td>' +
+      '<td data-rot="Motivo" class="motivo larga-m">' + esc(x.motivo || '') + '</td>' +
+      '<td data-rot="Liberado por"><span class="fraco">' + esc(x.criado_por || '') + '</span></td>' +
+      '<td data-rot="Entradas de fora" class="r">' + entradas + '</td>' +
+      (velha ? '<td data-rot="Situação">' + sit + '</td>'
+             : '<td class="r col-acao"><button class="acao perigo" type="button" data-rd-encerrar="' + esc(x.id) + '">Encerrar</button></td>') + '</tr>';
+  }
+  function pintarLiberacoes(d) {
+    var l = d.liberacoes || [];
+    var abertas = l.filter(function (x) { return x.estado === 'ativa' || x.estado === 'agendada'; });
+    var velhas = l.filter(function (x) { return x.estado === 'vencida' || x.estado === 'encerrada'; });
+    var ativas = abertas.filter(function (x) { return x.estado === 'ativa'; }).length;
+    subtitulo('[data-rd-lib-sub]', U.qtd(ativas, 'ativa', 'ativas') + (abertas.length > ativas ? ' · ' + U.qtd(abertas.length - ativas, 'agendada', 'agendadas') : '') +
+      ' · máximo de ' + U.num(d.max_dias || 30) + ' dias · cada entrada de fora fica registrada');
+    pintarSeMudou($('[data-rd-lib-ativas]'), abertas.length ? abertas.map(function (x) { return linhaLiberacao(x, false); }).join('')
+      : '<tr><td colspan="7" class="vazio">Ninguém liberado fora da rede agora.</td></tr>');
+    subtitulo('[data-rd-lib-velhas-sub]', velhas.length ? U.qtd(velhas.length, 'liberação', 'liberações') : 'nenhuma nos últimos 30 dias');
+    pintarSeMudou($('[data-rd-lib-velhas]'), velhas.length ? velhas.map(function (x) { return linhaLiberacao(x, true); }).join('')
+      : '<tr><td colspan="7" class="vazio">Nenhuma liberação encerrada ou vencida nos últimos 30 dias.</td></tr>');
+  }
+
+  function montarFiltrosFora(d) {
+    var sel = $('[data-rd-f-sis]');
+    opcoes(sel, '<option value="">Todos os sistemas</option>' + (d.sistemas || []).filter(function (s) { return !s.isento; }).map(function (s) {
+      return '<option value="' + esc(s.projeto) + '">' + esc(nomeSisRede(s.projeto)) + '</option>';
+    }).join(''));
+    sel.value = RD.f.sis;
+    if (sel.value !== RD.f.sis) { RD.f.sis = ''; sel.value = ''; }
+    $('[data-rd-f-dias]').value = String(RD.dias);
+    $('[data-rd-f-sit]').value = RD.f.sit;
+  }
+  function filtrarFora(l) {
+    var f = RD.f, q = norm(f.busca);
+    return l.filter(function (x) {
+      if (f.sit && x.situacao !== f.sit) return false;
+      if (f.sis && (x.projetos || []).indexOf(f.sis) < 0) return false;
+      if (q && norm([x.nome, x.email, x.ip, x.cidade, x.regiao, x.pais, U.nomePais(x.pais)].join(' ')).indexOf(q) < 0) return false;
+      return true;
+    });
+  }
+  function pilulaFora(x) {
+    var s = SIT[x.situacao] || SIT.regra_desligada, sub;
+    if (x.situacao === 'barrado') sub = U.qtd(x.barrados, 'barrada', 'barradas');
+    else if (x.situacao === 'seria_barrado') sub = U.num(x.observados) + ' seriam barradas';
+    else if (x.situacao === 'liberado') sub = x.liberacao ? 'até ' + U.dia(x.liberacao.fim) : 'pelo TI';
+    else sub = 'seria pega se ligada';
+    return '<span class="pilula ' + s.cls + '"><b><span class="em">' + s.ic + '</span>' + s.nome + '</b><small>' + esc(sub) + '</small></span>';
+  }
+  function pintarFora(d) {
+    var l = d.fora || [], lista = filtrarFora(l), c = d.contagens || {};
+    var previa = !+c.exigir && !+c.observar;
+    $('[data-rd-fora-titulo]').textContent = previa ? 'Prévia: quem seria pego se a regra estivesse ligada' : 'Tentativas de fora';
+    var sub = U.qtd(l.length, 'registro', 'registros') + ' por pessoa e IP em ' + rotuloDias();
+    if (lista.length !== l.length) sub = U.num(lista.length) + ' de ' + sub;
+    if (l.length >= 300) sub += ' · os 300 mais recentes';
+    subtitulo('[data-rd-fora-sub]', sub);
+    var redes = d.redes || [], pessoas = {};
+    (d.pessoas || []).forEach(function (p) { pessoas[p.id] = true; });
+    pintarSeMudou($('[data-rd-fora]'), lista.length ? lista.map(function (x) {
+      var br = (x.pais || '').toUpperCase() === 'BR';
+      var nomes = (x.projetos || []).map(nomeSisRede);
+      var sis = nomes.slice(0, 2).map(function (n) { return '<span class="sch">' + esc(n) + '</span>'; }).join('') +
+        (nomes.length > 2 ? '<span class="sch mais" title="' + esc(nomes.join(' · ')) + '">+' + (nomes.length - 2) + '</span>' : '');
+      var naRede = redes.some(function (r) { return U.contem(r.rede, x.ip); });
+      var botoes = [];
+      if (x.user_id && pessoas[x.user_id]) {
+        botoes.push('<button class="acao bom" type="button" data-rd-liberar-pessoa="' + esc(x.user_id) + '">' + (x.liberacao ? 'Mudar liberação' : 'Liberar esta pessoa') + '</button>');
+      }
+      if (!naRede && x.ip) {
+        var bRede = '<button class="acao info" type="button" data-rd-ip-rede="' + esc(x.ip) + '">Isto é uma rede da Lube?</button>';
+        botoes.push(+x.pessoas_no_ip >= 2 ? bRede
+          : '<details class="mais-r"><summary class="acao ic" title="Mais ações" aria-label="Mais ações">⋯</summary><div class="menu-r">' + bRede + '</div></details>');
+      }
+      return '<tr>' +
+        '<td data-rot="Pessoa" class="pessoa">' + pessoaHtml(x) + '</td>' +
+        '<td data-rot="Local"><div class="c-local"><span class="flag">' + U.bandeira(x.pais) + '</span><div><b>' + esc(U.local(x)) + '</b><small>' +
+          esc(br ? 'Brasil' : U.nomePais(x.pais)) + '</small></div></div></td>' +
+        '<td data-rot="IP">' + (x.ip ? '<button class="link-ip" type="button" data-ip-abrir="' + esc(x.ip) + '">' + esc(x.ip) + '</button>' : '<span class="fraco">sem IP</span>') +
+          (+x.pessoas_no_ip >= 2 ? '<br><span class="fraco">' + esc(U.qtd(x.pessoas_no_ip, 'pessoa', 'pessoas')) + ' neste IP</span>' : '') +
+          (naRede ? '<br><span class="etq">rede da Lube</span>' : '') + '</td>' +
+        '<td data-rot="Sistemas"><div class="chips">' + (sis || '<span class="fraco">—</span>') + '</div></td>' +
+        '<td data-rot="Vezes" class="r"><span class="c-num">' + U.num(x.vezes) + '</span></td>' +
+        '<td data-rot="Último"><span class="c-ha" data-ha="' + esc(x.ultimo) + '" title="' + esc(U.dataHora(x.ultimo)) + '">' + esc(U.ha(x.ultimo)) + '</span></td>' +
+        '<td data-rot="Situação">' + pilulaFora(x) + '</td>' +
+        '<td class="r col-acao larga-m"><div class="acoes">' + botoes.join('') + '</div></td></tr>';
+    }).join('') : '<tr><td colspan="8" class="vazio">' + (l.length ? 'Ninguém com esses filtros.' : 'Ninguém de fora da rede neste período.') + '</td></tr>');
+  }
+
+  /* ---------- eventos do módulo ---------- */
+  $$('[data-rd-aba]').forEach(function (b) {
+    b.addEventListener('click', function () { RD.aba = b.getAttribute('data-rd-aba'); pintarAbasRede(RD.dados); });
+  });
+  $('[data-rd-f-dias]').addEventListener('change', function (e) {
+    RD.dias = Math.max(1, Math.min(90, +e.target.value || 14));
+    carregarRede('acao');
+  });
+  $('[data-rd-f-sit]').addEventListener('change', function (e) { RD.f.sit = e.target.value; if (RD.dados) pintarFora(RD.dados); });
+  $('[data-rd-f-sis]').addEventListener('change', function (e) { RD.f.sis = e.target.value; if (RD.dados) pintarFora(RD.dados); });
+  (function () {
+    var t;
+    $('[data-rd-f-busca]').addEventListener('input', function (e) {
+      clearTimeout(t);
+      t = setTimeout(function () { RD.f.busca = e.target.value.trim(); if (RD.dados) pintarFora(RD.dados); }, 160);
+    });
+  })();
+  $('[data-rd-nova]').addEventListener('click', function () { novaRede({}); });
+  $('[data-rd-onde-add]').addEventListener('click', function () {
+    var r = est.minhaRede || (DEMO && SNT.demo && SNT.demo.minhaRede ? SNT.demo.minhaRede() : null);
+    // IPv6: cada computador do escritório sai com um endereço próprio no mesmo prefixo → o /64
+    novaRede({ rede: r && r.ip ? (U.prefixo64(r.ip) || r.ip) : '' });
+  });
+  $('[data-rd-liberar]').addEventListener('click', function () { liberarPessoa(null); });
+  $('[data-modulo="rede"]').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.hasAttribute('data-rd-remover')) removerRede(+b.getAttribute('data-rd-remover'));
+    else if (b.hasAttribute('data-rd-sug')) confirmarRede(b.getAttribute('data-rd-sug'));
+    else if (b.hasAttribute('data-rd-ip-rede')) { fecharMais(); confirmarRede(b.getAttribute('data-rd-ip-rede')); }
+    else if (b.hasAttribute('data-rd-modo')) mudarModo(b.getAttribute('data-projeto'), b.getAttribute('data-rd-modo'));
+    else if (b.hasAttribute('data-rd-todos')) mudarModo('*', b.getAttribute('data-rd-todos'));
+    else if (b.hasAttribute('data-rd-liberar-pessoa')) liberarPessoa(b.getAttribute('data-rd-liberar-pessoa'));
+    else if (b.hasAttribute('data-rd-encerrar')) encerrarLiberacao(+b.getAttribute('data-rd-encerrar'));
+    else if (b.hasAttribute('data-ip-abrir')) abrirGaveta(b.getAttribute('data-ip-abrir'));
+  });
+  // o menu "mais" fecha ao clicar fora dele
+  function fecharMais(menos) { $$('details.mais-r[open]').forEach(function (x) { if (x !== menos) x.open = false; }); }
+  document.addEventListener('click', function (e) { fecharMais(e.target.closest ? e.target.closest('details.mais-r') : null); });
+
+  /* ---------- rede nova ---------- */
+  // conferência leve, com os mesmos limites do banco (§1): o banco confere de novo
+  function avaliarRede(v) {
+    v = String(v || '').trim();
+    if (!v) return {};
+    var info = U.ipOuCidr(U.semMapeado(v)) ? U.infoRede(v) : null;
+    if (!info) return { erro: 'Não é um IP nem uma faixa válida. Exemplos: 203.0.113.7 ou 203.0.113.0/24.', cls: 'vermelho' };
+    if (U.reservado(v)) return { erro: 'É um IP interno da rede. Cadastre o IP público, que aparece em /.sentinela/saude do portal aberto de lá.', cls: 'vermelho' };
+    if ((info.familia === 4 && info.bits < 24) || (info.familia === 6 && info.bits < 48)) {
+      return { erro: 'Rede ampla demais: incluiria outros clientes da operadora (mínimo /24 em IPv4 e /48 em IPv6).', cls: 'vermelho' };
+    }
+    if (info.hostLigado) return { erro: 'A faixa tem bits de host ligados' + (info.certa ? ': use ' + info.certa : '') + '.', cls: 'vermelho' };
+    var cobre = ((RD.dados && RD.dados.redes) || []).filter(function (r) { return U.contem(r.rede, v) || U.contem(v, r.rede); })[0];
+    if (cobre) return { erro: 'Já coberta pela rede #' + cobre.id + ' (' + cobre.rede + ').', cls: 'vermelho' };
+    if ((info.familia === 4 && info.bits < 32) || (info.familia === 6 && info.bits < 64)) {
+      return { aviso: 'Mais larga que um IP só: inclui outros clientes da operadora, a não ser que a faixa inteira seja da Lube. Confirme com a operadora.', cls: 'ambar' };
+    }
+    return { aviso: info.familia === 4 ? 'Um endereço só (/32).' : 'Faixa IPv6 /' + info.bits + '.', cls: '' };
+  }
+  function novaRede(pre) {
+    abrirModal({
+      titulo: 'Adicionar rede da Lube',
+      html: '<label class="campo"><span>IP ou faixa</span><input type="text" name="rede" value="' + esc(pre.rede || '') + '" placeholder="203.0.113.7 ou 203.0.113.0/24" spellcheck="false" autocomplete="off"></label>' +
+        '<div class="dica-rede" data-rd-dica></div>' +
+        '<label class="campo"><span>Descrição</span><input type="text" name="descricao" maxlength="120" value="' + esc(pre.descricao || '') + '" placeholder="ex.: escritório Cariacica, link reserva, galpão"></label>' +
+        '<p class="texto">Quem acessa deste endereço é tratado como <b>dentro da empresa</b> em todos os sistemas (o login continua obrigatório). ' +
+        'Use só para internet da Lube: escritório, galpão, link reserva, filial. Para uma pessoa de fora, use <b>Liberar pessoa</b>.</p>' +
+        '<p class="rodape-r">O IP público de cada lugar aparece em <span class="mono">/.sentinela/saude</span> do portal, aberto de lá.</p>',
+      rotulo: 'Adicionar rede',
+      semFoco: !!pre.rede,
+      aoSalvar: function () {
+        var rede = campoValor('rede'), desc = campoValor('descricao'), p = avaliarRede(rede);
+        if (!rede) throw new Error('Informe o IP ou a faixa.');
+        if (p.erro) throw new Error(p.erro);
+        if (desc.length < 3 || desc.length > 120) throw new Error('Escreva uma descrição (3 a 120 letras).');
+        return acaoRede('rede_nova', { rede: rede, descricao: desc, origem: pre.origem || 'manual' }).then(function (r) {
+          toast('Rede ' + ((r && r.rede) || rede) + ' cadastrada. Vale nos sistemas em até 30 s.');
+          renovarMinhaRede();
+          depoisDeAcao();
+        });
+      }
+    });
+    var inp = mForm.elements.rede;
+    function dica() {
+      var p = avaliarRede(inp.value), el = $('[data-rd-dica]', mForm);
+      el.className = 'dica-rede' + (p.cls ? ' ' + p.cls : '');
+      el.textContent = p.erro || p.aviso || '';
+    }
+    inp.addEventListener('input', dica);
+    dica();
+    if (pre.rede) setTimeout(function () { var x = mForm.elements.descricao; if (x) x.focus(); }, 70);
+  }
+
+  function removerRede(id) {
+    var d = RD.dados || {}, redes = d.redes || [];
+    var r = redes.filter(function (x) { return +x.id === id; })[0];
+    if (!r) return;
+    var exigindo = +((d.contagens || {}).exigir) > 0, ultima = redes.length === 1;
+    var o = ORIGEM_REDE[r.origem] || ['cinza', r.origem || ''];
+    var eu = est.minhaRede || (DEMO && SNT.demo && SNT.demo.minhaRede ? SNT.demo.minhaRede() : null);
+    var daqui = !!(eu && eu.ip && U.contem(r.rede, eu.ip));
+    abrirModal({
+      titulo: 'Remover ' + r.rede + ' das redes da Lube?',
+      html: '<p class="texto"><b>' + esc(r.descricao || '') + '</b><br>' + esc(o[1]) + ' · cadastrada em ' + esc(U.dataHora(r.criado_em)) +
+          (r.criado_por ? ' por ' + esc(r.criado_por) : '') + '</p>' +
+        (daqui ? '<div class="forte"><b>É a rede de onde você está agora</b> (' + esc(eu.ip) + '). Depois de remover, você fica fora da rede da Lube' +
+          (exigindo ? ': é barrado nos sistemas que exigem a rede e, com o portal exigindo, sai da sessão ao recarregar. ' +
+            'De fora, só dá para cadastrar a rede de volta com liberação do TI ou pelo SQL de emergência' : '') + '.</div>' : '') +
+        (ultima && exigindo
+          ? '<div class="forte"><b>É a última rede</b> e há sistemas exigindo a rede: o banco recusa. Passe os sistemas para observar antes.</div>'
+          : '<div class="forte ambar">Quem acessa deste endereço passa a ser tratado como <b>fora da rede</b> em até 1 minuto' +
+            (exigindo ? ' e é barrado nos sistemas que exigem a rede' : '') + '.</div>') +
+        (+r.acessos ? '<p class="texto">Uso em ' + esc(rotuloDias()) + ': ' + U.numeros(U.qtd(r.acessos, 'acesso', 'acessos') + ' de ' + U.qtd(r.pessoas, 'pessoa', 'pessoas')) + '.</p>' : ''),
+      rotulo: 'Remover', perigo: true, semFoco: true,
+      aoSalvar: function () {
+        return acaoRede('rede_remover', { id: +r.id }).then(function () {
+          toast(r.rede + ' saiu das redes da Lube. Vale nos sistemas em até 30 s.');
+          renovarMinhaRede();
+          depoisDeAcao();
+        });
+      }
+    });
+  }
+
+  /* ---------- "isto é uma rede da Lube?" (sugestão ou tentativa de fora) ---------- */
+  function confirmarRede(ip) {
+    var d = RD.dados || {};
+    var s = (d.sugestoes || []).filter(function (x) { return x.ip === ip; })[0] || null;
+    var vistos = (d.fora || []).filter(function (x) { return x.ip === ip; });
+    var g = s || vistos[0] || { ip: ip };
+    var comLogin = vistos.filter(function (x) { return x.email; });
+    var pessoas = s ? +s.pessoas : Math.max(+(vistos[0] && vistos[0].pessoas_no_ip) || 0, comLogin.length);
+    var acessos = s ? +s.acessos : vistos.reduce(function (a, x) { return a + (+x.vezes || 0); }, 0);
+    var tempos = vistos.map(function (x) { return [new Date(x.primeiro).getTime(), new Date(x.ultimo).getTime()]; });
+    var primeiro = s ? s.primeiro : (tempos.length ? new Date(Math.min.apply(null, tempos.map(function (t) { return t[0]; }))) : null);
+    var ultimo = s ? s.ultimo : (tempos.length ? new Date(Math.max.apply(null, tempos.map(function (t) { return t[1]; }))) : null);
+    var fichas = [['Pessoas', U.num(pessoas)], ['Acessos', U.num(acessos)]];
+    if (s) fichas.push(['Dias', U.num(s.dias)]);
+    fichas.push(['Primeiro', U.dataHora(primeiro)], ['Último', U.ha(ultimo)]);
+    var local = g.cidade || g.pais ? U.local(g) : '';
+    abrirModal({
+      titulo: 'Isto é uma rede da Lube?',
+      html: '<div class="sug-topo"><span class="flag">' + U.bandeira(g.pais) + '</span><div><div class="sug-ip">' + esc(ip) + '</div>' +
+          '<div class="sug-local">' + esc(local || 'local desconhecido') + '</div></div></div>' +
+        '<div class="fichas">' + fichas.map(function (f) {
+          return '<div class="ficha"><span>' + esc(f[0]) + '</span><b title="' + esc(f[1]) + '">' + esc(f[1]) + '</b></div>';
+        }).join('') + '</div>' +
+        (comLogin.length ? '<div class="lista-mini">' + comLogin.slice(0, 8).map(function (x) {
+          return '<div><span class="h">' + esc(U.curta(x.ultimo)) + '</span><span class="t">' + esc(x.nome ? x.nome + ' · ' + x.email : x.email) + '</span>' +
+            '<span class="chip cinza">' + esc(U.num(x.vezes)) + '×</span></div>';
+        }).join('') + '</div>' : '') +
+        '<div class="forte ambar">Só confirme se este endereço for de um lugar da Lube (escritório, galpão, link reserva, filial). ' +
+          'Casa, 4G, hotel e cliente <b>não</b> são rede da Lube: para essas pessoas, use <b>Liberar pessoa</b>.</div>' +
+        '<label class="campo"><span>Rede</span><input type="text" name="rede" value="' + esc(ip) + '" spellcheck="false" autocomplete="off"></label>' +
+        '<div class="dica-rede" data-rd-dica></div>' +
+        '<label class="campo"><span>Descrição</span><input type="text" name="descricao" maxlength="120" value="' + esc(local ? local + ' · confirmado pelo TI' : '') +
+          '" placeholder="ex.: link reserva do escritório"></label>' +
+        (s ? '<div><button class="btn link small" type="button" data-rd-nao-sao>Não é da Lube (esconder neste navegador)</button></div>' : ''),
+      rotulo: 'Sim, é da Lube',
+      semFoco: true,
+      aoSalvar: function () {
+        var rede = campoValor('rede'), desc = campoValor('descricao'), p = avaliarRede(rede);
+        if (!rede) throw new Error('Informe o IP ou a faixa.');
+        if (p.erro) throw new Error(p.erro);
+        if (desc.length < 3 || desc.length > 120) throw new Error('Escreva uma descrição (3 a 120 letras).');
+        return acaoRede('rede_nova', { rede: rede, descricao: desc, origem: 'sugestao' }).then(function (r) {
+          toast('Rede ' + ((r && r.rede) || rede) + ' cadastrada. Vale nos sistemas em até 30 s.');
+          renovarMinhaRede();
+          depoisDeAcao();
+        });
+      }
+    });
+    var inp = mForm.elements.rede;
+    function dica() {
+      var p = avaliarRede(inp.value), el = $('[data-rd-dica]', mForm);
+      el.className = 'dica-rede' + (p.cls ? ' ' + p.cls : '');
+      el.textContent = p.erro || p.aviso || '';
+    }
+    inp.addEventListener('input', dica);
+    dica();
+    var nao = $('[data-rd-nao-sao]', mForm);
+    if (nao) nao.addEventListener('click', function () {
+      guardarNaoSao(ip);
+      fecharModal(true);
+      pintarSugestoes(RD.dados || {});
+      toast(ip + ' não aparece mais em “Parece rede da Lube” neste navegador.');
+    });
+  }
+
+  /* ---------- modo de rede de um sistema ou de todos ---------- */
+  function listaVistos(vistos) {
+    if (!vistos.length) return '<div class="vazio" style="padding:12px">Ninguém visto fora da rede em ' + esc(rotuloDias()) + '.</div>';
+    return '<div class="lista-mini">' + vistos.slice(0, 10).map(function (x) {
+      var s = SIT[x.situacao] || SIT.regra_desligada;
+      return '<div><span class="h"><span class="em-r" title="' + esc(s.nome) + '">' + s.ic + '</span></span><span class="t">' + esc((x.email ? (x.nome || x.email) : 'sem login') + ' · ' + U.local(x)) + '</span>' +
+        '<span class="chip ' + ({ bloqueado: 'vermelho', observado: 'ambar', analise: 'azul' }[s.cls] || 'cinza') + '">' + esc(U.num(x.vezes)) + '×</span></div>';
+    }).join('') + (vistos.length > 10 ? '<div><span class="t fraco">e mais ' + U.num(vistos.length - 10) + '</span></div>' : '') + '</div>';
+  }
+  function listaLiberados(libs) {
+    if (!libs.length) return '<div class="vazio" style="padding:12px">Nenhuma liberação ativa ou agendada.</div>';
+    return '<div class="lista-mini">' + libs.slice(0, 10).map(function (l) {
+      return '<div><span class="h">' + esc(U.curta(l.fim)) + '</span><span class="t">' + esc(l.nome ? l.nome + ' · ' + l.email : l.email) + '</span>' +
+        '<span class="chip ' + (l.estado === 'agendada' ? 'azul' : 'verde') + '">' + esc(l.estado) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function mudarModo(projeto, modo) {
+    var d = RD.dados || {}, todos = projeto === '*';
+    if (!NOME_MODO[modo]) return;
+    var sis = (d.sistemas || []).filter(function (s) { return !s.isento && (todos || s.projeto === projeto); });
+    // "Todos em exigir" fica com os sistemas que exigem login (como o banco): o portal, que é o login,
+    // passa a exigir à parte e por último (roteiro, passo 8c)
+    var pulados = [];
+    if (todos && modo === 'exigir') {
+      pulados = sis.filter(function (s) { return !s.exige_login; });
+      sis = sis.filter(function (s) { return s.exige_login; });
+    }
+    if (!sis.length) return;
+    var s1 = todos ? null : sis[0];
+    if (s1 && s1.modo === modo) return;
+    var temRede = (d.redes || []).length > 0;
+    // botão "Exigir" travado: diz o porquê sem abrir o modal (o banco recusaria)
+    if (s1 && modo === 'exigir' && (!temRede || !s1.guarda_rede)) {
+      toast(!temRede ? 'Cadastre uma rede da Lube antes de exigir a rede.'
+                     : (s1.nome || s1.projeto) + ' precisa do guarda 1.3.0, visto na produção, antes de exigir a rede.', true);
+      return;
+    }
+    var alvo = todos ? 'todos os sistemas (' + sis.length + ')' : (s1.nome || s1.projeto);
+    var html, rotulo, perigo = false;
+    if (modo === 'exigir') {
+      perigo = true;
+      var vistos = (d.fora || []).filter(function (x) {
+        return sis.some(function (s) { return (x.projetos || []).indexOf(s.projeto) > -1; });
+      });
+      var libs = (d.liberacoes || []).filter(function (l) { return l.estado === 'ativa' || l.estado === 'agendada'; });
+      var velhos = sis.filter(function (s) { return !s.guarda_rede; });
+      html = '<div class="forte">Quem abrir ' + esc(alvo) + ' de fora da rede da Lube passa a ver <b>“Este sistema só abre na rede da Lube”</b>, ' +
+          'mesmo com login. Só entram os liberados pelo TI e as máquinas autenticadas pelo próprio sistema.</div>' +
+        (sis.some(ehPortal) ? '<p class="texto">No <b>Painel Lube</b> a tela de login continua abrindo; depois do login, quem está fora sai da sessão.</p>' +
+          '<div class="forte"><b>O LUBE OFFICE ainda não confere a rede</b> (parte D do desenho): um notebook que entrou na empresa e levou a sessão ' +
+          'para casa abre o Office direto pelo favorito. Só exija a rede no portal com o Office conferindo.</div>' : '') +
+        (pulados.length ? '<p class="texto">Fica como está: <b>' + esc(pulados.map(function (s) { return ehPortal(s) ? 'Painel Lube' : s.nome || s.projeto; }).join(', ')) +
+          '</b>. O portal passa a exigir à parte, por último, no botão dele.</p>' : '') +
+        (!temRede ? '<div class="forte">Nenhuma rede da Lube cadastrada: o banco vai recusar.</div>' : '') +
+        (velhos.length ? '<div class="forte">Ainda sem o guarda 1.3.0 visto na produção: <b>' + esc(velhos.map(function (s) { return s.nome || s.projeto; }).join(', ')) +
+          '</b>. O banco recusa e nada muda.</div>' : '') +
+        '<div class="difs-rot">Vistos fora da rede em ' + esc(rotuloDias()) + ' · ' + esc(U.num(vistos.length)) + '</div>' + listaVistos(vistos) +
+        '<div class="difs-rot">Liberados pelo TI · ' + esc(U.num(libs.length)) + '</div>' + listaLiberados(libs);
+      rotulo = todos ? 'Exigir a rede em todos' : 'Exigir a rede em ' + (s1.nome || s1.projeto);
+    } else if (modo === 'observar') {
+      html = '<div class="forte ambar">Ninguém é barrado pela rede: quem acessa ' + esc(alvo) + ' de fora fica registrado como <b>“seria barrado”</b> em Tentativas de fora.</div>' +
+        (sis.some(function (s) { return s.modo === 'exigir'; }) ? '<p class="texto">Quem estava sendo barrado volta a entrar em até 1 minuto.</p>' : '');
+      rotulo = 'Observar';
+    } else {
+      html = '<div class="forte ambar">A regra de rede deixa de valer em ' + esc(alvo) + '. O login do Painel Lube e as outras regras da Sentinela continuam.</div>';
+      rotulo = 'Desligar';
+    }
+    abrirModal({
+      titulo: (modo === 'exigir' ? 'Exigir a rede da Lube em ' : modo === 'observar' ? 'Observar a rede em ' : 'Desligar a regra de rede em ') + alvo + '?',
+      html: html, rotulo: rotulo, perigo: perigo, semFoco: true,
+      aoSalvar: function () {
+        return acaoRede('rede_modo', { projeto: projeto, modo: modo }).then(function (r) {
+          var n = ((r && r.alterados) || []).length;
+          toast(!n ? 'Nenhum sistema mudou.' : todos ? 'Modo “' + NOME_MODO[modo].toLowerCase() + '” em ' + U.qtd(n, 'sistema', 'sistemas') + '.'
+            : (s1.nome || s1.projeto) + ': ' + NOME_MODO[modo].toLowerCase() + '.');
+          depoisDeAcao();
+        }, function (e) {
+          // recusa do banco (sem rede, guarda antigo, isento): toast com o texto dele, nada muda
+          toast(texto(e), true);
+          depoisDeAcao();
+        });
+      }
+    });
+  }
+
+  /* ---------- liberar pessoa fora da rede ---------- */
+  function liberarPessoa(userId) {
+    var d = RD.dados || {}, pessoas = d.pessoas || [], max = +d.max_dias || 30;
+    var sel = userId ? (pessoas.filter(function (p) { return p.id === userId; })[0] || null) : null;
+    if (userId && !sel) { toast('Esta conta não está ativa no Painel Lube: não dá para liberar.', true); return; }
+    var selId = sel ? sel.id : null;
+    var atalhos = [['hoje', 'Hoje 23:59'], ['3', '3 dias'], ['7', '7 dias'], [String(max), max + ' dias']].filter(function (a, i, l) {
+      return a[0] === 'hoje' || (+a[0] <= max && l.map(function (x) { return x[0]; }).indexOf(a[0]) === i);
+    });
+    abrirModal({
+      titulo: 'Liberar pessoa fora da rede',
+      html: '<label class="campo"><span>Pessoa</span><input type="search" name="busca" placeholder="buscar por nome ou e-mail" autocomplete="off" spellcheck="false"></label>' +
+        '<div class="escolhas pessoas-r" data-rd-pessoas role="radiogroup" aria-label="Pessoa"></div>' +
+        '<div class="dica-rede ambar" data-rd-lib-atual></div>' +
+        '<div class="campo"><span>Começa</span><div class="escolhas linha">' +
+          '<label class="escolha"><input type="radio" name="comeca" value="agora" checked><span><b>Agora</b></span></label>' +
+          '<label class="escolha"><input type="radio" name="comeca" value="data"><span><b>Em outra data</b></span></label></div>' +
+          '<input type="datetime-local" name="inicio" hidden></div>' +
+        '<div class="campo"><span>Até (horário de Brasília)</span><input type="datetime-local" name="fim">' +
+          '<div class="atalhos">' + atalhos.map(function (a) { return '<button type="button" class="acao" data-at="' + a[0] + '">' + esc(a[1]) + '</button>'; }).join('') + '</div></div>' +
+        '<label class="campo"><span>Motivo</span><input type="text" name="motivo" maxlength="300" placeholder="ex.: viagem a cliente em outra cidade"></label>' +
+        '<p class="rodape-r">Máximo de ' + esc(U.num(max)) + ' dias. Cada entrada de fora fica registrada.</p>',
+      rotulo: 'Liberar',
+      semFoco: !!sel,
+      aoSalvar: function () {
+        if (!selId) throw new Error('Escolha a pessoa.');
+        var agora = Date.now(), ini = null;
+        if (mForm.elements.comeca.value === 'data') {
+          ini = deCampo(campoValor('inicio'));
+          if (!ini) throw new Error('Escolha quando a liberação começa.');
+          if (ini.getTime() < agora - 5 * MIN_MS || ini.getTime() > agora + 30 * DIA_MS) throw new Error('O início vai de agora até 30 dias à frente.');
+        }
+        var fim = deCampo(campoValor('fim'));
+        if (!fim) throw new Error('Escolha até quando vale a liberação.');
+        var base = ini ? ini.getTime() : agora;
+        if (fim.getTime() <= agora + 5 * MIN_MS) throw new Error('O fim precisa ser pelo menos 5 minutos à frente.');
+        if (fim.getTime() <= base) throw new Error('O fim precisa ser depois do início.');
+        if (fim.getTime() - base > max * DIA_MS) throw new Error('Prazo máximo de ' + max + ' dias.');
+        var motivo = campoValor('motivo');
+        if (motivo.length < 5 || motivo.length > 300) throw new Error('Escreva o motivo (5 a 300 letras).');
+        var dados = { user_id: selId, fim: fim.toISOString(), motivo: motivo };
+        if (ini) dados.inicio = ini.toISOString();
+        return acaoRede('liberar', dados).then(function (r) {
+          var p = pessoas.filter(function (x) { return x.id === selId; })[0] || {};
+          // 10 s de cache na central + 20 s da lista do guarda: avisar a pessoa antes disso não adianta
+          toast((p.nome || p.email || 'Pessoa') + ' liberada até ' + U.dataHora((r && r.fim) || dados.fim) + '.' +
+            (r && r.substituida ? ' A liberação #' + r.substituida + ' foi substituída.' : '') +
+            ' Vale nos sistemas em até 1 minuto: peça para a pessoa esperar e recarregar.');
+          depoisDeAcao();
+        });
+      }
+    });
+    var caixa = $('[data-rd-pessoas]', mForm), atual = $('[data-rd-lib-atual]', mForm);
+    function avisoAtual() {
+      var l = selId ? liberacaoAberta(selId) : null;
+      var depois = mForm.elements.comeca && mForm.elements.comeca.value === 'data';
+      atual.textContent = l ? (l.nome || l.email) + ' já tem liberação ' + (l.estado === 'agendada' ? 'agendada ' : '') + 'até ' +
+        U.dataHora(l.fim) + ': ela será substituída pela nova.' +
+        (l.estado === 'ativa' && depois ? ' Até a nova começar, a pessoa fica sem liberação.' : '') : '';
+    }
+    function pintarPessoas() {
+      var q = norm(mForm.elements.busca.value);
+      var l = pessoas.filter(function (p) { return !q || norm((p.nome || '') + ' ' + p.email).indexOf(q) > -1; });
+      // a escolhida fica sempre à vista, no topo
+      var escolhida = selId ? pessoas.filter(function (p) { return p.id === selId; })[0] : null;
+      var mostrar = l.filter(function (p) { return p !== escolhida; }).slice(0, escolhida ? 7 : 8);
+      if (escolhida) mostrar.unshift(escolhida);
+      caixa.innerHTML = mostrar.length ? mostrar.map(function (p) {
+        return '<label class="escolha"><input type="radio" name="pessoa" value="' + esc(p.id) + '"' + (p.id === selId ? ' checked' : '') + '>' +
+          '<span><b>' + esc(p.nome || p.email) + '</b><small>' + esc(p.email) + '</small></span></label>';
+      }).join('') + (l.length > 8 ? '<div class="vazio">e mais ' + U.num(l.length - 8) + ': refine a busca</div>' : '')
+        : '<div class="vazio">Ninguém com esse nome ou e-mail entre os perfis ativos.</div>';
+      avisoAtual();
+    }
+    caixa.addEventListener('change', function (e) { if (e.target.name === 'pessoa') { selId = e.target.value; avisoAtual(); } });
+    mForm.elements.busca.addEventListener('input', pintarPessoas);
+    pintarPessoas();
+    var inicio = mForm.elements.inicio;
+    $$('input[name="comeca"]', mForm).forEach(function (r) {
+      r.addEventListener('change', function () {
+        inicio.hidden = mForm.elements.comeca.value !== 'data';
+        if (!inicio.hidden && !inicio.value) inicio.value = paraCampo(new Date(Date.now() + DIA_MS));
+        avisoAtual();
+      });
+    });
+    $$('[data-at]', mForm).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ini = mForm.elements.comeca.value === 'data' && deCampo(inicio.value) ? deCampo(inicio.value) : new Date();
+        var a = b.getAttribute('data-at');
+        var fim = a === 'hoje' ? deCampo(paraCampo(ini).slice(0, 10) + 'T23:59') : new Date(ini.getTime() + (+a) * DIA_MS);
+        mForm.elements.fim.value = paraCampo(fim);
+      });
+    });
+    mForm.elements.fim.min = paraCampo(new Date());
+    if (!sel) setTimeout(function () { mForm.elements.busca.focus(); }, 70);
+    else setTimeout(function () { mForm.elements.motivo.focus(); }, 70);
+  }
+
+  function encerrarLiberacao(id) {
+    var l = ((RD.dados && RD.dados.liberacoes) || []).filter(function (x) { return +x.id === id; })[0];
+    if (!l) return;
+    var nome = l.nome || l.email;
+    abrirModal({
+      titulo: 'Encerrar a liberação de ' + nome + '?',
+      html: '<p class="texto">' + esc(l.email) + ' · até ' + esc(U.dataHora(l.fim)) + '<br>' + esc(l.motivo || '') + '</p>' +
+        '<div class="forte ambar">A partir de agora, ' + esc(nome) + ' volta a ser barrado fora da rede da Lube nos sistemas que exigem a rede (em até 1 minuto).</div>',
+      rotulo: 'Encerrar', perigo: true, semFoco: true,
+      aoSalvar: function () {
+        return acaoRede('encerrar', { id: +l.id }).then(function () {
+          toast('Liberação de ' + nome + ' encerrada.');
+          depoisDeAcao();
+        });
+      }
+    });
+  }
+
+  /* =========================================================
      dados: painel completo e eventos novos
      ========================================================= */
   function aplicarPainel(p) {
@@ -1737,6 +2633,8 @@
     if (est.parado || document.hidden) return;
     atualizarPainel().then(function () {
       if (est.modulo !== 'visao') carregarModulo(est.modulo, 'ciclo');
+      // chip da rede a cada 5 min (no módulo Rede da Lube ele vem junto com a leitura do módulo)
+      if (est.modulo !== 'rede' && Date.now() - est.chipRedeEm > 5 * MIN_MS) lerChipRede();
     }, function () {}).then(function () { agendarPainel(T_PAINEL); });
   }
   // IP novo ou bloqueio: o painel completo vem logo, contado da última TENTATIVA (não do último sucesso),
@@ -1799,6 +2697,7 @@
       marcarOk();
       aplicarPainel(p || {});
       irPara(moduloDoHash(), true);
+      if (est.modulo !== 'rede') lerChipRede();
       iniciarCiclos();
     }).catch(function (err) {
       if (err.restrito) { mostrarRestrito(); return; }
@@ -1815,6 +2714,35 @@
     });
   }
 
+  /* ---------- regra de rede da Lube na entrada (docs/SENTINELA-REDE.md, §7.2) ----------
+     Depois da sessão (ou do login próprio) e antes de montar o painel. Fora da rede e sem
+     liberação: sai da sessão e vai para a página de bloqueio; administrador com provas de que
+     o IP do escritório mudou vê o cartão de emergência. Central fora ou tempo: segue. */
+  function conferirRedeEntrada(token) {
+    if (!window.LubeRede) return Promise.resolve(true);
+    tela('carregando');
+    return window.LubeRede.verificar(token, 3000).then(function (r) {
+      est.minhaRede = r;
+      est.minhaRedeEm = Date.now();
+      if (!r || r.acao !== 'bloquear') {
+        if (r && r.acao === 'seguir' && r.liberado) setTimeout(function () { toast(window.LubeRede.textoLiberado(r.liberado.ate)); }, 900);
+        return true;
+      }
+      if (r.emergencia && r.emergencia.possivel) {
+        return new Promise(function (ok) {
+          window.LubeRede.cartaoEmergencia({
+            pessoas: r.emergencia.pessoas, ip: r.ip, token: token,
+            aoEntrar: function () { est.minhaRedeEm = 0; ok(true); },
+            aoSair: function () { pararTudo(); window.LubeRede.sair(DEMO ? null : sb, 'sentinela'); ok(false); }
+          });
+        });
+      }
+      pararTudo();
+      window.LubeRede.sair(DEMO ? null : sb, 'sentinela');
+      return false;
+    });
+  }
+
   function iniciarReal() {
     if (!window.supabase || !CFG.url || !CFG.key) {
       tela('entrada');
@@ -1824,8 +2752,8 @@
     sb = window.supabase.createClient(CFG.url, CFG.key);
     sb.auth.getSession().then(function (r) {
       var s = r.data && r.data.session;
-      if (s) abrirPainel(s.user.email);
-      else tela('entrada');
+      if (!s) { tela('entrada'); return; }
+      conferirRedeEntrada(s.access_token).then(function (segue) { if (segue) abrirPainel(s.user.email); });
     }, function () { tela('entrada'); });
     sb.auth.onAuthStateChange(function (evt) {
       if (evt === 'SIGNED_OUT') { pararTudo(); tela('entrada'); }
@@ -1857,8 +2785,13 @@
           return;
         }
         pwd.value = '';
-        avisarCentral('identidade', {}, r.data.session.access_token);
-        abrirPainel(r.data.session.user.email);
+        var sessao = r.data.session;
+        // a identidade só vai depois de uma conferência de rede que não mandou bloquear
+        conferirRedeEntrada(sessao.access_token).then(function (segue) {
+          if (!segue) return;
+          avisarCentral('identidade', {}, sessao.access_token);
+          abrirPainel(sessao.user.email);
+        });
       }).catch(function () {
         btn.disabled = false;
         erro.textContent = 'Falha de conexão. Tente de novo.';
@@ -1878,8 +2811,8 @@
   if (DEMO) {
     document.body.classList.add('demo');
     $('[data-tarja-demo]').hidden = false;
-    carregarScript('demo.js?v=20261007a').then(function () {
-      abrirPainel(SNT.demo.usuario.email);
+    carregarScript('demo.js?v=20261023a').then(function () {
+      return conferirRedeEntrada(null).then(function (segue) { if (segue) abrirPainel(SNT.demo.usuario.email); });
     }).catch(function () {
       tela('entrada');
       $('[data-entrar-erro]').textContent = 'Não foi possível carregar a demonstração.';

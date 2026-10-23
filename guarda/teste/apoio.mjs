@@ -1,5 +1,5 @@
 /* Apoio dos testes do guarda: central falsa, chaves ES256, requisições. */
-import { createHmac } from 'node:crypto';
+import { createHmac, createHash } from 'node:crypto';
 
 export const CENTRAL = 'https://wkkdcsqwlxjxorutrbnx.supabase.co/functions/v1/sentinela';
 export const PORTAL = 'https://painel-lube-distribuidora.vercel.app';
@@ -101,17 +101,43 @@ export function oidcFalso(extra = {}) {
 }
 
 /* ---------- lista no formato do contrato ---------- */
+// SHA-256 hex do e-mail em minúsculas: o "h" dos liberados (sentinela.email_hash da central)
+export function hashEmail(email) {
+  return createHash('sha256').update(String(email).trim().toLowerCase()).digest('hex');
+}
+
+// Bloco "rede" (1.3.0, docs/SENTINELA-REDE.md §4.3). o.rede: objeto = o bloco (padrões abaixo);
+// null = lista sem o bloco. Sem o.rede, a lista sai sem o bloco, a menos que SENTINELA_TESTE_REDE=desligado:
+// aí toda lista leva o bloco no modo desligado, com a rede do escritório, faixas e um liberado de
+// verdade, e a bateria do 1.2.0 inteira tem de passar igual (modo desligado = 1.2.0).
+// SENTINELA_TESTE_REDE=exigir (ou observar) é a contraprova: com a regra ligada a bateria do 1.2.0 TEM
+// de falhar, senão a troca acima não estaria valendo.
+function blocoRede(o) {
+  if (o.rede === null) return undefined;
+  if (o.rede === undefined) {
+    const modo = process.env.SENTINELA_TESTE_REDE;
+    if (modo !== 'desligado' && modo !== 'observar' && modo !== 'exigir') return undefined;
+    return { v: 1, gerado_em: new Date().toISOString(), modo,
+      redes: ['203.0.113.169/32', '177.100.20.0/24', '2804:14c:1::/48'],
+      liberados: [{ h: hashEmail('julio@lube.com.br'), ate: new Date(Date.now() + 86400e3).toISOString() }] };
+  }
+  return { v: 1, gerado_em: new Date().toISOString(), modo: 'observar', redes: [], liberados: [], ...o.rede };
+}
+
 export function lista(o = {}) {
-  return {
+  const l = {
     v: 1, gerado_em: new Date().toISOString(), ttl: 20, modo: o.modo || 'observar',
     bloqueios: o.bloqueios || [], confiaveis: o.confiaveis || [],
     sistema: o.sistema === null ? null : {
       projeto: o.projeto || 'painel-compras', nome: o.nome || 'BI Compras', sistema_slug: o.slug === undefined ? 'gestao-compras' : o.slug,
       exige_login: !!o.exige, rotas_publicas: o.rotas || [], arquivos_proibidos: o.proibidos || [],
     },
-    portal: PORTAL,
+    portal: o.portal || PORTAL,
     chaves: o.chaves || [],
   };
+  const rede = blocoRede(o);
+  if (rede) l.rede = rede;
+  return l;
 }
 
 /* ---------- central falsa (substitui globalThis.fetch) ---------- */

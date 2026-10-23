@@ -3,7 +3,9 @@
 // e parâmetros EXATOS das funções sentinela_srv_* (§2).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { criarCentral, MAX_TENTATIVAS_MIN, precisaAtualizarTor, TEAM_ID, URL_TOR } from '../central.ts';
+import {
+  ACOES_PAINEL_REDE, blocoRede, criarCentral, DETALHE_EMERGENCIA, MAX_REDE_MIN, MAX_TENTATIVAS_MIN, precisaAtualizarTor, REDE_CACHE_MS, TEAM_ID, URL_TOR,
+} from '../central.ts';
 import type { Dependencias } from '../central.ts';
 import { assinarHmac } from '../hmac.ts';
 import { URL_ANTHROPIC, URL_MODELO } from '../ia.ts';
@@ -34,6 +36,11 @@ const ASSINATURAS: Record<string, string[]> = {
   sentinela_srv_chaves_publicas: [],
   sentinela_srv_tor_atualizar: ['p_ips'],
   sentinela_srv_manutencao: [],
+  // regra de rede (db/13_sentinela_rede.sql)
+  sentinela_srv_rede_lista: ['p_projeto'],
+  sentinela_srv_rede_decidir: ['p_ip', 'p_user_id', 'p_email', 'p_projeto', 'p_origem', 'p_ua'],
+  sentinela_srv_rede_emergencia: ['p_ip', 'p_user_id'],
+  sentinela_srv_rede_acao: ['p_user_id', 'p_ip', 'p_acao', 'p_dados'],
 };
 
 type Chamada = { nome: string; params: Record<string, unknown> };
@@ -98,6 +105,13 @@ function montar(opcoes: { chaveIa?: string; chaveHmac?: string; tempoIaMs?: numb
     /** GET do modelo na conferência da chave; null = rede fora */
     respostaModelo: (): Response | null => new Response(JSON.stringify({ id: 'claude-haiku-4-5-20251001', type: 'model' }), { status: 200 }),
     respostaTor: () => new Response(Array.from({ length: 150 }, (_, i) => `185.220.${Math.floor(i / 250)}.${i % 250}`).join('\n'), { status: 200 }),
+    /** srv_permissao lança erro (banco fora) */
+    falharPermissao: false,
+    /** respostas das funções da regra de rede; lançar = banco fora */
+    redeLista: (_projeto: string): unknown => ({ v: 1, gerado_em: new Date(estado.agora).toISOString(), modo: 'desligado', redes: [], liberados: [] }),
+    redeDecidir: (p: P): unknown => ({ modo: 'desligado', na_rede: false, rede: null, liberado: null, acao: 'seguir', ip: p.p_ip ?? null, emergencia: null }),
+    redeEmergencia: (_p: P): unknown => ({ ok: false, motivo: 'so_admin' }),
+    redeAcao: (_p: P): unknown => ({ ok: true, alterados: [] }),
   };
 
   const rpc = async (nome: string, params: Record<string, unknown> = {}) => {
@@ -135,7 +149,12 @@ function montar(opcoes: { chaveIa?: string; chaveHmac?: string; tempoIaMs?: numb
         estado.usados.add(jti);
         return true;
       }
+      case 'sentinela_srv_rede_lista': return estado.redeLista(params.p_projeto as string);
+      case 'sentinela_srv_rede_decidir': return estado.redeDecidir(params as P);
+      case 'sentinela_srv_rede_emergencia': return estado.redeEmergencia(params as P);
+      case 'sentinela_srv_rede_acao': return estado.redeAcao(params as P);
       case 'sentinela_srv_permissao': {
+        if (estado.falharPermissao) throw new Error('rpc sentinela_srv_permissao: banco fora');
         // mesmos motivos do 02_sentinela.sql: o perfil é conferido antes do sistema
         const slug = params.p_sistema_slug;
         if (params.p_user_id === PENDENTE) return { permitido: false, motivo: 'perfil_inativo', email: 'novo@lube.com.br', nome: 'Novo', projeto: null, url: null };
@@ -229,7 +248,7 @@ test('GET /saude e rotas desconhecidas', async () => {
   const c = montar();
   const r = await c.chamar('saude');
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { ok: true, servico: 'sentinela', versao: '1.0.0' });
+  assert.deepEqual(await r.json(), { ok: true, servico: 'sentinela', versao: '1.1.0' });
   assert.equal(r.headers.get('access-control-allow-origin'), null);
   assert.equal((await c.chamar('xpto')).status, 404);
   assert.deepEqual(await (await c.chamar('')).json(), { erro: 'rota_desconhecida' });
@@ -1006,4 +1025,325 @@ test('IA: Anthropic fora (5xx) ou rede caída na conferência não mexe no statu
   await pedirLista(c); await c.esperarFundo();
   assert.equal(c.de('sentinela_srv_ia_status').length, 0);
   assert.equal(c.fetches.filter((f) => f.url === URL_MODELO).length, 2);
+});
+
+// ---------------------------------------------------------
+// Regra de rede da Lube (central 1.1.0, docs/SENTINELA-REDE.md §5)
+// ---------------------------------------------------------
+const H1 = 'ab'.repeat(32);
+const blocoExigir = () => ({
+  v: 1, gerado_em: '2026-10-05T15:00:00.000Z', modo: 'exigir',
+  redes: ['203.0.113.7/32', '2001:db8:10::/48'], liberados: [{ h: H1, ate: '2026-10-06T15:00:00.000Z' }],
+});
+const pedirPasse = (c: ReturnType<typeof montar>, extra: Record<string, string> = { 'cf-connecting-ip': '177.10.20.30' }) =>
+  c.chamar('passe', { method: 'POST', headers: nav({ authorization: 'Bearer usuario-ok', 'user-agent': 'UA', ...extra }),
+    body: JSON.stringify({ sistema_slug: 'gestao-financeiro' }) });
+const pedirRede = (c: ReturnType<typeof montar>, corpo = '{}', extra: Record<string, string> = {}) =>
+  c.chamar('rede', { method: 'POST', headers: nav({ authorization: 'Bearer usuario-ok', 'cf-connecting-ip': '203.0.113.7', 'user-agent': 'UA', ...extra }),
+    body: corpo });
+
+test('/lista leva o bloco rede: modo, redes e só hash + prazo dos liberados (nunca o e-mail)', async () => {
+  const c = montar();
+  c.estado.redeLista = () => ({
+    ...blocoExigir(), extra: 'campo a mais do banco',
+    liberados: [{ h: H1, ate: '2026-10-06T15:00:00.000Z', email: 'julio@lube.com.br' }, { h: 'curto', ate: 'x' }, 'lixo', { h: H1 }],
+  });
+  const r = await c.chamar('lista', { headers: guarda('oidc.compras.ok') });
+  assert.equal(r.status, 200);
+  const j = await r.json();
+  assert.deepEqual(j.rede, blocoExigir());
+  assert.equal(JSON.stringify(j).includes('@lube.com.br'), false, 'e-mail nunca vai para o guarda');
+  assert.deepEqual(c.de('sentinela_srv_rede_lista').map((x) => x.params), [{ p_projeto: 'painel-compras' }]);
+  // o resto da lista não muda (o modo da Sentinela é outro, o da rede vai dentro de "rede")
+  assert.equal(j.modo, 'observar');
+  assert.equal(j.chaves.length, 1);
+  assert.equal(j.sistema.projeto, 'painel-compras');
+  assert.equal(j.bloqueios.length, 1);
+  // ajudante: formato aceito e recusado
+  assert.equal(blocoRede(null), null);
+  assert.equal(blocoRede({ modo: 'xpto', redes: [], liberados: [] }), null);
+  assert.deepEqual(blocoRede({ modo: 'desligado', redes: [], liberados: [] }), { v: 1, gerado_em: null, modo: 'desligado', redes: [], liberados: [] });
+});
+
+test('/lista: srv_rede_lista falhando ou fora do formato → lista sem "rede"; log uma vez por instância', async () => {
+  const c = montar();
+  c.estado.redeLista = () => { throw new Error('rpc sentinela_srv_rede_lista: 42883 function does not exist'); };
+  for (let i = 0; i < 3; i++) {
+    const r = await c.chamar('lista', { headers: guarda('oidc.compras.ok') });
+    assert.equal(r.status, 200, 'a lista continua saindo');
+    const j = await r.json();
+    assert.equal('rede' in j, false);
+    assert.equal(j.bloqueios.length, 1);
+    assert.equal(j.chaves.length, 1);
+  }
+  assert.equal(c.de('sentinela_srv_rede_lista').length, 3, 'falha não fica no cache');
+  assert.equal(c.logs.filter((x) => x.startsWith('rede: srv_rede_lista falhou')).length, 1);
+  for (const ruim of [null, 'texto', { modo: 'xpto', redes: [], liberados: [] }, { modo: 'exigir', redes: 'x', liberados: [] },
+    { modo: 'exigir', redes: [] }]) {
+    const f = montar();
+    f.estado.redeLista = () => ruim;
+    const j = await (await f.chamar('lista', { headers: guarda('oidc.compras.ok') })).json();
+    assert.equal('rede' in j, false, JSON.stringify(ruim));
+    assert.equal(f.logs.filter((x) => x.startsWith('rede: srv_rede_lista fora do formato')).length, 1);
+  }
+});
+
+test('/lista: bloco rede em cache por 10 s, por projeto; pedidos juntos dividem uma leitura', async () => {
+  const c = montar();
+  let n = 0;
+  c.estado.redeLista = (p) => ({ ...blocoExigir(), modo: p === 'painel-compras' ? 'exigir' : 'observar', gerado_em: String(++n) });
+  const lista = (t: string) => c.chamar('lista', { headers: guarda(t) }).then((r) => r.json());
+  assert.equal((await lista('oidc.compras.ok')).rede.gerado_em, '1');
+  c.estado.agora += 9_000;
+  assert.equal((await lista('oidc.compras.ok')).rede.gerado_em, '1', 'dentro de 10 s: do cache');
+  assert.equal((await lista('oidc.fin.ok')).rede.modo, 'observar', 'outro projeto tem o seu');
+  c.estado.agora += 1_001;
+  assert.equal((await lista('oidc.compras.ok')).rede.gerado_em, '3', 'passou 10 s: relê');
+  assert.equal(c.de('sentinela_srv_rede_lista').length, 3);
+  c.estado.agora += 20_000;
+  await Promise.all([1, 2, 3].map(() => lista('oidc.compras.ok')));
+  assert.equal(c.de('sentinela_srv_rede_lista').length, 4);
+  assert.equal(REDE_CACHE_MS, 10_000);
+});
+
+test('/passe fora da rede (bloquear): 403 fora_da_rede, nenhum passe assinado e nenhuma identidade', async () => {
+  const c = montar();
+  c.estado.redeDecidir = (p) => ({ modo: 'exigir', na_rede: false, rede: null, liberado: null, acao: 'bloquear', ip: p.p_ip, emergencia: null });
+  const r = await pedirPasse(c);
+  assert.equal(r.status, 403);
+  assert.equal(r.headers.get('access-control-allow-origin'), PORTAL, 'o portal lê o motivo');
+  assert.deepEqual(await r.json(), { erro: 'fora_da_rede', detalhe: 'Este sistema só abre na rede da Lube.' });
+  await c.esperarFundo();
+  assert.deepEqual(c.de('sentinela_srv_rede_decidir').map((x) => x.params), [{
+    p_ip: '177.10.20.30', p_user_id: USUARIO, p_email: 'julio@lube.com.br', p_projeto: 'gestao-finaceiro', p_origem: 'passe', p_ua: 'UA' }]);
+  assert.equal(c.de('sentinela_srv_chave_ativa').length + c.de('sentinela_srv_chave_criar').length, 0, 'nenhum passe assinado');
+  assert.equal(c.de('sentinela_srv_identidade').length, 0, 'IP de fora não vira confiável');
+  // sistema ainda sem guarda: a regra vale antes de devolver a URL
+  c.estado.guardaAtivo = false;
+  assert.equal((await pedirPasse(c)).status, 403);
+  // sem permissão no sistema: nem chega a decidir a rede
+  const n = c.de('sentinela_srv_rede_decidir').length;
+  await c.chamar('passe', { method: 'POST', headers: nav({ authorization: 'Bearer usuario-ok', 'cf-connecting-ip': '177.10.20.30' }),
+    body: JSON.stringify({ sistema_slug: 'gestao-ti' }) });
+  assert.equal(c.de('sentinela_srv_rede_decidir').length, n);
+});
+
+test('/passe: observar, liberado, dentro da rede e desligado seguem com o passe; banco fora não barra', async () => {
+  const casos: P[] = [
+    { modo: 'observar', na_rede: false, rede: null, liberado: null, acao: 'observar', emergencia: null },
+    { modo: 'exigir', na_rede: false, rede: null, liberado: { id: 3, ate: '2026-10-30T21:00:00.000Z', motivo: 'viagem' }, acao: 'seguir', emergencia: null },
+    { modo: 'exigir', na_rede: true, rede: { id: 1, descricao: 'Escritório' }, liberado: null, acao: 'seguir', emergencia: null },
+    { modo: 'desligado', na_rede: false, rede: null, liberado: null, acao: 'seguir', emergencia: null },
+  ];
+  for (const caso of casos) {
+    const c = montar();
+    c.estado.redeDecidir = () => caso;
+    const r = await pedirPasse(c);
+    assert.equal(r.status, 200, JSON.stringify(caso));
+    assert.ok(new URL((await r.json()).url).searchParams.get('sentinela_passe'));
+    await c.esperarFundo();
+    assert.equal(c.de('sentinela_srv_identidade').length, 1);
+  }
+  // banco fora na decisão: falha aberta (o guarda barra) e registra no log
+  const f = montar();
+  f.estado.redeDecidir = () => { throw new Error('rpc sentinela_srv_rede_decidir: 57014 canceling statement'); };
+  assert.equal((await pedirPasse(f)).status, 200);
+  assert.ok(f.logs.some((x) => x.startsWith('rede: srv_rede_decidir falhou (passe)')));
+  // resposta fora do formato: segue
+  const g = montar();
+  g.estado.redeDecidir = () => ({ acao: 'xpto' });
+  assert.equal((await pedirPasse(g)).status, 200);
+  assert.ok(g.logs.some((x) => x.startsWith('rede: srv_rede_decidir fora do formato')));
+  // sem IP do cliente: o banco recebe p_ip nulo (e decide como fora)
+  const s = montar();
+  await pedirPasse(s, {});
+  assert.equal(s.de('sentinela_srv_rede_decidir')[0].params.p_ip, null);
+});
+
+test('POST /rede: decide o login do portal e devolve só o que o portal usa', async () => {
+  const c = montar();
+  c.estado.redeDecidir = (p) => ({ modo: 'exigir', na_rede: false, rede: null,
+    liberado: { id: 9, ate: '2026-10-30T21:00:00.000Z', motivo: 'viagem a trabalho' }, acao: 'seguir', ip: p.p_ip, emergencia: null, extra: 'x' });
+  const r = await pedirRede(c);
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('access-control-allow-origin'), PORTAL);
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await r.json(), { ok: true, modo: 'exigir', na_rede: false, acao: 'seguir', rede: null,
+    liberado: { ate: '2026-10-30T21:00:00.000Z' }, ip: '203.0.113.7', emergencia: null });
+  assert.deepEqual(c.de('sentinela_srv_rede_decidir')[0].params, {
+    p_ip: '203.0.113.7', p_user_id: USUARIO, p_email: 'julio@lube.com.br', p_projeto: 'painel-lube-distribuidora', p_origem: 'portal', p_ua: 'UA' });
+  assert.deepEqual(c.de('sentinela_srv_permissao')[0].params, { p_user_id: USUARIO, p_sistema_slug: null }, 'confere o perfil ativo');
+  // dentro da rede: o nome dela
+  c.estado.redeDecidir = (p) => ({ modo: 'exigir', na_rede: true, rede: { id: 1, descricao: 'Escritório' }, liberado: null,
+    acao: 'seguir', ip: p.p_ip, emergencia: null });
+  const dentro = await (await pedirRede(c)).json();
+  assert.equal(dentro.na_rede, true);
+  assert.deepEqual(dentro.rede, { descricao: 'Escritório' });
+  // admin fora com provas: o bloco de emergência
+  c.estado.redeDecidir = (p) => ({ modo: 'exigir', na_rede: false, rede: null, liberado: null, acao: 'bloquear', ip: p.p_ip,
+    emergencia: { possivel: true, pessoas: 7 } });
+  const fora = await (await pedirRede(c)).json();
+  assert.equal(fora.acao, 'bloquear');
+  assert.deepEqual(fora.emergencia, { possivel: true, pessoas: 7 });
+  // o corpo não escolhe IP nem projeto
+  await pedirRede(c, JSON.stringify({ ip: '1.2.3.4', p_ip: '1.2.3.4', projeto: 'gestao-ti', p_projeto: 'gestao-ti' }));
+  const ult = c.de('sentinela_srv_rede_decidir').at(-1)!.params;
+  assert.equal(ult.p_ip, '203.0.113.7');
+  assert.equal(ult.p_projeto, 'painel-lube-distribuidora');
+  // sem IP do cliente: p_ip nulo
+  const s = montar();
+  const semIp = await (await s.chamar('rede', { method: 'POST', headers: nav({ authorization: 'Bearer usuario-ok' }), body: '{}' })).json();
+  assert.equal(s.de('sentinela_srv_rede_decidir')[0].params.p_ip, null);
+  assert.equal(semIp.ip, null);
+  // "emergencia" que não é true decide normalmente
+  const e = montar();
+  await pedirRede(e, '{"emergencia":"true"}');
+  assert.equal(e.de('sentinela_srv_rede_decidir').length, 1);
+  assert.equal(e.de('sentinela_srv_rede_emergencia').length, 0);
+});
+
+test('POST /rede: Origin do portal, JSON, Bearer, método, perfil ativo e limitador de 30/min', async () => {
+  const c = montar();
+  const evil = await pedirRede(c, '{}', { origin: 'https://evil.example' });
+  assert.equal(evil.status, 403);
+  assert.deepEqual(await evil.json(), { erro: 'origem_nao_permitida' });
+  assert.equal(evil.headers.get('access-control-allow-origin'), null);
+  const texto = await pedirRede(c, '{}', { 'content-type': 'text/plain' });
+  assert.equal(texto.status, 400);
+  assert.equal((await texto.json()).erro, 'content_type_invalido');
+  const get = await c.chamar('rede', { headers: { origin: PORTAL } });
+  assert.equal(get.status, 405);
+  assert.equal(get.headers.get('allow'), 'POST, OPTIONS');
+  const pre = await c.chamar('rede', { method: 'OPTIONS', headers: { origin: PORTAL } });
+  assert.equal(pre.status, 204);
+  assert.equal(pre.headers.get('access-control-allow-origin'), PORTAL);
+  for (const token of ['', 'Bearer lixo', 'Bearer usuario-anonimo']) {
+    const h: Record<string, string> = { 'cf-connecting-ip': '203.0.113.8' };
+    const r = await c.chamar('rede', { method: 'POST', headers: nav(token ? { ...h, authorization: token } : h), body: '{}' });
+    assert.equal(r.status, 401, token);
+    assert.deepEqual(await r.json(), { erro: 'token_invalido' });
+  }
+  for (const corpo of ['', '[]', 'x', '"texto"']) {
+    assert.equal((await pedirRede(c, corpo)).status, 400, corpo);
+  }
+  for (const token of ['usuario-pendente', 'usuario-outro']) {
+    const r = await pedirRede(c, '{}', { authorization: `Bearer ${token}` });
+    assert.equal(r.status, 403, token);
+    assert.deepEqual(await r.json(), { erro: 'perfil_inativo' });
+  }
+  assert.equal(c.de('sentinela_srv_rede_decidir').length + c.de('sentinela_srv_rede_emergencia').length, 0, 'nada disso chegou à decisão');
+  // limitador por IP
+  const l = montar();
+  const st: number[] = [];
+  for (let i = 0; i <= MAX_REDE_MIN; i++) st.push((await pedirRede(l, '{}', { 'cf-connecting-ip': '198.51.100.9' })).status);
+  assert.equal(st.filter((x) => x === 200).length, MAX_REDE_MIN);
+  assert.equal(st.at(-1), 429);
+  assert.equal((await pedirRede(l, '{}', { 'cf-connecting-ip': '198.51.100.10' })).status, 200, 'outro IP tem a sua cota');
+  assert.equal(MAX_REDE_MIN, 30);
+});
+
+test('POST /rede: banco fora → seguir com "indisponivel" (os guardas barram)', async () => {
+  const indisponivel = { ok: true, acao: 'seguir', indisponivel: true };
+  const a = montar();
+  a.estado.falharPermissao = true;
+  const ra = await pedirRede(a);
+  assert.equal(ra.status, 200);
+  assert.deepEqual(await ra.json(), indisponivel);
+  const b = montar();
+  b.estado.redeDecidir = () => { throw new Error('rpc sentinela_srv_rede_decidir: fora'); };
+  assert.deepEqual(await (await pedirRede(b)).json(), indisponivel);
+  assert.ok(b.logs.some((x) => x.startsWith('rede: srv_rede_decidir falhou (portal)')));
+  const c = montar();
+  c.estado.redeDecidir = () => ({ acao: 'derrubar' });
+  assert.deepEqual(await (await pedirRede(c)).json(), indisponivel);
+});
+
+test('POST /rede {"emergencia": true}: cadastra o IP do pedido; cada recusa sai com o motivo e o texto', async () => {
+  const c = montar();
+  c.estado.redeEmergencia = (p) => ({ ok: true, id: 12, rede: `${p.p_ip}/32` });
+  const r = await pedirRede(c, JSON.stringify({ emergencia: true, ip: '9.9.9.9', rede: '0.0.0.0/0' }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { ok: true, cadastrada: { id: 12, rede: '203.0.113.7/32' } });
+  assert.deepEqual(c.de('sentinela_srv_rede_emergencia')[0].params, { p_ip: '203.0.113.7', p_user_id: USUARIO }, 'IP do pedido, nunca do corpo');
+  assert.equal(c.de('sentinela_srv_rede_decidir').length, 0, 'emergência não passa pela decisão');
+  for (const motivo of ['so_admin', 'ja_cadastrada', 'ip_invalido']) {
+    c.estado.redeEmergencia = () => ({ ok: false, motivo });
+    const x = await pedirRede(c, '{"emergencia":true}');
+    assert.equal(x.status, 403, motivo);
+    assert.equal(x.headers.get('access-control-allow-origin'), PORTAL);
+    assert.deepEqual(await x.json(), { erro: motivo, detalhe: DETALHE_EMERGENCIA[motivo] });
+  }
+  c.estado.redeEmergencia = () => ({ ok: false, motivo: 'sem_provas', pessoas: 1 });
+  const sp = await pedirRede(c, '{"emergencia":true}');
+  assert.equal(sp.status, 403);
+  assert.deepEqual(await sp.json(), { erro: 'sem_provas', detalhe: DETALHE_EMERGENCIA.sem_provas, pessoas: 1 });
+  // banco fora ou resposta desconhecida: 503 (o botão não tem como seguir)
+  c.estado.redeEmergencia = () => { throw new Error('rpc sentinela_srv_rede_emergencia: fora'); };
+  const fora = await pedirRede(c, '{"emergencia":true}');
+  assert.equal(fora.status, 503);
+  assert.equal((await fora.json()).erro, 'indisponivel');
+  c.estado.redeEmergencia = () => ({ ok: false, motivo: 'xpto' });
+  assert.equal((await pedirRede(c, '{"emergencia":true}')).status, 503);
+  c.estado.falharPermissao = true;
+  assert.equal((await pedirRede(c, '{"emergencia":true}')).status, 503);
+  // conta sem perfil ativo não chega ao banco de emergência
+  const p = montar();
+  assert.equal((await pedirRede(p, '{"emergencia":true}', { authorization: 'Bearer usuario-pendente' })).status, 403);
+  assert.equal(p.de('sentinela_srv_rede_emergencia').length, 0);
+  // sem IP: o banco recebe p_ip nulo e responde ip_invalido
+  const s = montar();
+  s.estado.redeEmergencia = (q) => (q.p_ip ? { ok: true, id: 1, rede: `${q.p_ip}/32` } : { ok: false, motivo: 'ip_invalido' });
+  const semIp = await s.chamar('rede', { method: 'POST', headers: nav({ authorization: 'Bearer usuario-ok' }), body: '{"emergencia":true}' });
+  assert.equal(semIp.status, 403);
+  assert.equal((await semIp.json()).erro, 'ip_invalido');
+});
+
+test('POST /rede {"acao"}: ação do painel com o IP do pedido; recusa do banco sai com o código e o texto', async () => {
+  assert.deepEqual([...ACOES_PAINEL_REDE].sort(), ['encerrar', 'liberar', 'rede_modo', 'rede_nova', 'rede_remover']);
+  const c = montar();
+  c.estado.redeAcao = (p) => ({ ok: true, id: 5, rede: `${(p.p_dados as P).rede}/32` });
+  // o corpo não escolhe o IP nem a pessoa: o IP é o do pedido, a pessoa é a do token
+  const r = await pedirRede(c, JSON.stringify({ acao: 'rede_nova', dados: { rede: '198.51.100.4', descricao: 'Galpão' },
+    ip: '9.9.9.9', p_ip: '9.9.9.9', p_user_id: 'outro' }));
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('access-control-allow-origin'), PORTAL);
+  assert.deepEqual(await r.json(), { ok: true, resultado: { ok: true, id: 5, rede: '198.51.100.4/32' } });
+  assert.deepEqual(c.de('sentinela_srv_rede_acao')[0].params, {
+    p_user_id: USUARIO, p_ip: '203.0.113.7', p_acao: 'rede_nova', p_dados: { rede: '198.51.100.4', descricao: 'Galpão' } });
+  assert.equal(c.de('sentinela_srv_rede_decidir').length + c.de('sentinela_srv_rede_emergencia').length, 0, 'ação não decide nem cadastra emergência');
+  // sem "dados": objeto vazio (o banco recusa o que faltar)
+  await pedirRede(c, '{"acao":"encerrar"}');
+  assert.deepEqual(c.de('sentinela_srv_rede_acao').at(-1)!.params.p_dados, {});
+  // recusa do banco: fora da rede (42501) → 403; validação (22023) e não encontrado (P0002) → 400
+  for (const [codigo, status] of [['42501', 403], ['22023', 400], ['P0002', 400]] as const) {
+    c.estado.redeAcao = () => ({ ok: false, codigo, erro: 'sentinela: recusa de teste\u0007' });
+    const x = await pedirRede(c, '{"acao":"liberar","dados":{}}');
+    assert.equal(x.status, status, codigo);
+    assert.deepEqual(await x.json(), { erro: 'acao_recusada', codigo, detalhe: 'sentinela: recusa de teste' });
+  }
+  c.estado.redeAcao = () => ({ ok: false, codigo: 'drop table', erro: 'sentinela: x' });
+  assert.equal((await (await pedirRede(c, '{"acao":"liberar"}')).json()).codigo, null, 'código fora do formato não passa');
+  // ação desconhecida ou dados que não são objeto: 400 e o banco nem é chamado
+  const n = c.de('sentinela_srv_rede_acao').length;
+  for (const corpo of ['{"acao":"apagar_tudo"}', '{"acao":"rede_nova","dados":"x"}', '{"acao":"rede_nova","dados":[1]}', '{"acao":"constructor"}']) {
+    const x = await pedirRede(c, corpo);
+    assert.equal(x.status, 400, corpo);
+    assert.deepEqual(await x.json(), { erro: 'acao_invalida' });
+  }
+  assert.equal(c.de('sentinela_srv_rede_acao').length, n);
+  // banco fora ou resposta estranha: 503
+  c.estado.redeAcao = () => { throw new Error('rpc sentinela_srv_rede_acao: fora'); };
+  const fora = await pedirRede(c, '{"acao":"encerrar","dados":{"id":1}}');
+  assert.equal(fora.status, 503);
+  assert.equal((await fora.json()).erro, 'indisponivel');
+  assert.ok(c.logs.some((x) => x.startsWith('rede: srv_rede_acao falhou')));
+  c.estado.redeAcao = () => ({ talvez: true });
+  assert.equal((await pedirRede(c, '{"acao":"encerrar"}')).status, 503);
+  // conta sem perfil ativo nem chega ao banco; sem IP, o banco recebe p_ip nulo (e trata como fora da rede)
+  const p = montar();
+  assert.equal((await pedirRede(p, '{"acao":"rede_nova"}', { authorization: 'Bearer usuario-pendente' })).status, 403);
+  assert.equal(p.de('sentinela_srv_rede_acao').length, 0);
+  const s = montar();
+  await s.chamar('rede', { method: 'POST', headers: nav({ authorization: 'Bearer usuario-ok' }), body: '{"acao":"rede_nova"}' });
+  assert.equal(s.de('sentinela_srv_rede_acao')[0].params.p_ip, null);
 });

@@ -9,13 +9,14 @@ valendo. Contrato completo: `docs/SENTINELA-ESPECIFICACAO.md` §4.
 |---|---|
 | `sentinela-guarda.ts` | o núcleo. Sem dependências, só Web APIs. Roda nos runtimes nodejs e edge e no middleware do Next 15/16. |
 | `middleware.ts` | a casca para projetos estáticos (Routing Middleware da Vercel). |
-| `teste/` | testes em Node 24 (`node guarda/teste/guarda.teste.mjs`, `middleware.teste.mjs`, `edge.teste.mjs`). |
+| `teste/` | testes em Node 24 (`node guarda/teste/guarda.teste.mjs`, `rede.teste.mjs`, `middleware.teste.mjs`, `edge.teste.mjs`). |
 
 Nada de segredo nestes arquivos: eles podem ficar públicos.
 
 ## Regras (guarda 1.1.0, 2026-10-07)
 
-Ordem: ataque certo → lista → arquivo proibido → exceções → regras de user-agent → `sem_login` → liberado.
+Ordem: ataque certo → lista → arquivo proibido → exceções → regras de user-agent → `sem_login` → rede da
+Lube (1.3.0, abaixo) → liberado.
 O nível **certo** barra (403) em qualquer modo e para todos. O nível **suspeito** barra só no modo
 **proteger**; no **observar** só registra (`observado`); de IP **confiável** é ignorado (liberado, motivo
 "rede confiável: ... (ignorado)").
@@ -56,6 +57,97 @@ O nível **certo** barra (403) em qualquer modo e para todos. O nível **suspeit
   em IPv4 que teve evento com identidade nas últimas horas).
 - No banco, `nao_navegador` ainda não tem risco base (vale 0 + os modificadores de página sem
   `sec_fetch_mode` e sem idioma) e o bloqueio automático de IP conta só eventos `robo`.
+
+## Regra de rede da Lube (guarda 1.3.0, 2026-10-23)
+
+Pedido do gestor geral: o portal e os sistemas internos só abrem para quem está na rede da empresa.
+Desenho completo: `docs/SENTINELA-REDE.md`. Quem manda é a central: a `/lista` traz, por sistema, o
+**modo de rede**, as **redes da Lube** (IPs e faixas cadastrados pelo TI) e os **liberados fora da rede**
+(SHA-256 do e-mail e o fim da liberação; a lista nunca traz e-mail).
+
+| modo | o que o guarda faz com quem está fora da rede |
+|---|---|
+| `desligado` (ou lista sem o bloco `rede`) | **nada: igual ao 1.2.0**. Dá para instalar o 1.3.0 em todos sem mudar nada para ninguém |
+| `observar` | deixa passar e registra `observado`, regra `fora_da_rede`, motivo "seria bloqueado: fora da rede da Lube" |
+| `exigir` | 403 "Este sistema só abre na rede da Lube" (só com o OK do Júlio) |
+
+Ordem: a regra entra **no fim**, depois do `sem_login`, e só decide quem ia passar. Ataque certo,
+bloqueio da lista, modo proteger e `sem_login` continuam vindo antes, como no 1.2.0.
+
+- **A rede é conferida a cada pedido.** Sessão de 8 h pega na empresa e levada para casa não vale fora.
+- **Só o `x-real-ip`**, que a Vercel sobrescreve. `x-forwarded-for`, `x-vercel-forwarded-for`,
+  `cf-connecting-ip`, `forwarded`, `referer` e `origin` nunca põem ninguém "dentro". IP vazio ou
+  inválido = fora (o evento leva "· IP sem x-real-ip" quando o IP veio só por outro cabeçalho).
+- **IPv4 e IPv6**, IP solto ou faixa; `::ffff:a.b.c.d` vale como IPv4. Faixa mais larga que **/24**
+  (IPv4) ou **/48** (IPv6) é ignorada, como a central já recusa.
+- **Sempre passam:** `/.sentinela/*` (o Guardião confere a saúde de fora); IP numa rede da Lube; quem
+  **não tem login** no **portal** (sistema sem slug: a tela de login e o atalho do SAC abrem de qualquer
+  lugar); máquina autenticada pelo app (abaixo); pessoa liberada. Num sistema com slug, quem não tem
+  login também passa pela regra, mesmo com o "exige login" desligado (desligar o login de um sistema,
+  por engano ou com a senha de um admin de fora, não o abre para fora da rede).
+- **Liberado:** o guarda compara o SHA-256 do e-mail da sessão (ou do login do app), em minúsculas,
+  com a lista. Só vale com a rede da lista de **até 2 min**: lista mais velha espera a renovação (até
+  **2,5 s**, o prazo da central; só quem está fora paga essa espera) e, se a central não responder, a
+  liberação não vale. Encerrar no painel chega em ~30 s.
+- **`exigir` sem nenhuma rede válida vira `observar`**: lista vazia não tranca a empresa.
+- **Lista sem o bloco** (central antiga, RPC fora): vale o último bloco recebido por até 24 h; depois,
+  sem regra. A reserva do modo fechado (central fora) usa esse mesmo bloco; numa partida a frio não há
+  bloco, e a regra não vale.
+- **Rede confiável** (`sentinela.confiaveis`, aprendida pelo login, até de casa) **não** dispensa a rede.
+- **Nunca bloqueia IP**, nunca pede bloqueio à central e nunca mexe em cookie. O mesmo IP, sem login,
+  continua vendo o portal.
+- **Passe trocado fora da rede** (pego dentro e usado fora em 90 s): no `exigir` e sem liberação, 403
+  **sem nenhum `Set-Cookie`**, motivo "fora da rede da Lube · passe trocado, sessão não entregue". No
+  `observar` ou liberado, 302 com o cookie, como sempre.
+
+Respostas do 403 de rede (cabeçalho `x-sentinela: rede`, `cache-control: no-store`, sem código de
+incidente e sem IP):
+- **página** (GET/HEAD de página, inclusive no iframe do portal): HTML âmbar "Este sistema só abre na
+  rede da Lube · Você está fora da empresa · Se precisa acessar, fale com o TI", a dica "Está na Lube?
+  Use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e recarregue a página. Se o TI
+  acabou de liberar você, espere 1 minuto e recarregue." e o botão "Voltar ao Painel Lube" (abre fora do
+  iframe);
+- **API, arquivo e outros métodos:** `{"erro":"fora_da_rede","mensagem":"...","portal":"https://..."}`.
+
+Eventos novos (todos com risco base 0 na central):
+
+| regra | decisão | quando |
+|---|---|---|
+| `fora_da_rede` | `bloqueado` / `observado` | fora, sem liberação (`exigir` / `observar`) |
+| `rede_liberado` | `liberado` | fora, pessoa liberada pelo TI ("liberado pelo TI até ...") |
+| `rede_maquina` | `liberado` | fora, máquina autenticada pelo app |
+| `cron` | `liberado` | o agendador do Gestão TI com a marca: motivo "agendamento da Vercel · fora da rede da Lube: máquina autenticada pelo sistema" |
+
+O que já estava marcado no evento (por exemplo, bloqueio suspeito da lista com login) vai no motivo,
+depois de "· também ...".
+
+`/.sentinela/saude` ganha `lista.rede`: `"desligado"`, `"observar"`, `"exigir"` ou `null` (sem bloco). É o
+modo que o guarda aplica (exigir sem rede aparece `"observar"`); nunca mostra as redes nem os liberados.
+E `lista.rede_idade_s`, a idade do bloco em segundos (`null` sem bloco): com a central mandando a lista
+sem o bloco (central antiga, `srv_rede_lista` falhando), a lista fica nova (`idade_s` pequeno) e o bloco
+envelhece. **`rede_idade_s` acima de ~120 com `idade_s` pequeno = as mudanças de modo, redes e
+liberações não estão chegando a este sistema** (e os liberados já não passam).
+
+### Máquina autenticada (`maquina: true`)
+
+Chamada de servidor para servidor de fora da rede (o agendador da Vercel sai de um IP da Amazon
+diferente a cada dia) passa **só** se o próprio app conferiu o segredo dela e marcou a identidade:
+
+```ts
+// Gestão TI (src/middleware.ts): depois de conferir Authorization: Bearer <CRON_SECRET> em /api/cron/
+const ROBO_AGENDADOR = { email: "robo do gestao ti (agendador da vercel)", origem: "sessao_app" as const, maquina: true };
+```
+
+- Vale só com `origem: 'sessao_app'` e nome de robô no formato `robo <nome>` (minúsculas, letras,
+  números, espaço e `()._-`, de 3 a 80 caracteres). E-mail de pessoa com `maquina: true` não é máquina.
+- A marca só dispensa a regra de rede. Não dispensa ataque, lista nem login.
+- **Nunca** marque por IP, por user-agent (`vercel-cron/1.0` qualquer um manda) ou por cabeçalho que o
+  cliente escolhe. Sem a marca, o robô de fora cai em `fora_da_rede` (403 no `exigir`).
+- Reposições: o aquecedor da `SRV-IA` entra pelo segredo próprio `AQUECEDOR_SEGREDO` (mínimo 32 caracteres)
+  no cabeçalho `x-lube-aquecedor`, só em `GET /api/dados`, conferido em tempo constante pelo `web/middleware.ts`
+  do Reposições, que marca `{ email: 'robo do reposicoes (aquecedor da srv-ia)', origem: 'sessao_app', maquina: true }`
+  (`docs/SENTINELA-REDE.md` §14.2). Cabeçalho próprio, e não `Authorization`, para o CDN continuar guardando
+  `/api/dados`.
 
 ## Projeto estático (portal, Compras, RH, Financeiro, Comercial, Saída de Veículos)
 
@@ -184,9 +276,17 @@ lê `process.env.X` escrito por extenso, que é como o Next entrega variáveis a
 
 ```
 node guarda/teste/guarda.teste.mjs       # núcleo: regras, lista, sessão, passe, central fora, desempenho
+node guarda/teste/rede.teste.mjs         # regra de rede da Lube (1.3.0) e comparação com o 1.2.0
 node guarda/teste/middleware.teste.mjs   # casca estática
 node guarda/teste/edge.teste.mjs         # núcleo dentro do Edge Runtime do Next (sem process/Buffer)
 ```
+
+Prova de que o modo desligado é o 1.2.0:
+- `SENTINELA_TESTE_REDE=desligado node guarda/teste/guarda.teste.mjs` roda a bateria do 1.2.0 inteira
+  com o bloco `rede` em toda lista (modo desligado, com a rede do escritório, faixas e um liberado). Tem
+  de passar igual. Com `SENTINELA_TESTE_REDE=exigir` ela **tem** de falhar (contraprova).
+- O caso 22 do `rede.teste.mjs` roda os mesmos pedidos no núcleo do commit `9f1732a` (1.2.0, lido pelo
+  git) e no 1.3.0 e compara resposta, eventos e chamadas à central.
 
 ## Emergência: o TI ficou bloqueado
 
@@ -224,3 +324,49 @@ painel respondem 403 (bloqueio da lista vale até para IP confiável). E `sentin
    se quiser, remova o confiável de emergência.
 4. Último recurso: apague o `middleware.ts` da raiz **do portal** (`painel-lube-distribuidora`) e faça o
    redeploy. Um deploy novo também zera o mapa local de todas as instâncias daquele projeto.
+
+## Emergência: todo mundo do escritório vê "só abre na rede da Lube"
+
+Causa provável: a operadora trocou o IP do escritório, ou a internet caiu para outro link. Passo a passo
+completo em `docs/SENTINELA-REDE.md` §12.
+
+1. Num computador do escritório, abra `https://painel-lube-distribuidora.vercel.app/.sentinela/saude`
+   (responde de qualquer lugar): o campo `ip` é o IP novo.
+2. Supabase › projeto **PAINEL LUBE DISTRIBUIDORA** › **SQL Editor**, trocando `<IP_NOVO>`:
+
+   ```sql
+   select sentinela.emergencia_rede('<IP_NOVO>', 'escritório: IP novo da operadora');
+   -- sem achar o IP? pausa a regra em todos (exigir → observar; volta pelo painel):
+   select sentinela.emergencia_pausar_rede();
+   ```
+
+   **IPv6** (o `ip` tem `:`): cada computador sai com um endereço próprio dentro do mesmo prefixo. Cole o
+   endereço como veio: a função cadastra o **/64** inteiro (ex.: `2001:db8:1:2::15` vira `2001:db8:1:2::/64`).
+
+   Se a função der erro (apagada ou com defeito), as linhas cruas (em IPv6, o prefixo com o fim zerado,
+   como `2001:db8:1:2::/64`). Sem a migração aplicada não existe regra de rede, e não há nada a destravar
+   por aqui:
+
+   ```sql
+   insert into sentinela.redes (rede, descricao, origem, criado_por)
+   values ('<IP_NOVO>/32', 'escritório: IP novo', 'emergencia', 'sql-emergencia');
+   update sentinela.rede_sistemas set modo = 'observar', modo_em = now(), modo_por = 'sql-emergencia'
+    where modo = 'exigir';
+   ```
+
+3. Espere até ~30 s (10 s de cache na central + 20 s da lista do guarda) e recarregue. As sessões
+   continuam valendo.
+4. Para voltar atrás de vez: modo `desligado` (pelo painel da Sentinela ou
+   `update sentinela.rede_sistemas set modo = 'desligado' ...`). Com ele o 1.3.0 age igual ao 1.2.0: não é
+   preciso tirar o guarda.
+
+**Quando a volta pelo banco não chega aos guardas.** Tudo acima depende da central 1.1.0 no ar mandando o
+bloco `rede` na `/lista`. Se a central voltar para a versão antiga (7) ou o log dela mostrar
+`rede: srv_rede_lista falhou`, a lista sai sem o bloco e cada guarda segue com o **último bloco por até
+24 h** (`lista.rede_idade_s` crescendo no `/.sentinela/saude`): "Desligar todos", a pausa por SQL e as
+redes novas não chegam, e os liberados passam a levar 403 no `exigir`. Então:
+- **nunca** volte a central para antes da 1.1.0 com algum sistema fora de `desligado`: primeiro
+  "Todos em desligado", confira `lista.rede: "desligado"` no `/.sentinela/saude` de cada sistema, e só
+  então volte a central;
+- com o `srv_rede_lista` falhando, a volta atrás é o **Instant Rollback** de cada sistema para o deployment
+  do 1.2.0 anotado antes do deploy (`docs/SENTINELA-REDE.md` §20).
