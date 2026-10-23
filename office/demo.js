@@ -2,7 +2,7 @@
    LUBE OFFICE — modo demonstração (só em localhost, ?demo=1)
    Dados sintéticos em memória, com as mesmas regras de papel do
    banco (dono, editar, comentar, ver, herança pelas pastas).
-   Fica fora do site publicado (.vercelignore).
+   Fica fora do site publicado (.vercelignore). Inclui a Agenda (2026-10-23).
    ========================================================= */
 (function () {
   'use strict';
@@ -375,7 +375,9 @@
         avisos: avisos.slice().sort(function (x, y) { return x.em < y.em ? 1 : -1; }).map(function (v) {
           var a = v.arquivo ? arqPor(v.arquivo) : null, p = v.pasta ? pastaPor(v.pasta) : null;
           return { id: v.id, tipo: v.tipo, mensagem: v.mensagem, criado_em: v.em, lido_em: v.lido_em, de: pes(v.de),
-            arquivo: a ? { id: a.id, nome: a.nome, extensao: a.extensao } : null, pasta: p ? { id: p.id, nome: p.nome } : null };
+            arquivo: a ? { id: a.id, nome: a.nome, extensao: a.extensao } : null, pasta: p ? { id: p.id, nome: p.nome } : null,
+            evento: v.evento ? (function (e) { return e ? { id: e.id, titulo: e.titulo, inicio: e.inicio, fim: e.fim, dia_inteiro: e.dia_inteiro,
+              cancelado: !!e.cancelado_em, sala: e.sala ? salaPor(e.sala).nome : null } : null; })(evPor(v.evento)) : null };
         })
       };
     },
@@ -384,6 +386,187 @@
       avisos.forEach(function (v) { if (!v.lido_em && (!d.ids || d.ids.indexOf(v.id) > -1)) { v.lido_em = new Date().toISOString(); n++; } });
       return { marcados: n };
     }
+  };
+
+
+  /* ---------- Agenda e salas de reunião (2026-10-23): as mesmas regras do banco ---------- */
+  var salasAg = [
+    { id: novoId(), nome: 'Sala de Reunião 1', local: '1º andar', capacidade: 8, recursos: 'TV e videoconferência', cor: '#2C3FC4', ativa: true },
+    { id: novoId(), nome: 'Sala da Diretoria', local: '2º andar', capacidade: 12, recursos: 'TV, quadro', cor: '#E5101F', ativa: true },
+    { id: novoId(), nome: 'Sala de Treinamento', local: 'Térreo', capacidade: 24, recursos: 'Projetor', cor: '#1FB26B', ativa: true }
+  ];
+  var evs = [], evAtiv = [];
+  function hojeAs(dias, h, m) { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + dias); d.setHours(h, m || 0, 0, 0); return d; }
+  function ev(o) {
+    var e = { id: novoId(), serie: o.serie || null, dono: o.dono.id, titulo: o.titulo, descricao: o.descricao || '', local: o.local || '',
+      sala: o.sala ? o.sala.id : null, inicio: o.inicio.toISOString(), fim: o.fim.toISOString(), dia_inteiro: !!o.dia_inteiro,
+      particular: !!o.particular, repeticao: o.repeticao || null, cancelado_em: null, alterado_em: null,
+      convidados: (o.convidados || []).map(function (c) { return { pessoa: c[0] ? c[0].id : null, email: c[0] ? null : c[2], resposta: c[1] || 'pendente', email_em: ha(30) }; }) };
+    evs.push(e);
+    evAtiv.push({ evento: e.id, pessoa: e.dono, acao: 'criou_evento', detalhe: {}, em: ha(600) });
+    return e;
+  }
+  (function () {
+    var s1 = salasAg[0], dir = salasAg[1], tre = salasAg[2];
+    ev({ dono: P.ana, titulo: 'Alinhamento do Comercial', sala: s1, inicio: hojeAs(0, 9), fim: hojeAs(0, 10),
+         descricao: 'Metas da semana por região e campanha de fim de ano.', convidados: [[P.eu, 'pendente'], [P.raf, 'sim']] });
+    ev({ dono: P.eu, titulo: 'Reunião de resultados de outubro', sala: dir, inicio: hojeAs(0, 14), fim: hojeAs(0, 15, 30),
+         descricao: 'Pauta:\n1. Venda contra a meta\n2. Ruptura do Trade\n3. Próximos passos do painel',
+         convidados: [[P.car, 'sim'], [P.fer, 'talvez'], [P.raf, 'pendente'], [null, 'pendente', 'consultoria@parceiro.com.br']] });
+    ev({ dono: P.pat, titulo: 'Treinamento de integração', sala: tre, inicio: hojeAs(0, 15), fim: hojeAs(0, 17), convidados: [[P.die, 'sim']] });
+    ev({ dono: P.car, titulo: 'Visita do fornecedor', sala: s1, particular: true, inicio: hojeAs(1, 10), fim: hojeAs(1, 11, 30) });
+    ev({ dono: P.pat, titulo: 'Entrevista', sala: dir, inicio: hojeAs(2, 15), fim: hojeAs(2, 16) });
+    ev({ dono: P.eu, titulo: 'Dentista', inicio: hojeAs(1, 7, 30), fim: hojeAs(1, 8, 30) });
+    ev({ dono: P.raf, titulo: 'Inventário geral do galpão', dia_inteiro: true, inicio: hojeAs(3, 0), fim: hojeAs(4, 0), convidados: [[P.eu, 'sim']] });
+    ev({ dono: P.fer, titulo: 'Fechamento do mês', sala: dir, inicio: hojeAs(-1, 10), fim: hojeAs(-1, 12), convidados: [[P.eu, 'sim']] });
+    // série: toda segunda, 08:30, na Sala de Reunião 1
+    var serie = novoId(), seg = hojeAs(0, 8, 30);
+    seg.setDate(seg.getDate() - ((seg.getDay() + 6) % 7) - 21);
+    var ate = new Date(seg); ate.setDate(ate.getDate() + 7 * 12);
+    for (var i = 0; i <= 12; i++) {
+      var a = new Date(seg); a.setDate(a.getDate() + 7 * i);
+      var b = new Date(a); b.setHours(9, 30);
+      ev({ dono: P.eu, titulo: 'Semanal de vendas', sala: s1, inicio: a, fim: b, serie: serie,
+           repeticao: { freq: 'semana', ate: ate.toISOString().slice(0, 10) }, convidados: [[P.ana, 'sim'], [P.raf, 'sim'], [P.car, 'nao']] });
+    }
+    var alinhamento = evs[0], resultados = evs[1];
+    avisos.push({ id: novoId(), para: EU, de: P.ana.id, evento: alinhamento.id, tipo: 'convite', mensagem: alinhamento.titulo, em: ha(40), lido_em: null });
+    avisos.push({ id: novoId(), para: EU, de: P.car.id, evento: resultados.id, tipo: 'resposta', mensagem: 'sim', em: ha(25), lido_em: null });
+  })();
+
+  function salaPor(id) { for (var i = 0; i < salasAg.length; i++) if (salasAg[i].id === id) return salasAg[i]; return null; }
+  function evPor(id) { for (var i = 0; i < evs.length; i++) if (evs[i].id === id) return evs[i]; return null; }
+  function participa(e) { return e.dono === EU || e.convidados.some(function (c) { return c.pessoa === EU; }); }
+  function jEv(e) {
+    var part = participa(e), eu = e.dono === EU ? 'dono' : part ? 'convidado' : null;
+    var minha = e.convidados.filter(function (c) { return c.pessoa === EU; })[0];
+    return { id: e.id, serie: e.serie, repeticao: e.repeticao ? { freq: e.repeticao.freq, ate: e.repeticao.ate } : null,
+      titulo: part || !e.particular ? e.titulo : 'Reservada', particular: e.particular,
+      descricao: part ? e.descricao : '', local: part ? e.local : '', sala: e.sala ? salaPor(e.sala) : null,
+      inicio: e.inicio, fim: e.fim, dia_inteiro: e.dia_inteiro, dono: pes(e.dono), eu: eu,
+      minha_resposta: minha ? minha.resposta : null,
+      convidados: part ? e.convidados.map(function (c) { return { pessoa: c.pessoa ? pes(c.pessoa) : null, email: c.email, resposta: c.resposta, email_em: c.email_em, email_erro: null }; }) : null,
+      n_convidados: e.convidados.length, alterado_em: e.alterado_em, cancelado_em: e.cancelado_em };
+  }
+  function cruza(e, a, b) { return new Date(e.inicio) < b && new Date(e.fim) > a; }
+  function conflito(sala, a, b, ignorar) {
+    return evs.filter(function (x) { return x.sala === sala && !x.cancelado_em && ignorar.indexOf(x.id) < 0 && cruza(x, a, b); })[0];
+  }
+  function txtConflito(x) {
+    var a = new Date(x.inicio), f = new Date(x.fim), pad = function (n) { return String(n).padStart(2, '0'); };
+    return 'A sala "' + salaPor(x.sala).nome + '" já está reservada em ' + pad(a.getDate()) + '/' + pad(a.getMonth() + 1) + ', das ' +
+      pad(a.getHours()) + ':' + pad(a.getMinutes()) + ' às ' + pad(f.getHours()) + ':' + pad(f.getMinutes()) + ', por ' + pes(x.dono).nome +
+      (x.particular && !participa(x) ? '' : ' ("' + x.titulo + '")') + '. Escolha outro horário ou outra sala.';
+  }
+  function datasRep(a, b, rep) {
+    if (!rep) return [[a, b]];
+    var l = [], dur = b - a, d = new Date(a), ate = new Date(rep.ate + 'T23:59:59'), dia0 = a.getDay(), n0 = a.getDate();
+    while (d <= ate && l.length < 400) {
+      var ok = rep.freq === 'dia' || (rep.freq === 'dia_util' && d.getDay() > 0 && d.getDay() < 6) ||
+        (rep.freq === 'semana' && d.getDay() === dia0) || (rep.freq === 'mes' && d.getDate() === n0);
+      if (ok) { var x = new Date(d); x.setHours(a.getHours(), a.getMinutes(), 0, 0); l.push([x, new Date(x.getTime() + dur)]); }
+      d.setDate(d.getDate() + 1);
+    }
+    return l;
+  }
+  function lerConv(lista) {
+    return (lista || []).map(function (c) {
+      if (c.pessoa) return { pessoa: c.pessoa, email: null, resposta: 'pendente', email_em: new Date().toISOString() };
+      var p = pessoas.filter(function (x) { return x.email === c.email; })[0];
+      return p ? { pessoa: p.id, email: null, resposta: 'pendente', email_em: new Date().toISOString() }
+        : { pessoa: null, email: c.email, resposta: 'pendente', email_em: new Date().toISOString() };
+    }).filter(function (c) { return c.pessoa !== EU; });
+  }
+  function enviadosDe(conv) { return conv.map(function (c) { return c.pessoa ? pes(c.pessoa).email : c.email; }); }
+
+  ACOES.agenda = function (d) {
+    var a = new Date(d.de), b = new Date(d.ate);
+    return { admin: true, salas: salasAg.slice(),
+      eventos: evs.filter(function (e) { return !e.cancelado_em && cruza(e, a, b) && (e.sala || participa(e)); })
+        .sort(function (x, y) { return x.inicio < y.inicio ? -1 : 1; }).map(jEv) };
+  };
+  ACOES.evento = function (d) {
+    var e = evPor(d.id);
+    if (!e || !(participa(e) || e.sala)) falha('reunião não encontrada', 404);
+    var j = jEv(e);
+    j.pode_cancelar = !e.cancelado_em && (e.dono === EU || !!e.sala);
+    j.historico = participa(e) ? evAtiv.filter(function (t) { return t.evento === e.id || (e.serie && evPor(t.evento) && evPor(t.evento).serie === e.serie); })
+      .sort(function (x, y) { return x.em < y.em ? 1 : -1; }).map(function (t) { return { pessoa: pes(t.pessoa), acao: t.acao, detalhe: t.detalhe, em: t.em }; }) : null;
+    return j;
+  };
+  ACOES.salas = function (d) {
+    var a = d.inicio ? new Date(d.inicio) : null, b = d.fim ? new Date(d.fim) : null;
+    return { admin: true, salas: salasAg.map(function (s) {
+      var x = a && b ? evs.filter(function (e) { return e.sala === s.id && !e.cancelado_em && e.id !== d.ignorar && cruza(e, a, b); })[0] : null;
+      return Object.assign({}, s, { ocupada: x ? jEv(x) : null });
+    }) };
+  };
+  ACOES.evento_salvar = function (d) {
+    var x = d.dados || {}, a = new Date(x.inicio), b = new Date(x.fim);
+    if (!String(x.titulo || '').trim()) falha('dê um título para a reunião');
+    if (!(b > a)) falha('o fim tem que ser depois do início');
+    var conv = lerConv(x.convidados);
+    if (!d.id) {
+      var datas = datasRep(a, b, x.repeticao), serie = x.repeticao ? novoId() : null;
+      if (x.sala) datas.forEach(function (p) { var c = conflito(x.sala, p[0], p[1], []); if (c) falha(txtConflito(c), 409); });
+      var prim = null;
+      datas.forEach(function (p) {
+        var e = { id: novoId(), serie: serie, dono: EU, titulo: x.titulo.trim(), descricao: x.descricao || '', local: x.local || '', sala: x.sala || null,
+          inicio: p[0].toISOString(), fim: p[1].toISOString(), dia_inteiro: !!x.dia_inteiro, particular: !!x.particular,
+          repeticao: x.repeticao || null, cancelado_em: null, alterado_em: null, convidados: JSON.parse(JSON.stringify(conv)) };
+        evs.push(e);
+        prim = prim || e;
+      });
+      evAtiv.push({ evento: prim.id, pessoa: EU, acao: 'criou_evento', detalhe: { ocorrencias: datas.length }, em: new Date().toISOString() });
+      return { evento: jEv(prim), ocorrencias: datas.length, email: { ligado: true, enviados: enviadosDe(conv), falhas: [] } };
+    }
+    var e0 = evPor(d.id);
+    if (!e0 || e0.dono !== EU) falha('só quem marcou a reunião pode mudar', 403);
+    var alvos = d.escopo === 'serie' && e0.serie ? evs.filter(function (e) { return e.serie === e0.serie && !e.cancelado_em && e.inicio >= e0.inicio; }) : [e0];
+    var ids = alvos.map(function (e) { return e.id; }), dur = b - a;
+    var novos = alvos.map(function (e) {
+      var s = e === e0 ? a : new Date(e.inicio);
+      if (e !== e0) s.setHours(a.getHours(), a.getMinutes(), 0, 0);
+      return [s, new Date(s.getTime() + dur)];
+    });
+    if (x.sala) novos.forEach(function (p) { var c = conflito(x.sala, p[0], p[1], ids); if (c) falha(txtConflito(c), 409); });
+    alvos.forEach(function (e, i) {
+      var mudouHora = e.inicio !== novos[i][0].toISOString() || e.fim !== novos[i][1].toISOString();
+      e.titulo = x.titulo.trim(); e.descricao = x.descricao || ''; e.local = x.local || ''; e.sala = x.sala || null;
+      e.particular = !!x.particular; e.dia_inteiro = !!x.dia_inteiro;
+      e.inicio = novos[i][0].toISOString(); e.fim = novos[i][1].toISOString(); e.alterado_em = new Date().toISOString();
+      var velhas = {};
+      e.convidados.forEach(function (c) { velhas[c.pessoa || c.email] = c.resposta; });
+      e.convidados = JSON.parse(JSON.stringify(conv)).map(function (c) { c.resposta = mudouHora ? 'pendente' : (velhas[c.pessoa || c.email] || 'pendente'); return c; });
+    });
+    evAtiv.push({ evento: e0.id, pessoa: EU, acao: 'alterou_evento', detalhe: { escopo: d.escopo }, em: new Date().toISOString() });
+    return { evento: jEv(e0), ocorrencias: alvos.length, email: { ligado: true, enviados: enviadosDe(conv), falhas: [] } };
+  };
+  ACOES.evento_cancelar = function (d) {
+    var e0 = evPor(d.id);
+    if (!e0 || e0.cancelado_em) falha('reunião não encontrada ou já cancelada', 404);
+    var alvos = d.escopo === 'serie' && e0.serie ? evs.filter(function (e) { return e.serie === e0.serie && !e.cancelado_em && e.inicio >= e0.inicio; }) : [e0];
+    alvos.forEach(function (e) { e.cancelado_em = new Date().toISOString(); });
+    evAtiv.push({ evento: e0.id, pessoa: EU, acao: 'cancelou_evento', detalhe: { escopo: d.escopo }, em: new Date().toISOString() });
+    return { cancelados: alvos.length, email: { ligado: true, enviados: enviadosDe(e0.convidados), falhas: [] } };
+  };
+  ACOES.evento_responder = function (d) {
+    var e0 = evPor(d.id);
+    var alvos = d.escopo === 'serie' && e0.serie ? evs.filter(function (e) { return e.serie === e0.serie && !e.cancelado_em && e.inicio >= e0.inicio; }) : [e0];
+    alvos.forEach(function (e) { e.convidados.forEach(function (c) { if (c.pessoa === EU) c.resposta = d.resposta; }); });
+    evAtiv.push({ evento: e0.id, pessoa: EU, acao: 'respondeu', detalhe: { resposta: d.resposta }, em: new Date().toISOString() });
+    return jEv(e0);
+  };
+  ACOES.sala_salvar = function (d) {
+    var x = d.dados || {};
+    if (!String(x.nome || '').trim()) falha('dê um nome à sala');
+    var s = d.id ? salaPor(d.id) : null;
+    if (salasAg.some(function (o) { return o !== s && o.nome.toLowerCase() === String(x.nome).trim().toLowerCase(); })) falha('já existe uma sala com esse nome');
+    if (!s) { s = { id: novoId(), ativa: true }; salasAg.push(s); }
+    s.nome = String(x.nome).trim(); s.local = x.local || ''; s.capacidade = x.capacidade ? +x.capacidade : null;
+    s.recursos = x.recursos || ''; s.cor = x.cor || '#2C3FC4';
+    if (typeof x.ativa === 'boolean') s.ativa = x.ativa;
+    return Object.assign({}, s, { reservas_futuras: evs.filter(function (e) { return e.sala === s.id && !e.cancelado_em && new Date(e.fim) > new Date(); }).length });
   };
 
   function confirmar(r, blob, o) {

@@ -16,12 +16,7 @@ export function smtpPronto() {
   return !!(Deno.env.get('OFFICE_SMTP_USER') && Deno.env.get('OFFICE_SMTP_PASS'));
 }
 
-// um e-mail por destinatário: quem recebe não vê o endereço dos outros
-export async function enviarEmails(o: {
-  para: string[]; nomeRemetente: string; responderPara: string;
-  assunto: string; texto: string; html: string;
-  anexo: { nome: string; bytes: Uint8Array; tipo: string };
-}) {
+function abrirTransporte() {
   const host = Deno.env.get('OFFICE_SMTP_HOST') || 'email-ssl.com.br';
   const port = Number(Deno.env.get('OFFICE_SMTP_PORT') || 465);
   if (port === 25 || port === 587) throw new Error(`a porta ${port} é bloqueada no Supabase; use a 465`);
@@ -31,6 +26,16 @@ export async function enviarEmails(o: {
     auth: { user, pass: Deno.env.get('OFFICE_SMTP_PASS')! },
     connectionTimeout: 15000, greetingTimeout: 10000, socketTimeout: 45000,
   });
+  return { transporte, user };
+}
+
+// um e-mail por destinatário: quem recebe não vê o endereço dos outros
+export async function enviarEmails(o: {
+  para: string[]; nomeRemetente: string; responderPara: string;
+  assunto: string; texto: string; html: string;
+  anexo: { nome: string; bytes: Uint8Array; tipo: string };
+}) {
+  const { transporte, user } = abrirTransporte();
   const conteudo = Buffer.from(o.anexo.bytes);
   const enviados: string[] = [];
   const falhas: { para: string; erro: string }[] = [];
@@ -44,6 +49,35 @@ export async function enviarEmails(o: {
         text: o.texto,
         html: o.html,
         attachments: [{ filename: o.anexo.nome, content: conteudo, contentType: o.anexo.tipo }],
+      });
+      enviados.push(para);
+    } catch (e) {
+      falhas.push({ para, erro: String((e as Error)?.message ?? e).slice(0, 200) });
+    }
+  }
+  transporte.close();
+  return { enviados, falhas };
+}
+
+// convite da Agenda: o .ics vai como convite de calendário (text/calendar com METHOD), que o
+// Gmail, o Outlook e o celular mostram com "Sim / Não / Talvez"; um e-mail por convidado
+export async function enviarConvites(o: {
+  para: string[]; nomeRemetente: string; responderPara: string;
+  assunto: string; texto: string; html: string; ics: string; metodo: 'REQUEST' | 'CANCEL';
+}) {
+  const { transporte, user } = abrirTransporte();
+  const enviados: string[] = [];
+  const falhas: { para: string; erro: string }[] = [];
+  for (const para of o.para) {
+    try {
+      await transporte.sendMail({
+        from: { name: o.nomeRemetente, address: user },
+        to: para,
+        replyTo: o.responderPara,
+        subject: o.assunto,
+        text: o.texto,
+        html: o.html,
+        icalEvent: { method: o.metodo, filename: o.metodo === 'CANCEL' ? 'cancelamento.ics' : 'convite.ics', content: o.ics },
       });
       enviados.push(para);
     } catch (e) {

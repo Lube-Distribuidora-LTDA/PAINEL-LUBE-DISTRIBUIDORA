@@ -2,6 +2,7 @@
 // LUBE OFFICE — Drive e editor do portal (2026-10-21)
 // Portas:
 //   POST /office                  o navegador do portal, com o JWT da sessão; a ação vai no corpo
+//                                 (Drive, editor e, desde 2026-10-23, a Agenda e as salas de reunião)
 //   POST /office/motor            o motor de edição (ONLYOFFICE) devolvendo o arquivo salvo
 //   POST /office/motor/registrar  a SRV-IA avisando o endereço do motor (o túnel muda ao reiniciar)
 //   POST /office/motor/teste      teste de ponta a ponta, só com a senha temporária do banco
@@ -22,7 +23,8 @@ import JSZip from 'npm:jszip@3.10.1';
 import { assinarHS256, verificarHS256 } from './jwt.ts';
 import { lerRetorno, montarEditor, motorVivo, origemDoPlugin, tipoDocumento, urlMotorValida, uuidValido, visualDoEditor } from './motor.ts';
 import { LIMITE_EMAIL_BYTES, linhaUnica, montarEmail, tipoMime } from './email.ts';
-import { enviarEmails, smtpPronto } from './correio.ts';
+import { enviarConvites, enviarEmails, smtpPronto } from './correio.ts';
+import { type Carta, montarEmailConvite, montarIcs } from './agenda.ts';
 import {
   conferirPlano, custoUsd, esquema, hojeBrasilia, instrucoes, LIMITE_IMAGEM_BYTES, LIMITE_TEXTO_FONTE, modeloValido, montarPedido,
   ordemNatural, textoDocx, textoPptx, textoXlsx, TIPOS_IMAGEM, type ModoIa, type TipoIa,
@@ -55,7 +57,8 @@ class ErroOffice extends Error {
 async function rpc(nome: string, params: Record<string, unknown>) {
   const { data, error } = await admin.rpc(nome, params);
   if (error) {
-    const st = error.code === '42501' ? 403 : error.code === 'P0002' ? 404 : error.code === '22023' ? 400 : 500;
+    const st = error.code === '42501' ? 403 : error.code === 'P0002' ? 404 : error.code === '22023' ? 400
+      : error.code === '23P01' ? 409 : 500;   // 23P01: a sala já está reservada nesse horário
     const msg = String(error.message || 'falha no banco').replace(/^office:\s*/, '');
     throw new ErroOffice(st === 500 ? 'Falha no banco: ' + msg : msg, st);
   }
@@ -276,6 +279,48 @@ async function pedirIa(eu: string, c: Record<string, any>) {
   return json({ plano, modelo, custo_usd: custo, segundos: Math.round((Date.now() - inicio) / 100) / 10, situacao });
 }
 
+
+// ---------------------------------------------------------
+// Agenda: data do navegador e o convite por e-mail de cada "carta" que o banco devolve
+// ---------------------------------------------------------
+function dataOuNula(v: unknown) {
+  if (typeof v !== 'string' || v.length > 40) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+const ESCOPO = (v: unknown) => (v === 'serie' ? 'serie' : 'este');
+
+// manda os convites (.ics) e anota no banco o que saiu e o que falhou. A reunião já está salva:
+// e-mail que não sai vira aviso na tela, nunca desfaz a reunião
+async function enviarCartas(eu: string, cartas: unknown) {
+  const lista = (Array.isArray(cartas) ? cartas : []) as Carta[];
+  const r = { ligado: smtpPronto(), enviados: [] as string[], falhas: [] as { para: string; erro: string }[] };
+  if (!lista.length || !r.ligado) return r;
+  for (const carta of lista) {
+    const para = (carta.para ?? []).map((x) => String(x?.email ?? '').trim().toLowerCase()).filter(Boolean);
+    if (!para.length || !carta.componentes?.length) continue;
+    const link = `${PORTAL}/office/?v=agenda&evento=${carta.evento}`;
+    let envio: { enviados: string[]; falhas: { para: string; erro: string }[] };
+    try {
+      const e = montarEmailConvite(carta, link);
+      envio = await enviarConvites({
+        para,
+        nomeRemetente: linhaUnica((carta.organizador?.nome || 'Lube Distribuidora') + ' via LUBE OFFICE', 100),
+        responderPara: carta.organizador?.email || '',
+        assunto: e.assunto, texto: e.texto, html: e.html,
+        ics: montarIcs(carta, link), metodo: carta.metodo === 'CANCEL' ? 'CANCEL' : 'REQUEST',
+      });
+    } catch (e) {
+      envio = { enviados: [], falhas: para.map((x) => ({ para: x, erro: String((e as Error)?.message ?? e).slice(0, 200) })) };
+    }
+    r.enviados.push(...envio.enviados);
+    r.falhas.push(...envio.falhas);
+    await rpc('office_srv_evento_emails', { p_user: eu, p_evento: carta.evento, p_enviados: envio.enviados, p_falhas: envio.falhas })
+      .catch((e) => console.error('office agenda: falha ao anotar o e-mail', e));
+  }
+  return r;
+}
+
 // ---------------------------------------------------------
 // porta do navegador
 // ---------------------------------------------------------
@@ -441,6 +486,42 @@ async function acaoDoPortal(req: Request) {
         const ids = Array.isArray(c.ids) ? c.ids.filter(uuidValido) : null;
         return json(await rpc('office_srv_avisos_lidos', { p_user: eu, p_ids: ids }));
       }
+
+      // ===== Agenda e salas de reunião (2026-10-23) =====
+      case 'agenda': {
+        const de = dataOuNula(c.de), ate = dataOuNula(c.ate);
+        if (!de || !ate) return json({ erro: 'Período inválido' }, 400);
+        return json(await rpc('office_srv_agenda', { p_user: eu, p_de: de, p_ate: ate }));
+      }
+      case 'evento':
+        return json(await rpc('office_srv_evento', { p_user: eu, p_evento: exigeUuid(c.id, 'Reunião') }));
+      case 'evento_salvar': {
+        const d = c.dados && typeof c.dados === 'object' ? c.dados : {};
+        const r = await rpc('office_srv_evento_salvar', {
+          p_user: eu, p_evento: uuidOuNulo(c.id), p_dados: d, p_escopo: ESCOPO(c.escopo),
+        });
+        const email = await enviarCartas(eu, r.cartas);
+        delete r.cartas;
+        return json({ ...r, email });
+      }
+      case 'evento_cancelar': {
+        const r = await rpc('office_srv_evento_cancelar', { p_user: eu, p_evento: exigeUuid(c.id, 'Reunião'), p_escopo: ESCOPO(c.escopo) });
+        const email = await enviarCartas(eu, r.cartas);
+        delete r.cartas;
+        return json({ ...r, email });
+      }
+      case 'evento_responder':
+        return json(await rpc('office_srv_evento_responder', {
+          p_user: eu, p_evento: exigeUuid(c.id, 'Reunião'), p_resposta: String(c.resposta ?? ''), p_escopo: ESCOPO(c.escopo),
+        }));
+      case 'salas':
+        return json(await rpc('office_srv_salas', {
+          p_user: eu, p_inicio: dataOuNula(c.inicio), p_fim: dataOuNula(c.fim), p_ignorar: uuidOuNulo(c.ignorar),
+        }));
+      case 'sala_salvar':
+        return json(await rpc('office_srv_sala_salvar', {
+          p_user: eu, p_sala: uuidOuNulo(c.id), p_dados: c.dados && typeof c.dados === 'object' ? c.dados : {},
+        }));
       default:
         return json({ erro: 'Ação desconhecida' }, 400);
     }

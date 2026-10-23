@@ -1,6 +1,7 @@
 /* =========================================================
    LUBE OFFICE — Drive
    Lista, criar, enviar, compartilhar, versões, lixeira e avisos.
+   A Agenda (agenda.js) entra como a visão "agenda" (2026-10-23).
    Quem pode o quê é conferido no servidor (função office); aqui a
    tela só esconde o que a pessoa não pode fazer.
    ========================================================= */
@@ -9,9 +10,9 @@
 
   var O = window.OFC, $ = O.$, $$ = O.$$, esc = O.esc;
 
-  var VISOES = ['meus', 'compartilhados', 'recentes', 'modelos', 'lixeira', 'busca'];
+  var VISOES = ['meus', 'compartilhados', 'recentes', 'agenda', 'modelos', 'lixeira', 'busca'];
   var TITULO = {
-    meus: 'Meus arquivos', compartilhados: 'Compartilhados comigo', recentes: 'Recentes',
+    meus: 'Meus arquivos', compartilhados: 'Compartilhados comigo', recentes: 'Recentes', agenda: 'Agenda',
     modelos: 'Modelos da Lube', lixeira: 'Lixeira'
   };
 
@@ -28,7 +29,9 @@
     pessoas: null,
     avisos: null,
     gav: null,
-    animar: false
+    animar: false,
+    evento: null,        // reunião a abrir na Agenda (vinda do sino ou do e-mail)
+    agendaNova: false    // "Novo › Reunião" fora da Agenda
   };
 
   /* ---------- ícones de interface ---------- */
@@ -72,6 +75,7 @@
     est.busca = u.get('q') || '';
     var v = u.get('v') || (est.busca ? 'busca' : 'meus');
     est.visao = est.pasta ? 'pasta' : (VISOES.indexOf(v) > -1 ? v : 'meus');
+    est.evento = est.visao === 'agenda' && /^[0-9a-f-]{36}$/i.test(u.get('evento') || '') ? u.get('evento') : null;
   }
   function irPara(o, substituir) {
     var u = new URLSearchParams();
@@ -79,6 +83,8 @@
     if (o.pasta) u.set('pasta', o.pasta);
     else if (o.visao && o.visao !== 'meus') u.set('v', o.visao);
     if (o.q) u.set('q', o.q);
+    if (o.evento) u.set('evento', o.evento);
+    if (o.nova) est.agendaNova = true;
     if (o.visao && o.visao !== 'pasta' && o.visao !== 'busca') gravarSessao('office_origem', o.visao);
     var url = location.pathname + (u.toString() ? '?' + u.toString() : '');
     history[substituir ? 'replaceState' : 'pushState'](null, '', url);
@@ -102,10 +108,11 @@
 
   /* ---------- montagem da página ---------- */
   function render() {
-    var raiz = est.visao === 'meus';
+    var raiz = est.visao === 'meus', agenda = est.visao === 'agenda';
     $('[data-ola]').hidden = !raiz;
     $('[data-secao-modelos]').hidden = !(raiz || est.visao === 'modelos');
-    $('[data-secao-lista]').hidden = est.visao === 'modelos';
+    $('[data-secao-lista]').hidden = est.visao === 'modelos' || agenda;
+    $('[data-secao-agenda]').hidden = !agenda;
     var marcada = est.visao === 'pasta' ? origem() : est.visao === 'busca' ? '' : est.visao;
     $$('[data-visao]').forEach(function (a) {
       a.classList.toggle('is-on', a.getAttribute('data-visao') === marcada);
@@ -131,6 +138,13 @@
     document.title = (est.visao === 'pasta' && est.caminho.length
       ? est.caminho[est.caminho.length - 1].nome
       : est.visao === 'busca' ? 'Busca' : TITULO[est.visao] || 'LUBE OFFICE') + ' — LUBE OFFICE';
+    if (window.OFC_AGENDA && est.eu) {
+      if (agenda) {
+        window.OFC_AGENDA.mostrar({ eu: est.eu, evento: est.evento, nova: est.agendaNova });
+        est.evento = null;
+        est.agendaNova = false;
+      } else window.OFC_AGENDA.esconder();
+    }
   }
 
   function renderTrilha() {
@@ -209,7 +223,7 @@
   }
 
   function carregar() {
-    if (!est.eu || est.visao === 'modelos') return;
+    if (!est.eu || est.visao === 'modelos' || est.visao === 'agenda') return;
     var n = ++est.pedido;
     esqueleto();
     var dados = est.visao === 'pasta' ? { pasta: est.pasta } : { visao: est.visao, busca: est.busca };
@@ -1092,14 +1106,15 @@
     $('[data-sino]').setAttribute('aria-label', r.nao_lidos ? r.nao_lidos + ' avisos novos' : 'Avisos');
     var lista = $('[data-avisos-lista]');
     if (!r.avisos.length) {
-      lista.innerHTML = '<p class="avisos__vazio">Nenhum aviso.<br>Quando alguém mencionar você num comentário ou compartilhar algo, aparece aqui.</p>';
+      lista.innerHTML = '<p class="avisos__vazio">Nenhum aviso.<br>Quando alguém mencionar você num comentário, compartilhar algo ou convidar você para uma reunião, aparece aqui.</p>';
       return;
     }
     lista.innerHTML = r.avisos.map(function (v) {
       var alvo = v.arquivo ? v.arquivo.nome + '.' + v.arquivo.extensao : v.pasta ? v.pasta.nome : 'um item';
       var de = v.de ? v.de.nome : 'Alguém';
       var recado = v.mensagem ? '<span class="aviso__msg">“' + esc(v.mensagem) + '”</span>' : '';
-      var txt = v.tipo === 'mencao'
+      var txt = v.evento ? textoAvisoReuniao(v, de)
+        : v.tipo === 'mencao'
         ? '<span><strong>' + esc(de) + '</strong> mencionou você em <strong>' + esc(alvo) + '</strong></span>' + recado
         : v.tipo === 'enviou'
         ? '<span><strong>' + esc(de) + '</strong> enviou <strong>' + esc(alvo) + '</strong> para você</span>' + recado
@@ -1108,6 +1123,22 @@
       return '<button type="button" class="aviso' + (v.lido_em ? '' : ' aviso--novo') + '" data-aviso="' + esc(v.id) + '">' +
         O.avatar(v.de) + '<span class="aviso__txt">' + txt + '<span class="aviso__quando">' + esc(O.quando(v.criado_em)) + '</span></span></button>';
     }).join('');
+  }
+  // aviso da Agenda: "Ana convidou você para Reunião comercial" + quando e sala
+  var RESPOSTA = { sim: 'Sim', nao: 'Não', talvez: 'Talvez' };
+  function quandoReuniao(ev) {
+    var d = new Date(ev.inicio), sem = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][d.getDay()];
+    var dia = sem + ', ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+    return ev.dia_inteiro ? dia + ' (dia todo)' : dia + ' às ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  function textoAvisoReuniao(v, de) {
+    var ev = v.evento, t = '<strong>' + esc(ev.titulo) + '</strong>';
+    var frase = v.tipo === 'convite' ? ' convidou você para ' + t
+      : v.tipo === 'convite_mudou' ? ' mudou ' + t
+      : v.tipo === 'convite_cancelado' ? ' cancelou ' + t
+      : ' respondeu “' + esc(RESPOSTA[v.mensagem] || v.mensagem) + '” para ' + t;
+    return '<span><strong>' + esc(de) + '</strong>' + frase + '</span>' +
+      '<span class="aviso__msg" style="font-style:normal">' + esc(quandoReuniao(ev) + (ev.sala ? ' · ' + ev.sala : '')) + (ev.cancelado ? ' · cancelada' : '') + '</span>';
   }
   function abrirAviso(id) {
     var v = (est.avisos.avisos || []).filter(function (x) { return x.id === id; })[0];
@@ -1119,6 +1150,7 @@
       O.api('avisos_lidos', { ids: [id] }).catch(function () {});
     }
     fecharMenus();
+    if (v.evento) { irPara({ visao: 'agenda', evento: v.evento.id }); return; }
     if (v.arquivo) window.open(urlEditor({ id: v.arquivo.id, nome: v.arquivo.nome, extensao: v.arquivo.extensao }), '_blank', 'noopener');
     else if (v.pasta) { gravarSessao('office_origem', 'compartilhados'); irPara({ pasta: v.pasta.id }); }
   }
@@ -1183,6 +1215,11 @@
         return;
       }
       if (t.closest('[data-ia-criar]')) { ev.preventDefault(); fecharMenus(); dialogoIa({}); return; }
+      if (t.closest('[data-nova-reuniao]')) {
+        ev.preventDefault(); fecharMenus();
+        if (est.visao === 'agenda' && window.OFC_AGENDA) window.OFC_AGENDA.nova(); else irPara({ visao: 'agenda', nova: true });
+        return;
+      }
       if ((el = t.closest('[data-modelo]'))) {
         var m = O.MODELOS.filter(function (x) { return x.id === el.getAttribute('data-modelo'); })[0];
         if (m) pedirCriar(m.ext, m);
