@@ -35,8 +35,8 @@ caminho mais seguro e diga no relatório o que decidiu. A especificação geral 
   fora. A central também não emite passe fora da rede para quem não está liberado.
 - **A tela de login do portal sempre abre** (os RCAs usam o atalho do SAC nela, e o liberado precisa
   entrar). Depois do login, quem está fora e não está liberado vê: "Este sistema só abre na rede da Lube.
-  Você está fora da empresa. Se precisa acessar, fale com o TI." (mais uma dica para quem está na Lube no
-  4G, §9).
+  Este aparelho não está na rede da Lube. Se precisa acessar de fora, fale com o TI." (mais uma dica para
+  quem está na Lube no 4G, §9).
 - **Afrouxar a regra só de dentro.** Com algum sistema exigindo a rede, cadastrar rede, liberar pessoa,
   observar e desligar só passam pela central e de dentro de uma rede da Lube (ou com liberação). Senha de
   administrador, de fora, não desliga a regra pelo banco (§4.4). O SQL Editor do Supabase continua sendo a
@@ -573,7 +573,7 @@ Respostas do 403 de rede:
   `cache-control: no-store`, `x-robots-tag: noindex`, `x-sentinela: rede`, `x-content-type-options:
   nosniff`, `referrer-policy: no-referrer`, a CSP da página de bloqueio de hoje.
 - **API, arquivo e outros métodos**: `403 {"erro":"fora_da_rede","mensagem":"Este sistema só abre na rede
-  da Lube. Você está fora da empresa. Se precisa acessar, fale com o TI.","portal":"<portal>"}`.
+  da Lube. Este aparelho não está na rede da Lube. Se precisa acessar de fora, fale com o TI.","portal":"<portal>"}`.
 - Sem código de incidente e sem IP (o TI acha a pessoa em "Tentativas de fora").
 
 ### 6.5 Troca do passe fora da rede
@@ -736,20 +736,19 @@ ataque) e **sem código e sem IP**:
 <title>Fora da rede da Lube · Sentinela Lube</title>
 [ícone: prédio com sinal riscado, âmbar #ffb340]
 Este sistema só abre na rede da Lube                    (h1)
-Você está fora da empresa.
-Se precisa acessar, fale com o TI: <e-mail do TI, o mesmo da página de bloqueio de hoje>
-(v1.1, menor) Está na Lube? Use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e
-recarregue a página. Se o TI acabou de liberar você, espere 1 minuto e recarregue.
+Este aparelho não está na rede da Lube.
+Se precisa acessar de fora, fale com o TI: <e-mail do TI, o mesmo da página de bloqueio de hoje>
+(menor) Na Lube, use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e recarregue a
+página. Se o TI acabou de liberar você, espere 1 minuto e recarregue.
 [ Voltar ao Painel Lube ]  → <portal>/
 Lube Distribuidora · Sentinela
 ```
 O `portal` vem da lista (já validado como `https://...`) e é escapado.
 
-"Você está fora da empresa" é falso para quem está na Lube no 4G, com VPN, com a Retransmissão Privada do
-iCloud ou com a "rede segura" do Edge (§17.4), e para o escritório inteiro quando a operadora troca o IP
-(§12). A linha de baixo dá a saída sem detalhe técnico. Trocar a frase decidida por "Este aparelho não está
-na rede da Lube" fica para o OK do Júlio (§18); o mesmo texto vai no guarda, no `fora-da-rede.html` e no
-aviso do `rede.js`.
+Texto decidido pelo Júlio em 2026-10-26: "Este aparelho não está na rede da Lube" (no lugar de "Você está
+fora da empresa", que era falso para quem está na Lube no 4G, com VPN, com a Retransmissão Privada do iCloud
+ou com a "rede segura" do Edge, §17.4, e para o escritório inteiro quando a operadora troca o IP, §12). O
+mesmo texto vai no guarda, no `fora-da-rede.html` e no aviso do `rede.js`.
 
 ### 9.2 No portal (`fora-da-rede.html`, estático, na raiz)
 O mesmo texto, no visual do portal. `?de=painel` troca o título para "O Painel Lube só abre na rede da
@@ -1150,9 +1149,14 @@ atalho do SAC) e não tem liberação por pessoa.
 
 ## 18. Pendências e decisões para o Júlio
 
-- [ ] O IP do escritório é **fixo**? Há link reserva, Wi-Fi do galpão, filial ou empresa do grupo (LUBE
-      RJ, L LOG, IMPÉRIO LOG, SERMAR) que use os sistemas de outro endereço? O TI abre
-      `/.sentinela/saude` de cada lugar e anota o `ip`.
+> **Decisões de 2026-10-26 (Júlio):** o IP do escritório fica como **fixo** ("qualquer coisa te aviso para
+> mudanças"); **exigir já no mesmo dia**, sem os 5 dias de observar ("ai eu vou saber se todo mundo que está na
+> empresa está usando a rede"; se algo der errado, ele pede para desfazer); o **Reposições fica para depois**;
+> a frase passa a ser **"Este aparelho não está na rede da Lube"**.
+
+- [x] O IP do escritório é **fixo**? Júlio, 2026-10-26: manter como fixo. Há link reserva, Wi-Fi do galpão,
+      filial ou empresa do grupo (LUBE RJ, L LOG, IMPÉRIO LOG, SERMAR) que use os sistemas de outro endereço?
+      Vai aparecer em "Tentativas de fora"; o TI abre `/.sentinela/saude` de cada lugar e anota o `ip`.
 - [ ] **Consultora externa** (única conta de fora do domínio, só usa o Reposições): liberação renovada a
       cada 30 dias, prazo maior só para ela, ou o Reposições em observar enquanto houver consultoria?
 - [ ] Prazo máximo de 30 dias está bom?
@@ -1164,10 +1168,9 @@ atalho do SAC) e não tem liberação por pessoa.
       da rede também nas funções de admin e da Sentinela no Supabase.
 - [ ] **MFA nos administradores** (v1.1): sem ele, a senha de um admin, de fora, ainda mexe nas funções gerais
       da Sentinela e do admin (§17.1). Com ele, as funções de admin passam a exigir `aal2`.
-- [ ] **Texto da página de bloqueio** (v1.1): "Você está fora da empresa" é falso para quem está na Lube no 4G
-      ou com VPN. Hoje a página leva a dica "Está na Lube? Use o Wi-Fi da empresa ..." (§9). Trocar a frase por
-      "Este aparelho não está na rede da Lube" só com o OK do Júlio (muda o SHA-256 do guarda: copiar de novo
-      nos 12 lugares).
+- [x] **Texto da página de bloqueio**: trocado em 2026-10-26 (Júlio) para "Este aparelho não está na rede da
+      Lube", com a dica "Na Lube, use o Wi-Fi da empresa ..." (§9). O SHA-256 do guarda mudou: copiado de novo
+      nos 12 lugares.
 - [ ] **Reposições** (v1.1): quem precisa do cartão REPOSIÇÕES e o aviso aos usuários antes do passo 5 (§14.2).
 - [ ] **Aquecedor do Reposições** (v1.1): com o segredo, sem o `ssl=sem-verificar` (§14.2, item 3).
 - [ ] **Guardião** (v1.1, repositório `12. GUARDIAO`): para cada sistema com `rede_sistemas.modo = 'exigir'`,

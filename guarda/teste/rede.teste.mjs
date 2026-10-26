@@ -26,7 +26,7 @@ const HP = 'painel-lube-distribuidora.vercel.app';
 const JULIO = 'julio@lube.com.br';
 const ANA = 'ana@lube.com.br';
 const ROBO = 'robo do gestao ti (agendador da vercel)';
-const MSG = 'Este sistema só abre na rede da Lube. Você está fora da empresa. Se precisa acessar, fale com o TI.';
+const MSG = 'Este sistema só abre na rede da Lube. Este aparelho não está na rede da Lube. Se precisa acessar de fora, fale com o TI.';
 const RE_REGRA = /^[a-z_]{1,40}$/;           // formato que a central aceita
 
 const app = (email, extra = {}) => ({ identidade: { email, origem: 'sessao_app', ...extra } });
@@ -60,9 +60,9 @@ async function paginaRede(r, portal = PORTAL, ips = [FORA]) {
   assert.equal(r.headers.get('content-security-policy'), "default-src 'none'; style-src 'unsafe-inline'; img-src data:");
   const txt = await r.text();
   for (const t of ['<title>Fora da rede da Lube · Sentinela Lube</title>', '<h1>Este sistema só abre na rede da Lube</h1>',
-    '<p>Você está fora da empresa.</p>',
-    '<p>Se precisa acessar, fale com o TI: <a href="mailto:cpd@lube.com.br">cpd@lube.com.br</a></p>',
-    'Está na Lube? Use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e recarregue a página.',
+    '<p>Este aparelho não está na rede da Lube.</p>',
+    '<p>Se precisa acessar de fora, fale com o TI: <a href="mailto:cpd@lube.com.br">cpd@lube.com.br</a></p>',
+    'Na Lube, use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e recarregue a página.',
     'Se o TI acabou de liberar você, espere 1 minuto e recarregue.',
     '>Voltar ao Painel Lube</a>', 'Lube Distribuidora · Sentinela', '#050b1c', '#0d1830', 'stroke="#ffb340"',
     'target="_top"', '<meta name="robots" content="noindex">']) {

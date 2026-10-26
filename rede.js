@@ -329,8 +329,8 @@
     ic.innerHTML = IC_FORA;
     var t = el('div');
     t.appendChild(el('b', null, (nome ? nome + ' só abre' : 'Este sistema só abre') + ' na rede da Lube'));
-    t.appendChild(document.createTextNode('Você está fora da empresa. Se precisa acessar, fale com o TI: ' + CONTATO +
-      '. Está na Lube? Use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e tente de novo.'));
+    t.appendChild(document.createTextNode('Este aparelho não está na rede da Lube. Se precisa acessar de fora, fale com o TI: ' + CONTATO +
+      '. Na Lube, use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e tente de novo.'));
     var x = el('button', null, '×');
     x.type = 'button';
     x.setAttribute('aria-label', 'Fechar aviso');

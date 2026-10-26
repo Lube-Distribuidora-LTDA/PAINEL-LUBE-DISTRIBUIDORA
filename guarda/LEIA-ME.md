@@ -103,8 +103,8 @@ bloqueio da lista, modo proteger e `sem_login` continuam vindo antes, como no 1.
 Respostas do 403 de rede (cabeçalho `x-sentinela: rede`, `cache-control: no-store`, sem código de
 incidente e sem IP):
 - **página** (GET/HEAD de página, inclusive no iframe do portal): HTML âmbar "Este sistema só abre na
-  rede da Lube · Você está fora da empresa · Se precisa acessar, fale com o TI", a dica "Está na Lube?
-  Use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e recarregue a página. Se o TI
+  rede da Lube · Este aparelho não está na rede da Lube · Se precisa acessar de fora, fale com o TI", a
+  dica "Na Lube, use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e recarregue a página. Se o TI
   acabou de liberar você, espere 1 minuto e recarregue." e o botão "Voltar ao Painel Lube" (abre fora do
   iframe);
 - **API, arquivo e outros métodos:** `{"erro":"fora_da_rede","mensagem":"...","portal":"https://..."}`.
