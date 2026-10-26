@@ -10,12 +10,14 @@ autenticação e banco de dados.
 ## Estrutura
 
 ```
-index.html      portal: tela de login + vitrine dos sistemas liberados
+index.html      portal: login, abertura ("SISTEMAS CORPORATIVOS" + caminhão) e o painel
 admin.html      painel administrativo (só abre para perfis is_admin)
 styles.css      sistema visual do portal (cores, tipografia, animações)
 admin.css       estilos do painel administrativo
-app.js          animações: scroll, caminhão, ícones SVG, busca, carrossel
-portal.js       sessão, permissões e montagem dos cartões
+app.js          abertura: marca, cortina, hero, caminhão e a chegada animada do painel
+shell.js        painel: menu "BI LUBE" (fixados, áreas, cadeado), abas e BI dentro do painel
+shell.css       estilos do painel (menu azul flutuante, palco, abas, chegada)
+portal.js       sessão, permissões, passe da Sentinela e dados para o shell.js
 admin.js        CRUD de usuários, sistemas, permissões e log de acessos
 icones.js       ícones dos sistemas (desenhados no padrão Lube ou imagem)
 marca.js        marca "L" em SVG para páginas que não carregam o app.js
@@ -57,10 +59,11 @@ sistemas aquela pessoa pode ver.
 1. A pessoa entra com **usuário + senha**. Se digitar só `nome.sobrenome`, o
    portal completa para `nome.sobrenome@lube.com.br`.
 2. O Supabase valida a senha (guardada com hash, nunca em texto).
-3. O portal mostra **todos os sistemas cadastrados**. Os liberados vêm
-   primeiro e abrem normalmente; os demais aparecem em cinza, com cadeado e o
-   aviso de que falta autorização — assim a pessoa sabe o que existe e o que
-   pedir ao TI.
+3. A página abre no "SISTEMAS CORPORATIVOS"; rolando, o caminhão atravessa a tela e
+   o **painel** chega: menu azul à esquerda e a área branca à direita. O menu
+   **BI LUBE** lista **todos os sistemas cadastrados** por área: os liberados abrem;
+   os demais ficam apagados, com cadeado — assim a pessoa sabe o que existe e o que
+   pedir ao TI. Ver [Painel: menu BI LUBE e BI dentro do painel](#painel-menu-bi-lube-e-bi-dentro-do-painel).
 4. Cada login e cada abertura de sistema fica registrada na tabela `acessos`.
 
 **Exceção para e-mail de fora (consultores).** A tabela `emails_externos` guarda os
@@ -317,13 +320,13 @@ Não há etapa de build. Conecte este repositório na Vercel e configure:
 - Build Command: *(vazio)*
 - Output Directory: `.`
 
-## Trocar a ilustração do caminhão pela foto oficial
+## Caminhão da abertura
 
-A transição entre o topo escuro e a área de sistemas usa um caminhão que
-atravessa a tela — hoje desenhado em SVG. Para usar a foto oficial, salve a
-imagem como `assets/caminhao-lube.png` (PNG com fundo transparente, caminhão de
-perfil voltado para a direita, ~1600px de largura). O `app.js` detecta o arquivo
-e substitui o SVG sozinho.
+O caminhão que atravessa a tela é a foto do vídeo do Lube Online
+(`14. VIDEO LUBE ONLINE/web/assets/caminhao.png`), salva como
+`assets/caminhao-lube.webp` (1200 px, ~77 KB). Para trocar, salve outra imagem
+nesse nome: fundo transparente, caminhão de perfil voltado para a direita. Se a
+foto não carregar, o `app.js` desenha o caminhão em SVG.
 
 ## Cache dos arquivos
 
@@ -332,24 +335,57 @@ Os `<script>` e `<link>` de `index.html` e `admin.html` carregam com
 dois arquivos** — é o que faz o navegador buscar a versão nova em vez de usar a
 guardada em cache.
 
-## Busca e carrossel
+## Painel: menu BI LUBE e BI dentro do painel
 
-- A busca ignora acentos e maiúsculas e casa várias palavras ao mesmo tempo.
-  Procura no título, na área, na descrição e no slug do sistema.
-- `Esc` limpa a busca; o botão × também.
-- O carrossel aceita setas do teclado, arraste com o mouse, toque no celular e
-  os botões `<` `>`.
+**Menu (shell.js).** Início, **BI LUBE**, Office e, no rodapé, Administração e
+Sentinela (só admin), Suporte TI e a conta. No BI LUBE:
+
+- **Fixados** no topo: alfinete ao passar o mouse. Ficam na tabela `favoritos`
+  (cada pessoa só lê e grava os seus) e no navegador.
+- **Todos os BIs por área**, com cadeado nos sem autorização. Busca com `Ctrl+K`
+  (ignora acentos; `Enter` abre o primeiro).
+- O botão redondo na borda recolhe o menu (só ícones); no celular o menu vira gaveta.
+
+**Palco.** O Início é só a saudação; cada BI aberto vira uma aba e fica carregado
+(um iframe por BI), então trocar de aba é na hora. No topo: recarregar, abrir em
+nova aba e tela cheia.
+
+**BI dentro do painel.** Um sistema só abre na área branca quando
+`sistemas.abre_no_painel` está ligado (admin › Sistemas › Editar › "Abrir dentro
+do painel"); desligado, abre em nova aba com o passe, como antes. Hoje os 11 estão
+ligados. Para pôr um sistema **novo** dentro do painel:
+
+1. No projeto do sistema, troque `X-Frame-Options` por
+   `Content-Security-Policy: frame-ancestors 'self' https://painel-lube-distribuidora.vercel.app`
+   (estático: `headers` do `vercel.json`; com `routes`, uma rota
+   `{ "src": "/(.*)", "headers": {...}, "continue": true }`; Next: `async headers()`
+   no `next.config.ts`). Só o portal consegue mostrá-lo.
+2. Guarda da Sentinela **1.2.0 ou mais nova**: dentro do painel o cookie da sessão
+   sai `SameSite=None; Partitioned` (só vale na partição do portal); aberto direto
+   segue `Lax`.
+3. Se o sistema tem **login próprio por cookie**, o cookie dele precisa da mesma
+   regra quando a tela está dentro do painel (ver o Gestão TI: `emQuadro` no login e
+   no logout, `opcoesCookie(emQuadro)` em `src/lib/auth.ts`). O Painel ICMS está com
+   o login próprio desligado (`AUTH_DESLIGADA_TEMPORARIAMENTE`); ao religar, precisa
+   desse ajuste.
+4. Depois do deploy, confira `https://<sistema>/.sentinela/saude` (versão do guarda) e
+   o cabeçalho, e só então ligue "Abrir dentro do painel".
+
+Se o guarda devolver o BI ao portal dentro do iframe, o portal avisa o painel de
+cima, que pede um passe novo uma vez; se voltar de novo, a aba mostra o erro com
+"Abrir em nova aba". Os dados que um sistema guarda no navegador (ex.: planilha
+importada à mão no RH) ficam separados entre a aba normal e o painel.
 
 ## Contatos do TI
 
-O botão **Falar com o TI**, no rodapé, abre dois atalhos de WhatsApp:
+O item **Suporte TI**, no rodapé do menu do painel, abre dois atalhos de WhatsApp:
 
 | Pessoa | Telefone | Link |
 |---|---|---|
 | Júlio | +55 (27) 98881-9807 | `https://wa.me/5527988819807` |
 | Alexandre | +55 (27) 99273-6082 | `https://wa.me/5527992736082` |
 
-Para trocar um número, edite o `href` do `.contact__item` em `index.html` no
+Para trocar um número, edite o `href` do `.suporte__item` em `index.html` no
 formato `55` + DDD + número, sem espaços.
 
 ## Pendências recomendadas
