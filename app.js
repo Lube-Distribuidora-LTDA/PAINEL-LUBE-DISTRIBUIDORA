@@ -55,7 +55,7 @@
 
   /* ---------------------------------------------------------
      3. CAMINHÃO
-     Usa assets/caminhao-lube.png se existir; senão, SVG.
+     Usa a foto do caminhão (assets/caminhao-lube.webp, a mesma do vídeo do Lube Online); se não carregar, SVG.
      --------------------------------------------------------- */
   function truckSVG() {
     var stripes = '';
@@ -120,10 +120,10 @@
     vehicle.innerHTML = truckSVG();
     var probe = new Image();                       // troca pela foto oficial, se houver
     probe.onload = function () {
-      vehicle.innerHTML = '<img src="assets/caminhao-lube.png" alt="Caminhão Lube Distribuidora" ' +
+      vehicle.innerHTML = '<img src="assets/caminhao-lube.webp" alt="Caminhão Lube Distribuidora" ' +
         'style="width:100%;height:auto;display:block;filter:drop-shadow(0 30px 40px rgba(0,0,0,.45))" />';
     };
-    probe.src = 'assets/caminhao-lube.png';
+    probe.src = 'assets/caminhao-lube.webp';
   }
 
   /* ---------------------------------------------------------
