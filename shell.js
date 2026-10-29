@@ -229,7 +229,7 @@
     if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K') && document.body.classList.contains('autenticado')) {
       ev.preventDefault();
       if (app.classList.contains('is-rail')) recolher(false);
-      if (window.matchMedia('(max-width:860px)').matches) app.classList.add('is-menu');
+      if (estreito.matches) app.classList.add('is-menu');
       noPainel();
       setTimeout(function () { if (busca) { busca.focus({ preventScroll: true }); busca.select(); } }, 60);
     }
@@ -259,8 +259,17 @@
     }, function () {});
   }
 
+  /* ---------- celular e tablet: o menu vira gaveta ----------
+     Vale para tela estreita e também para toque até 1100 px (iPhone deitado,
+     iPad em pé), onde o menu fixo de 300 px tomaria metade da tela. */
+  var estreito = window.matchMedia('(max-width:860px), (pointer:coarse) and (max-width:1100px)');
+  function modoGaveta() {
+    app.classList.toggle('is-gaveta', estreito.matches);
+    if (!estreito.matches) app.classList.remove('is-menu');
+  }
+  modoGaveta();
+
   /* ---------- menu recolhido ---------- */
-  var estreito = window.matchMedia('(max-width:860px)');
   function recolher(sim) {
     if (estreito.matches) sim = false;
     app.classList.toggle('is-rail', !!sim);
@@ -275,7 +284,9 @@
   }
   var btnRecolher = $('[data-recolher]');
   if (btnRecolher) btnRecolher.addEventListener('click', function () { recolher(!app.classList.contains('is-rail')); });
-  if (estreito.addEventListener) estreito.addEventListener('change', function () { recolher(ler('lube_menu_recolhido', false)); });
+  var aoMudar = function () { modoGaveta(); recolher(ler('lube_menu_recolhido', false)); };
+  if (estreito.addEventListener) estreito.addEventListener('change', aoMudar);
+  else if (estreito.addListener) estreito.addListener(aoMudar);          // Safari antigo
 
   // dica com o nome ao passar o mouse no menu recolhido
   var dicaEl = null;
@@ -298,8 +309,12 @@
   /* ---------- gaveta no celular ---------- */
   var abrirMenu = $('[data-abrir-menu]');
   if (abrirMenu) abrirMenu.addEventListener('click', function () { app.classList.add('is-menu'); });
-  var fundo = $('[data-fechar-menu]');
-  if (fundo) fundo.addEventListener('click', function () { app.classList.remove('is-menu'); });
+  $$('[data-fechar-menu]').forEach(function (el) {
+    el.addEventListener('click', function () { app.classList.remove('is-menu'); });
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') app.classList.remove('is-menu');
+  });
 
   /* ---------- suporte ---------- */
   var suporte = $('[data-suporte]');

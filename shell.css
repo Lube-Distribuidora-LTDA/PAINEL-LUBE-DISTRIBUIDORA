@@ -515,7 +515,6 @@ body.no-painel .nav a,body.no-painel .nav button{ pointer-events:none; }
 .inicio__seta{ width:18px; height:18px; color:var(--blue); animation:apontaMenu 1.8s var(--ease-io) infinite; }
 .inicio__seta svg{ width:100%; height:100%; display:block; }
 @keyframes apontaMenu{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(-6px); } }
-@media (max-width:860px){ .inicio__seta{ transform:rotate(90deg); animation:none; } }
 
 /* aviso do painel (substitui o aviso discreto do portal quando o painel está aberto) */
 .toast-bi{
@@ -535,32 +534,68 @@ body.no-painel .nav a,body.no-painel .nav button{ pointer-events:none; }
 .stage:fullscreen{ border-radius:0; }
 
 /* =========================================================
-   CELULAR / TELA ESTREITA: menu vira gaveta flutuante
+   CELULAR / TABLET: o menu vira gaveta flutuante
+   .is-gaveta vem do shell.js: tela até 860 px, ou toque até 1100 px
+   (iPhone deitado, iPad em pé). Fechada, a gaveta fica fora da tela e
+   invisível; só aparece com o botão de menu.
    ========================================================= */
-@media (max-width:860px){
-  body.autenticado .app{ padding:10px; }
-  .side{
-    position:fixed; top:10px; bottom:10px; left:10px; z-index:60;
-    width:min(86vw, 320px); flex-basis:auto;
-    transform:translateX(calc(-100% - 20px));
-    transition:transform .5s var(--ease);
-  }
-  .app.is-menu .side{ transform:none; }
-  .app.is-rail .side{ width:min(86vw,320px); }
-  .side__recolher{ display:none; }
-  .side__fundo{
-    position:fixed; inset:0; z-index:55; background:rgba(6,11,41,.45);
-    opacity:0; visibility:hidden; transition:opacity .35s, visibility 0s linear .35s;
-    backdrop-filter:blur(2px);
-  }
-  .app.is-menu .side__fundo{ opacity:1; visibility:visible; transition-delay:0s; }
-  .stage__menu{ display:grid; }
-  .stage{ border-radius:20px; }
-  .suporte__caixa{ left:0; bottom:calc(100% + 10px); transform-origin:left bottom; }
-  .stage__acoes .acao[data-acao="tela"]{ display:none; }
-  .aba{ max-width:170px; }
+.side__fechar{ display:none; }
+.app:not(.is-gaveta) .side__fundo{ display:none; }
+
+body.autenticado .app.is-gaveta{
+  padding:8px; gap:0;
+  padding-left:max(8px, env(safe-area-inset-left));
+  padding-right:max(8px, env(safe-area-inset-right));
+  padding-bottom:max(8px, env(safe-area-inset-bottom));
 }
-@media (min-width:861px){ .side__fundo{ display:none; } }
+.app.is-gaveta .side{
+  position:fixed; z-index:60;
+  top:max(10px, env(safe-area-inset-top)); bottom:max(10px, env(safe-area-inset-bottom));
+  left:max(10px, env(safe-area-inset-left));
+  width:min(86vw, 330px); flex-basis:auto;
+  transform:translate3d(calc(-100% - 30px), 0, 0);
+  opacity:1; visibility:hidden;
+  transition:transform .45s var(--ease), visibility 0s linear .45s;
+}
+.app.is-gaveta.is-menu .side{ transform:none; visibility:visible; transition-delay:0s; }
+.app.is-gaveta .side__recolher{ display:none; }
+.app.is-gaveta .side__fechar{
+  position:absolute; top:1.05rem; right:.9rem; z-index:3;
+  width:38px; height:38px; border-radius:12px;
+  display:grid; place-items:center; color:#fff;
+  background:rgba(255,255,255,.12);
+}
+.app.is-gaveta .side__fechar svg{ width:18px; height:18px; }
+.app.is-gaveta .side__brand{ padding-right:3.2rem; }
+.app.is-gaveta .side__fundo{
+  position:fixed; inset:0; z-index:55; background:rgba(6,11,41,.5);
+  opacity:0; visibility:hidden; transition:opacity .35s, visibility 0s linear .35s;
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+}
+.app.is-gaveta.is-menu .side__fundo{ opacity:1; visibility:visible; transition-delay:0s; }
+.app.is-gaveta .side__busca kbd{ display:none; }
+.app.is-gaveta .bi__pino{ opacity:1; transform:none; }      /* sem mouse: alfinete sempre visível */
+.app.is-gaveta .stage__menu{ display:grid; }
+.app.is-gaveta .stage{ border-radius:18px; }
+.app.is-gaveta .stage__top{ min-height:56px; padding:.5rem .55rem; gap:.5rem; }
+.app.is-gaveta .suporte__caixa{ left:0; bottom:calc(100% + 10px); width:min(270px, 76vw); transform-origin:left bottom; }
+.app.is-gaveta .stage__acoes .acao[data-acao="tela"]{ display:none; }
+.app.is-gaveta .aba{ max-width:150px; height:40px; }
+.app.is-gaveta .acao{ width:38px; height:38px; }
+.app.is-gaveta .inicio__seta{ transform:rotate(90deg); animation:none; }
+@media (max-width:520px){
+  .app.is-gaveta .aba__nome{ max-width:96px; }
+  .app.is-gaveta .stage__acoes .acao[data-acao="recarregar"]{ display:none; }
+  .boas{ padding:1.2rem; border-radius:18px; }
+  .boas__nums{ width:100%; }
+  .boas__num{ flex:1; min-width:0; padding:.6rem .7rem; }
+  .boas__num strong{ font-size:1.25rem; }
+}
+
+/* no toque, quem não é link ou botão precisa parecer clicável, senão o Safari do
+   iPhone não entrega o toque ao menu */
+.bi,.aba,.bis__area{ cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.bi--bloqueado{ cursor:not-allowed; }
 
 @media (prefers-reduced-motion: reduce){
   .side__aurora i{ animation:none; }
@@ -582,7 +617,17 @@ body.no-painel .nav a,body.no-painel .nav button{ pointer-events:none; }
   transition:transform .5s var(--ease);
 }
 .nav-conta__admin:hover::after,.nav-conta__link:hover::after{ transform:scaleX(1); transform-origin:left; }
-@media (max-width:820px){ .nav-conta__nome{ display:none; } .nav-conta{ gap:.8rem; } }
+/* no celular a barra da conta encavalava no logo: some do topo e os atalhos
+   (Admin, Sentinela, Sair) ficam no menu de três linhas da abertura */
+@media (max-width:820px){ .nav-conta{ display:none; } }
+.menu .menu__sair{
+  padding:0; margin:0; border:0; background:none; align-self:flex-start;
+  font:inherit; font-size:13vw; font-weight:900; letter-spacing:-.04em; line-height:.95;
+  text-transform:uppercase; color:var(--red); text-align:left;
+  opacity:0; transform:translateY(30px);
+  transition:opacity .6s var(--ease), transform .8s var(--ease);
+}
+.menu.open .menu__sair{ opacity:1; transform:none; transition-delay:.36s; }
 
 /* =========================================================
    CHEGADA DO PAINEL (depois do "NOSSOS sistemas")
@@ -596,12 +641,10 @@ body.autenticado .app{ --entra:1; }
   transform:translate3d(0, calc((1 - var(--entra, 1)) * 140px), 0) scale(calc(.88 + var(--entra, 1) * .12));
   opacity:calc(.25 + var(--entra, 1) * .75);
 }
-@media (min-width:861px){
-  .side{
-    transform:translate3d(calc((1 - var(--entra, 1)) * -120%), calc((1 - var(--entra, 1)) * 60px), 0)
-              rotate(calc((1 - var(--entra, 1)) * -3deg));
-    opacity:calc(var(--entra, 1) * 1.25 - .25);
-  }
+.app:not(.is-gaveta) .side{
+  transform:translate3d(calc((1 - var(--entra, 1)) * -120%), calc((1 - var(--entra, 1)) * 60px), 0)
+            rotate(calc((1 - var(--entra, 1)) * -3deg));
+  opacity:calc(var(--entra, 1) * 1.25 - .25);
 }
 
 /* brilho que atravessa o menu na chegada */
@@ -635,6 +678,7 @@ body.autenticado .app{ --entra:1; }
 @keyframes entraMenu{ from{ opacity:0; transform:translateX(-18px); } to{ opacity:1; transform:none; } }
 
 @media (prefers-reduced-motion: reduce){
-  .stage,.side{ transform:none !important; opacity:1 !important; }
+  .stage,.app:not(.is-gaveta) .side{ transform:none !important; opacity:1 !important; }
+  .app.is-gaveta .side{ transition:none; }
   .app.pre-chegada .inicio > *{ opacity:1; transform:none; }
 }
