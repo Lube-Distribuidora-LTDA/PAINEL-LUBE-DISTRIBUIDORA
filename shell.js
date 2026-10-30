@@ -437,15 +437,50 @@
     else noPainel();
   }
 
+  /* ---------- painel travado ----------
+     Ao chegar no painel a página trava: a abertura sai de cena e o painel fica fixo
+     na tela, então rolar dentro do BI (ou do menu) não levanta mais a página. Para
+     voltar à abertura, só pelo botão de subir (data-subir). */
+  var raiz = document.documentElement;
+  var soltou = false;          // depois do botão de subir, só trava de novo ao voltar a descer
+  window.addEventListener('scroll', function () {
+    if (soltou && app.getBoundingClientRect().top > window.innerHeight * 0.5) soltou = false;
+  }, { passive: true });
+  function rolarSemAnimacao(y) {
+    var antes = raiz.style.scrollBehavior;
+    raiz.style.scrollBehavior = 'auto';            // o html tem scroll-behavior: smooth
+    window.scrollTo(0, y);
+    raiz.style.scrollBehavior = antes;
+  }
+  function travar() {
+    if (soltou || !document.body.classList.contains('autenticado') || raiz.classList.contains('painel-fixo')) return;
+    raiz.classList.add('painel-fixo');
+    rolarSemAnimacao(0);
+  }
+  function soltar() {
+    if (!raiz.classList.contains('painel-fixo')) return;
+    soltou = true;
+    raiz.classList.remove('painel-fixo');
+    app.classList.remove('is-menu');
+    // a abertura volta para cima: a página fica no painel e sobe até o topo
+    rolarSemAnimacao(app.getBoundingClientRect().top + (window.scrollY || window.pageYOffset));
+    var suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    requestAnimationFrame(function () { window.scrollTo({ top: 0, behavior: suave ? 'smooth' : 'auto' }); });
+  }
+  $$('[data-subir]').forEach(function (b) { b.addEventListener('click', soltar); });
+
   // a página tem a abertura em cima: ao abrir um BI, o painel vem para a tela inteira
   function noPainel() {
+    if (raiz.classList.contains('painel-fixo')) return;
+    soltou = false;              // abrir um BI sempre leva ao painel e trava
     var topo = app.getBoundingClientRect().top;
-    if (Math.abs(topo) < 2) return;
+    if (Math.abs(topo) < 2) { travar(); return; }
     var suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     app.scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'start' });
     // se a rolagem suave parar no meio (aba em segundo plano, outra rolagem), encaixa direto
     setTimeout(function () {
       if (Math.abs(app.getBoundingClientRect().top) > 2) app.scrollIntoView({ behavior: 'instant', block: 'start' });
+      travar();
     }, 1300);
   }
 
@@ -644,9 +679,12 @@
       }
       carregar(id);
     },
+    travar: travar,
+    soltar: soltar,
     limpar: function () {
       Object.keys(quadros).forEach(function (k) { fechar(k); });
       ativo = null;
+      raiz.classList.remove('painel-fixo');
     }
   };
 

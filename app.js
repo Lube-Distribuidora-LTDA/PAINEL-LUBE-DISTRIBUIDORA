@@ -192,6 +192,8 @@
     // entrada do painel: 0 quando o topo dele está no pé da tela, 1 quando ocupa a tela
     if (painelEl && painelEl.offsetHeight) {
       target.painel = clamp(1 - painelEl.getBoundingClientRect().top / vh, 0, 1);
+      // encostou no painel: trava já, sem esperar a animação
+      if (target.painel >= 0.995 && window.LubeShell && window.LubeShell.travar) window.LubeShell.travar();
     }
   }
 
@@ -236,10 +238,12 @@
     }
     if (painelEl) {
       painelEl.style.setProperty('--entra', e.toFixed(4));
-      if (!chegou && state.painel > 0.965) {
+      if (!chegou && state.painel > 0.965 && target.painel > 0.95) {
         chegou = true;
         painelEl.classList.remove('pre-chegada');
         painelEl.classList.add('chegou');
+        // encaixou: a página trava no painel (só o botão "subir" volta à abertura)
+        if (window.LubeShell && window.LubeShell.travar) window.LubeShell.travar();
       } else if (chegou && target.painel < 0.25 && !reduced) {
         chegou = false;                       // voltou para a abertura: a chegada repete
         painelEl.classList.remove('chegou');

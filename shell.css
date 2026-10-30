@@ -682,3 +682,21 @@ body.autenticado .app{ --entra:1; }
   .app.is-gaveta .side{ transition:none; }
   .app.pre-chegada .inicio > *{ opacity:1; transform:none; }
 }
+
+/* =========================================================
+   PAINEL TRAVADO (html.painel-fixo, shell.js)
+   Encaixou no painel: a abertura sai de cena, o painel fica fixo na tela e a
+   página não rola mais. Rolar dentro do BI ou do menu não levanta a página.
+   O botão de subir (.acao--subir) solta e volta para a abertura.
+   ========================================================= */
+html.painel-fixo,
+html.painel-fixo body{ overflow:hidden; overscroll-behavior:none; }
+html.painel-fixo .abertura,
+html.painel-fixo .nav,
+html.painel-fixo .menu{ display:none; }
+html.painel-fixo body.autenticado .app{ position:fixed; inset:0; z-index:5; }
+
+.stage__top .acao--subir{ flex:none; }
+.acao--subir:hover{ background:var(--red); color:#fff; }
+.acao--subir svg{ transition:transform .35s var(--ease); }
+.acao--subir:hover svg{ transform:translateY(-2px); }
