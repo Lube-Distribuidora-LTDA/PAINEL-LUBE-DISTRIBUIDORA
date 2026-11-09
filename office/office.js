@@ -12,7 +12,7 @@
 
   var VISOES = ['meus', 'compartilhados', 'recentes', 'agenda', 'modelos', 'lixeira', 'busca'];
   var TITULO = {
-    meus: 'Meus arquivos', compartilhados: 'Compartilhados comigo', recentes: 'Recentes', agenda: 'Agenda',
+    meus: 'Meus arquivos', compartilhados: 'Compartilhados comigo', recentes: 'Recentes', agenda: 'Agendas Lube',
     modelos: 'Modelos da Lube', lixeira: 'Lixeira'
   };
 

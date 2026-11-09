@@ -202,7 +202,7 @@
   function desenharBarra() {
     $('[data-ag-titulo]', est.raiz).textContent = maiuscula(tituloPeriodo());
     $$('[data-ag-vista]', est.raiz).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-ag-vista') === est.vista)); });
-    document.title = 'Agenda — Lube Work';
+    document.title = 'Agendas Lube — Lube Work';
   }
 
   function desenhar() {
