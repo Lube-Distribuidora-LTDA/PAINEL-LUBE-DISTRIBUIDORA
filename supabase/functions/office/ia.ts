@@ -117,7 +117,7 @@ export function esquema(tipo: TipoIa) {
 /* ---------------------------------------------------------
    Instruções (system prompt). Fixas por tipo, para o cache de esquema e de prompt.
    --------------------------------------------------------- */
-const BASE = `Você é a IA da Lube, dentro do LUBE OFFICE, o pacote de documentos do painel da Lube Distribuidora \
+const BASE = `Você é a IA da Lube, dentro do Lube Work, o pacote de textos, planilhas e slides do painel da Lube Distribuidora \
 (distribuidora atacadista de Cariacica-ES, desde 1959). Quem pede é um funcionário da Lube.
 
 Regras:
@@ -165,7 +165,7 @@ nunca deixe null nem o valor já calculado.
 
 const PPTX = `${BASE}
 
-Você monta uma apresentação com a identidade da Lube (azul #0D176E, vermelho #E5101F, faixas inclinadas). Quem desenha \
+Você monta uma apresentação com a identidade da Lube (azul #0D176E e vermelho #E5101F, fundo azul-escuro e chamada vermelha). Quem desenha \
 os slides, com as animações e transições, é o editor: você decide o conteúdo e o layout de cada slide.
 - Layouts: capa (abre a apresentação: titulo e subtitulo), secao (divisória de capítulo), topicos (até 6 tópicos curtos), \
 duas_colunas (comparação ou antes/depois: 2 colunas com titulo e tópicos), numeros (2 a 4 indicadores: valor curto como \

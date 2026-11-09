@@ -104,7 +104,7 @@ function vevento(carta: Carta, c: Componente, link: string, agora: Date) {
 }
 
 export function montarIcs(carta: Carta, link: string, agora = new Date()) {
-  const l = ['BEGIN:VCALENDAR', 'PRODID:-//Lube Distribuidora//LUBE OFFICE Agenda//PT-BR', 'VERSION:2.0', 'CALSCALE:GREGORIAN',
+  const l = ['BEGIN:VCALENDAR', 'PRODID:-//Lube Distribuidora//Lube Work Agenda//PT-BR', 'VERSION:2.0', 'CALSCALE:GREGORIAN',
     `METHOD:${carta.metodo === 'CANCEL' ? 'CANCEL' : 'REQUEST'}`];
   for (const c of carta.componentes) l.push(...vevento(carta, c, link, agora));
   l.push('END:VCALENDAR');
@@ -156,7 +156,7 @@ export function montarEmailConvite(carta: Carta, link: string) {
     : carta.sequencia > 0 ? `${organizador} mudou a reunião` : `${organizador} convidou você para uma reunião`;
   const pessoas = (c.participantes ?? []).map((p) => p.nome || p.email).filter(Boolean);
   const texto = [
-    `${chamada} pelo LUBE OFFICE, da Lube Distribuidora.`,
+    `${chamada} pelo Lube Work, da Lube Distribuidora.`,
     '',
     titulo,
     `Quando: ${qd}`,
@@ -177,7 +177,7 @@ export function montarEmailConvite(carta: Carta, link: string) {
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF0F7;padding:24px 0"><tr><td align="center">' +
     '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#FFFFFF;border-radius:12px;overflow:hidden">' +
     '<tr><td style="background:#0D176E;padding:22px 28px;color:#FFFFFF">' +
-    '<div style="font-size:20px;font-weight:800;letter-spacing:-0.3px">LUBE <span style="color:#FF5A63">OFFICE</span> · Agenda</div>' +
+    '<div style="font-size:20px;font-weight:800;letter-spacing:-0.3px">LUBE <span style="color:#FF5A63">WORK</span> · Agenda</div>' +
     '<div style="font-size:12px;color:#C9D0F0;margin-top:4px">Lube Distribuidora</div></td></tr>' +
     `<tr><td style="height:5px;background:${cancelado ? '#5C6480' : '#E5101F'};font-size:0;line-height:0">&nbsp;</td></tr>` +
     '<tr><td style="padding:28px">' +

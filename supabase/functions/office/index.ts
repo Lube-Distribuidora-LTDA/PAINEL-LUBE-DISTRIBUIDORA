@@ -145,7 +145,7 @@ async function pluginIaDe(req: Request) {
 async function lerFonte(f: { nome: string; extensao: string; caminho: string; tamanho: number }) {
   const ext = String(f.extensao).toLowerCase();
   if (!['docx', 'xlsx', 'pptx', 'pdf', 'txt', 'csv'].includes(ext)) {
-    throw new ErroOffice('A IA lê Word, Excel, PowerPoint, PDF, TXT e CSV. Abra este arquivo e salve como .docx, .xlsx ou .pptx.', 400);
+    throw new ErroOffice('A IA lê arquivos .docx, .xlsx, .pptx, PDF, TXT e CSV. Abra este arquivo e salve como .docx, .xlsx ou .pptx.', 400);
   }
   if (Number(f.tamanho) > 25 * 1024 * 1024) throw new ErroOffice('O arquivo de origem passa de 25 MB.', 413);
   const { data: blob, error } = await admin.storage.from(BUCKET).download(f.caminho);
@@ -178,7 +178,7 @@ async function lerFonte(f: { nome: string; extensao: string; caminho: string; ta
 
 function erroDaIa(e: unknown) {
   if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
-    return { msg: 'A chave da IA foi recusada. O TI precisa conferir a ANTHROPIC_API_KEY no Supabase.', status: 503 };
+    return { msg: 'A chave da IA foi recusada. O administrador precisa conferir a ANTHROPIC_API_KEY no Supabase.', status: 503 };
   }
   if (e instanceof Anthropic.RateLimitError) return { msg: 'A IA está ocupada agora. Tente de novo em um minuto.', status: 429 };
   if (e instanceof Anthropic.APIConnectionTimeoutError) return { msg: 'A IA demorou demais para responder. Peça algo menor ou tente de novo.', status: 504 };
@@ -305,7 +305,7 @@ async function enviarCartas(eu: string, cartas: unknown) {
       const e = montarEmailConvite(carta, link);
       envio = await enviarConvites({
         para,
-        nomeRemetente: linhaUnica((carta.organizador?.nome || 'Lube Distribuidora') + ' via LUBE OFFICE', 100),
+        nomeRemetente: linhaUnica((carta.organizador?.nome || 'Lube Distribuidora') + ' via Lube Work', 100),
         responderPara: carta.organizador?.email || '',
         assunto: e.assunto, texto: e.texto, html: e.html,
         ics: montarIcs(carta, link), metodo: carta.metodo === 'CANCEL' ? 'CANCEL' : 'REQUEST',
@@ -431,7 +431,7 @@ async function acaoDoPortal(req: Request) {
           : [];
         const externos = Array.isArray(c.externos) ? c.externos.filter((e: unknown) => typeof e === 'string').slice(0, 25) : [];
         if (externos.length && !smtpPronto()) {
-          return json({ erro: 'O envio por e-mail ainda não foi ligado: falta cadastrar a caixa de e-mail do LUBE OFFICE. O envio para pessoas do painel já funciona.' }, 503);
+          return json({ erro: 'O envio por e-mail ainda não foi ligado: falta cadastrar a caixa de e-mail do Lube Work. O envio para pessoas do painel já funciona.' }, 503);
         }
         const r = await rpc('office_srv_enviar', {
           p_user: eu, p_arquivo: id, p_internos: internos, p_externos: externos, p_mensagem: String(c.mensagem ?? '').slice(0, 1000),
@@ -447,7 +447,7 @@ async function acaoDoPortal(req: Request) {
           const e = montarEmail({ remetente: r.remetente, arquivo: r.nome_arquivo, mensagem: r.mensagem });
           const envio = await enviarEmails({
             para: r.externos,
-            nomeRemetente: linhaUnica(r.remetente.nome + ' via LUBE OFFICE', 100),
+            nomeRemetente: linhaUnica(r.remetente.nome + ' via Lube Work', 100),
             responderPara: r.remetente.email,
             assunto: e.assunto, texto: e.texto, html: e.html,
             anexo: { nome: r.nome_arquivo, bytes: new Uint8Array(await blob.arrayBuffer()), tipo: tipoMime(r.extensao) },
@@ -528,7 +528,7 @@ async function acaoDoPortal(req: Request) {
   } catch (e) {
     if (e instanceof ErroOffice) return json({ erro: e.message }, e.status);
     console.error('office:', e);
-    return json({ erro: 'Falha inesperada no LUBE OFFICE' }, 500);
+    return json({ erro: 'Falha inesperada no Lube Work' }, 500);
   }
 }
 

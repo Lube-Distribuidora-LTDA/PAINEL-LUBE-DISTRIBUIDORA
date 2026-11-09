@@ -5,7 +5,7 @@
    - a agenda pessoal é fechada: os colegas só veem as reservas das salas;
    - o convite vai pelo sino do painel e por e-mail (com o convite .ics);
    - todo usuário ativo reserva sala, e a sala ocupada não aceita outra reserva
-     no mesmo horário (a trava é do banco). O TI cadastra as salas.
+     no mesmo horário (a trava é do banco). O administrador (Júlio) cadastra as salas.
    Quem pode o quê é conferido no servidor (função office); aqui a tela só
    esconde o que a pessoa não pode fazer. O Drive (office.js) chama
    window.OFC_AGENDA quando a visão é "agenda".
@@ -202,7 +202,7 @@
   function desenharBarra() {
     $('[data-ag-titulo]', est.raiz).textContent = maiuscula(tituloPeriodo());
     $$('[data-ag-vista]', est.raiz).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-ag-vista') === est.vista)); });
-    document.title = 'Agenda — LUBE OFFICE';
+    document.title = 'Agenda — Lube Work';
   }
 
   function desenhar() {
@@ -242,7 +242,7 @@
       '<span class="mono">Salas de reunião</span>';
     var lista = salas();
     if (!lista.length) {
-      h += '<p class="ag-camadas__vazio">' + (admin() ? 'Nenhuma sala cadastrada. Cadastre as salas para todo mundo reservar.' : 'O TI ainda não cadastrou as salas de reunião.') + '</p>';
+      h += '<p class="ag-camadas__vazio">' + (admin() ? 'Nenhuma sala cadastrada. Cadastre as salas para todo mundo reservar.' : 'O administrador ainda não cadastrou as salas de reunião.') + '</p>';
     }
     lista.forEach(function (s) {
       h += '<label class="ag-camada" style="--c:' + esc(s.cor) + '"><input type="checkbox" data-ag-camada="' + esc(s.id) + '"' + (est.salasOff[s.id] ? '' : ' checked') + '><i></i>' +
@@ -332,7 +332,7 @@
     var lista = salasAtivas().filter(function (s) { return !est.salasOff[s.id]; });
     if (!salasAtivas().length) {
       g.innerHTML = '<div class="ag-salas__vazio">' + SVG.sala + '<h3>Nenhuma sala de reunião cadastrada</h3>' +
-        '<p>' + (admin() ? 'Cadastre as salas da Lube e todo mundo passa a ver quando cada uma está ocupada.' : 'Peça ao TI para cadastrar as salas de reunião da Lube.') + '</p>' +
+        '<p>' + (admin() ? 'Cadastre as salas da Lube e todo mundo passa a ver quando cada uma está ocupada.' : 'Peça ao administrador para cadastrar as salas de reunião da Lube.') + '</p>' +
         (admin() ? '<button class="btn btn--azul" type="button" data-ag-gerir>' + SVG.mais + 'Cadastrar salas</button>' : '') + '</div>';
       return;
     }
@@ -638,7 +638,7 @@
   }
   function emailTxt(m) {
     if (!m) return '';
-    if (!m.ligado) return ' O aviso foi pelo sino do painel (o e-mail do Office ainda não foi ligado).';
+    if (!m.ligado) return ' O aviso foi pelo sino do painel (o e-mail do Lube Work ainda não foi ligado).';
     if (m.falhas && m.falhas.length) return ' O e-mail não saiu para: ' + m.falhas.map(function (f) { return f.para; }).join(', ') + '.';
     if (m.enviados && m.enviados.length) return ' E-mail enviado para ' + m.enviados.length + (m.enviados.length === 1 ? ' pessoa.' : ' pessoas.');
     return '';
@@ -703,7 +703,7 @@
         '<div class="fichas" data-f-fichas></div>' +
         '<p class="enviar__nota">' + (comEmail
           ? 'Quem você convidar recebe o aviso no sino e um e-mail com o convite, que entra na agenda do celular (Gmail ou Outlook).'
-          : 'Quem você convidar recebe o aviso no sino do painel. O convite por e-mail liga quando a caixa do Office estiver cadastrada.') + '</p></section>' +
+          : 'Quem você convidar recebe o aviso no sino do painel. O convite por e-mail liga quando a caixa do Lube Work estiver cadastrada.') + '</p></section>' +
       '<section class="ag-bloco"><span class="mono rotulo">Local ou link (opcional)</span>' +
         '<label class="campo"><input type="text" data-f-local maxlength="200" placeholder="Ex.: na loja do cliente, ou o link da videochamada" value="' + esc(e ? e.local : '') + '"></label></section>' +
       '<section class="ag-bloco"><span class="mono rotulo">Pauta (opcional)</span>' +
@@ -748,7 +748,7 @@
       f('[data-f-salas]').innerHTML = h;
       var sel = (lista || []).filter(function (s) { return s.id === salaSel; })[0];
       var nota = f('[data-f-salas-nota]');
-      if (!(lista || []).some(function (s) { return s.ativa; })) nota.textContent = 'O TI ainda não cadastrou as salas de reunião.';
+      if (!(lista || []).some(function (s) { return s.ativa; })) nota.textContent = 'O administrador ainda não cadastrou as salas de reunião.';
       else if (sel && sel.ocupada) nota.innerHTML = '<span style="color:#FF8A91">' + esc(sel.nome) + ' está ocupada nesse horário' +
         (sel.ocupada.dono ? ', por ' + esc(sel.ocupada.dono.nome) + (sel.ocupada.titulo !== 'Reservada' ? ' (“' + esc(sel.ocupada.titulo) + '”)' : '') : '') + '. Troque o horário ou a sala.</span>';
       else nota.textContent = f('[data-f-rep]') && f('[data-f-rep]').value ? 'A sala é conferida em todas as datas da repetição na hora de salvar.' : '';
@@ -955,7 +955,7 @@
     var cor = s ? s.cor : CORES_SALA[lista.length % CORES_SALA.length];
     d.innerHTML = '<form method="dialog" novalidate>' +
       '<div class="dialogo__topo">' + SVG.sala.replace('<svg ', '<svg width="40" style="color:#8EA0FF;flex:none" ') +
-      '<div><h2>Salas de reunião</h2><p class="enviar__sub">Só o TI cadastra. Todo mundo do painel vê e reserva.</p></div></div>' +
+      '<div><h2>Salas de reunião</h2><p class="enviar__sub">Só o administrador cadastra. Todo mundo do painel vê e reserva.</p></div></div>' +
       (lista.length ? '<div class="ag-salas-lista">' + lista.map(function (x) {
         return '<button type="button" class="' + (x.ativa ? '' : 'is-off') + '" data-s-editar="' + esc(x.id) + '" style="--c:' + esc(x.cor) + '"><i></i><span>' + esc(x.nome) +
           '<br><small>' + esc([x.local, x.capacidade ? x.capacidade + ' lugares' : '', x.recursos, x.ativa ? '' : 'desativada'].filter(Boolean).join(' · ')) + '</small></span>' + SVG.lapis.replace('<svg ', '<svg width="16" ') + '</button>';

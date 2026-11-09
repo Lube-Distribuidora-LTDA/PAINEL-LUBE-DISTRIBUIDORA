@@ -29,7 +29,7 @@
     pptx: 'apre', ppt: 'apre', odp: 'apre',
     pdf: 'pdf'
   };
-  var NOME_TIPO = { doc: 'Documento', plan: 'Planilha', apre: 'Apresentação', pdf: 'PDF', outro: 'Arquivo', pasta: 'Pasta' };
+  var NOME_TIPO = { doc: 'Lube Texto', plan: 'Lube Planilha', apre: 'Lube Slides', pdf: 'PDF', outro: 'Arquivo', pasta: 'Pasta' };
   var ACEITOS = ['docx', 'xlsx', 'pptx', 'pdf', 'doc', 'xls', 'ppt', 'odt', 'ods', 'odp', 'csv', 'txt', 'rtf'];
   var MIME = {
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -41,20 +41,48 @@
   function classeTipo(ext) { return TIPO[String(ext || '').toLowerCase()] || 'outro'; }
   function nomeTipo(ext) { return NOME_TIPO[ext === 'pasta' ? 'pasta' : classeTipo(ext)]; }
 
-  // ícone de um tipo: folha com a dobra e o desenho do conteúdo
+  // ícone de um tipo: folha com a dobra (pasta, envio e modelo)
   var FOLHA = '<path style="fill:var(--c)" d="M10 3h14.5L33 11.5V35a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/>' +
               '<path fill="rgba(255,255,255,.38)" d="M24.5 3v6.5a2 2 0 0 0 2 2H33Z"/>';
-  var DESENHO = {
-    doc: '<path d="M13.5 19h14M13.5 23.5h14M13.5 28h9" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
-    plan: '<rect x="13" y="17.5" width="15" height="12.5" rx="1.5" fill="none" stroke="#fff" stroke-width="2"/>' +
-          '<path d="M13 21.8h15M13 25.9h15M18.5 17.5V30" stroke="#fff" stroke-width="2"/>',
-    apre: '<rect x="12.5" y="17.5" width="16" height="10.5" rx="1.5" fill="none" stroke="#fff" stroke-width="2"/>' +
-          '<path d="M20.5 28v3.5M17 31.5h7" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' +
-          '<path d="M16 25l2.8-3 2.4 2 3.3-3.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
-    pdf: '<text x="20.5" y="29.5" text-anchor="middle" font-size="8.6" font-weight="800" fill="#fff" ' +
-         'font-family="Archivo,sans-serif" letter-spacing=".3">PDF</text>',
-    outro: '<path d="M13.5 20h14M13.5 25h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>'
+
+  // editores do Lube Work (2026-11-06, decisão do Júlio: "ícone de aplicativo"): quadrado arredondado
+  // em degradê na cor do editor, símbolo branco no meio e o L da Lube num selo no canto
+  var APP = {
+    doc:   ['#5D7BFF', '#1E2B8C'],   // Lube Texto
+    plan:  ['#2FD486', '#0B7A44'],   // Lube Planilha
+    apre:  ['#FF7048', '#C20D1A'],   // Lube Slides
+    pdf:   ['#F2647D', '#9C1932'],
+    outro: ['#8D96B0', '#454C66']
   };
+  var SIMBOLO = {
+    doc: '<rect x="10" y="10.5" width="12" height="3.4" rx="1.7" fill="#fff"/>' +
+         '<rect x="10" y="16.6" width="18" height="2.5" rx="1.25" fill="#fff" fill-opacity=".92"/>' +
+         '<rect x="10" y="21.3" width="18" height="2.5" rx="1.25" fill="#fff" fill-opacity=".92"/>' +
+         '<rect x="10" y="26" width="11" height="2.5" rx="1.25" fill="#fff" fill-opacity=".92"/>',
+    plan: '<rect x="9.5" y="10" width="19" height="16.5" rx="2.6" fill="none" stroke="#fff" stroke-width="2"/>' +
+          '<path d="M9.5 12.6a2.6 2.6 0 0 1 2.6-2.6h13.8a2.6 2.6 0 0 1 2.6 2.6V15h-19Z" fill="#fff"/>' +
+          '<path d="M9.5 20.7h19M15.8 15v11.5M22.2 15v11.5" stroke="#fff" stroke-width="1.8"/>',
+    apre: '<rect x="8.5" y="10" width="21" height="14.5" rx="2.4" fill="none" stroke="#fff" stroke-width="2"/>' +
+          '<path d="M13 21v-2.6M17 21v-5.2M21 21v-3.6M25 21v-7" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/>' +
+          '<path d="M19 24.5v3.6M15 28.6h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+    pdf: '<text x="20" y="24.4" text-anchor="middle" font-size="9.6" font-weight="800" fill="#fff" ' +
+         'font-family="Archivo,sans-serif" letter-spacing=".3">PDF</text>',
+    outro: '<path d="M12 15h16M12 20h16M12 25h10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".85"/>'
+  };
+  var seqIco = 0;
+  function iconeApp(t) {
+    var c = APP[t], id = 'lw-ico-' + (++seqIco);   // id único: degradê de um ícone escondido não some dos outros
+    var selo = t === 'doc' || t === 'plan' || t === 'apre'
+      ? '<g transform="translate(26 26)"><rect width="11.5" height="11.5" rx="3.4" fill="#fff"/>' +
+        '<g transform="translate(2.9 2.5) scale(.064) skewX(-10)"><path fill="#1E2B8C" d="M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z"/>' +
+        '<path fill="#EE1B24" d="M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z"/></g></g>'
+      : '';
+    return '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="' + c[0] + '"/><stop offset="1" stop-color="' + c[1] + '"/></linearGradient></defs>' +
+      '<rect x="3" y="3" width="34" height="34" rx="9.5" fill="url(#' + id + ')"/>' +
+      '<path d="M3 12.5A9.5 9.5 0 0 1 12.5 3h15A9.5 9.5 0 0 1 37 12.5v2.7C27.5 12.4 12.5 12.6 3 18.2Z" fill="#fff" fill-opacity=".14"/>' +
+      SIMBOLO[t] + selo;
+  }
   function icone(ext, extra) {
     var t = ext === 'pasta' ? 'pasta' : ext === 'envio' ? 'env' : ext === 'modelo' ? 'modelo' : classeTipo(ext);
     var miolo;
@@ -72,7 +100,7 @@
               '<g transform="translate(12.5 17) scale(.11) skewX(-10)"><path fill="#fff" d="M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z"/>' +
               '<path fill="#EE1B24" d="M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z"/></g>';
     } else {
-      miolo = FOLHA + DESENHO[t];
+      miolo = iconeApp(t);
     }
     var cls = t === 'doc' ? '' : ' ico--' + t;
     return '<svg class="ico' + cls + '" viewBox="0 0 40 40" aria-hidden="true">' + miolo + '</svg>';
@@ -178,7 +206,7 @@
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (!r.ok) {
-            var e = new Error(j && j.erro ? j.erro : 'Falha ao falar com o LUBE OFFICE (' + r.status + ')');
+            var e = new Error(j && j.erro ? j.erro : 'Falha ao falar com o Lube Work (' + r.status + ')');
             e.status = r.status;
             e.dados = j;   // o que deu certo antes do erro (ex.: o envio no painel saiu, o e-mail não)
             throw e;

@@ -36,7 +36,7 @@
     $('[data-bloqueio-titulo]').textContent = titulo;
     $('[data-bloqueio-texto]').textContent = texto;
     var b = $('[data-bloqueio-botao]');
-    b.textContent = botao ? botao.texto : 'Voltar ao LUBE OFFICE';
+    b.textContent = botao ? botao.texto : 'Voltar ao Lube Work';
     b.setAttribute('href', botao ? botao.href : urlDrive());
     $('[data-bloqueio]').hidden = false;
     document.body.classList.remove('carregando');
@@ -45,12 +45,16 @@
   function mostrarArquivo(a) {
     arquivo = a;
     var nome = a.nome + '.' + a.extensao;
-    document.title = nome + ' — LUBE OFFICE';
+    document.title = nome + ' — Lube Work';
     $('[data-ed-nome]').textContent = nome;
     $('[data-ed-sub]').textContent = O.nomeTipo(a.extensao) + ' · ' +
       (a.pasta_nome || (a.papel !== 'dono' && a.dono ? 'de ' + a.dono.nome : 'Meus arquivos')) +
       ' · versão ' + a.versao;
     $('[data-ed-ico]').innerHTML = O.icone(a.extensao);
+    // a aba do navegador mostra o ícone do editor (Lube Texto, Lube Planilha ou Lube Slides)
+    var fav = $('link[rel="icon"]');
+    if (fav) fav.setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(
+      O.icone(a.extensao).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')));
     if (palco()) palco().dataset.tipo = String(a.extensao || '').toLowerCase();
     var papel = $('[data-ed-papel]');
     if (a.papel && a.papel !== 'dono') { papel.textContent = O.papelTxt(a.papel); papel.hidden = false; }
@@ -69,7 +73,7 @@
     $('[data-ed-cartao-nome]').textContent = a.nome + '.' + a.extensao;
     $('[data-ed-estado]').textContent = situacao === 'fora' ? 'Editor fora do ar' : 'Editor sendo ligado';
     $('[data-ed-motivo]').textContent = (motivo || 'O editor não abriu.') +
-      (situacao === 'fora' ? ' Assim que ele voltar, é só tentar de novo.' : ' Enquanto isso, o arquivo fica guardado e pode ser enviado ou compartilhado pelo LUBE OFFICE.');
+      (situacao === 'fora' ? ' Assim que ele voltar, é só tentar de novo.' : ' Enquanto isso, o arquivo fica guardado e pode ser enviado ou compartilhado pelo Lube Work.');
     var alt = a.alterado_por ? ' por ' + a.alterado_por.nome : '';
     var linhas = [
       ['Tipo', O.nomeTipo(a.extensao) + ' (.' + a.extensao + ')'],
@@ -217,7 +221,7 @@
       $('[data-ed-nome]').textContent = a.nome + '.' + a.extensao;
       var cartao = $('[data-ed-cartao-nome]');
       if (cartao && cartao.textContent) cartao.textContent = a.nome + '.' + a.extensao;
-      document.title = a.nome + '.' + a.extensao + ' — LUBE OFFICE';
+      document.title = a.nome + '.' + a.extensao + ' — Lube Work';
     }, function () {});
   }
 
@@ -248,7 +252,7 @@
     if (TESTE) { iniciarTeste(); return; }
     O.pronto().then(function () { return O.token(); }).then(function (t) {
       if (!t) {
-        bloquear('Entre pelo painel', 'O LUBE OFFICE abre com o mesmo login do Painel de Sistemas.',
+        bloquear('Entre pelo painel', 'O Lube Work abre com o mesmo login do Painel de Sistemas.',
           { texto: 'Ir para o login', href: '../?voltar=office' });
         return;
       }

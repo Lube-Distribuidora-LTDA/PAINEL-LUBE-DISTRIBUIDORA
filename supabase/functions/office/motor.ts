@@ -134,7 +134,7 @@ export function montarEditor(o: {
       customization: {
         autosave: true,
         comments: true,
-        goback: { url: o.voltarUrl, text: 'Voltar ao LUBE OFFICE', blank: false },
+        goback: { url: o.voltarUrl, text: 'Voltar ao Lube Work', blank: false },
         ...personalizar(o.visual ?? visualDoEditor(null)),
       },
       // a IA só escreve para quem pode editar (o servidor confere de novo)

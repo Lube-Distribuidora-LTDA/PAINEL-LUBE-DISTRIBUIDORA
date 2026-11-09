@@ -154,10 +154,15 @@ schema `sentinela` neste mesmo Supabase). Especificação em
 - Mudou o núcleo em `guarda/`? Copie para a raiz (`sentinela-guarda.ts`) e rode
   `node guarda/teste/guarda.teste.mjs`.
 
-## LUBE OFFICE (documentos, planilhas e apresentações)
+## Lube Work (textos, planilhas, slides e agenda)
+
+Até 2026-11-06 se chamou **LUBE OFFICE**. O nome mudou na tela, no portal e nos e-mails (Júlio: "um nome de marca
+pra empresa"), e os editores viraram **Lube Texto**, **Lube Planilha** e **Lube Slides**, com ícones de aplicativo
+da Lube. O endereço `/office/`, o schema, a função e o bucket `office` ficaram com o nome antigo, para não quebrar
+links, convites já enviados nem o motor.
 
 Desde 2026-10-21, em `/office/`. Todo usuário ativo do painel tem o seu, sem
-liberação por sistema: o link **Office** fica no menu do portal, com o número de
+liberação por sistema: o link **Lube Work** fica no menu do portal, com o número de
 avisos não lidos.
 
 - **Drive** (`office/index.html`): Meus arquivos, Compartilhados comigo,

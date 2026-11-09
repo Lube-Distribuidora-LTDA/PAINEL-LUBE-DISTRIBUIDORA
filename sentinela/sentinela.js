@@ -2368,8 +2368,8 @@
       html = '<div class="forte">Quem abrir ' + esc(alvo) + ' de fora da rede da Lube passa a ver <b>“Este sistema só abre na rede da Lube”</b>, ' +
           'mesmo com login. Só entram os liberados pelo TI e as máquinas autenticadas pelo próprio sistema.</div>' +
         (sis.some(ehPortal) ? '<p class="texto">No <b>Painel Lube</b> a tela de login continua abrindo; depois do login, quem está fora sai da sessão.</p>' +
-          '<div class="forte"><b>O LUBE OFFICE ainda não confere a rede</b> (parte D do desenho): um notebook que entrou na empresa e levou a sessão ' +
-          'para casa abre o Office direto pelo favorito. Só exija a rede no portal com o Office conferindo.</div>' : '') +
+          '<div class="forte"><b>O Lube Work ainda não confere a rede</b> (parte D do desenho): um notebook que entrou na empresa e levou a sessão ' +
+          'para casa abre o Lube Work direto pelo favorito. Só exija a rede no portal com o Lube Work conferindo.</div>' : '') +
         (pulados.length ? '<p class="texto">Fica como está: <b>' + esc(pulados.map(function (s) { return ehPortal(s) ? 'Painel Lube' : s.nome || s.projeto; }).join(', ')) +
           '</b>. O portal passa a exigir à parte, por último, no botão dele.</p>' : '') +
         (!temRede ? '<div class="forte">Nenhuma rede da Lube cadastrada: o banco vai recusar.</div>' : '') +

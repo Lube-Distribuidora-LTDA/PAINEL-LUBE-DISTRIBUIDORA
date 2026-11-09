@@ -271,7 +271,7 @@
       var n = j && typeof j.avisos_nao_lidos === 'number' ? j.avisos_nao_lidos : 0;
       el.textContent = n > 99 ? '99+' : String(n);
       el.hidden = !n;
-      el.parentNode.setAttribute('title', n ? n + (n > 1 ? ' avisos novos' : ' aviso novo') + ' no LUBE OFFICE' : 'LUBE OFFICE');
+      el.parentNode.setAttribute('title', n ? n + (n > 1 ? ' avisos novos' : ' aviso novo') + ' no Lube Work' : 'Lube Work');
     }, function () {});
   }
 

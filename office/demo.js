@@ -16,7 +16,7 @@
   }
 
   var P = {
-    eu:   { id: 'a0000000-0000-4000-8000-000000000001', nome: 'Júlio', email: 'julio@lube.com.br', cargo: 'TI' },
+    eu:   { id: 'a0000000-0000-4000-8000-000000000001', nome: 'Júlio', email: 'julio@lube.com.br', cargo: 'Administrador' },
     ana:  { id: 'a0000000-0000-4000-8000-000000000002', nome: 'Ana Ribeiro', email: 'ana.ribeiro@lube.com.br', cargo: 'Comercial' },
     car:  { id: 'a0000000-0000-4000-8000-000000000003', nome: 'Carlos Menezes', email: 'carlos.menezes@lube.com.br', cargo: 'Compras' },
     fer:  { id: 'a0000000-0000-4000-8000-000000000004', nome: 'Fernanda Lima', email: 'fernanda.lima@lube.com.br', cargo: 'Financeiro' },

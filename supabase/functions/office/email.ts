@@ -32,7 +32,7 @@ export function montarEmail(o: { remetente: { nome: string; email: string }; arq
   const assunto = linhaUnica(`${nome} enviou "${arquivo}"`, 180);
   const mensagem = String(o.mensagem ?? '').trim().slice(0, 1000);
   const texto = [
-    `${nome} (${o.remetente.email}) enviou o arquivo "${arquivo}" pelo LUBE OFFICE, da Lube Distribuidora.`,
+    `${nome} (${o.remetente.email}) enviou o arquivo "${arquivo}" pelo Lube Work, da Lube Distribuidora.`,
     mensagem ? `\nMensagem:\n${mensagem}\n` : '',
     `O arquivo está anexado a este e-mail. Para responder, é só responder: a resposta vai para ${o.remetente.email}.`,
     '',
@@ -43,7 +43,7 @@ export function montarEmail(o: { remetente: { nome: string; email: string }; arq
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF0F7;padding:24px 0"><tr><td align="center">' +
     '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#FFFFFF;border-radius:12px;overflow:hidden">' +
     '<tr><td style="background:#0D176E;padding:22px 28px;color:#FFFFFF">' +
-    '<div style="font-size:20px;font-weight:800;letter-spacing:-0.3px">LUBE <span style="color:#FF5A63">OFFICE</span></div>' +
+    '<div style="font-size:20px;font-weight:800;letter-spacing:-0.3px">LUBE <span style="color:#FF5A63">WORK</span></div>' +
     '<div style="font-size:12px;color:#C9D0F0;margin-top:4px">Lube Distribuidora</div></td></tr>' +
     '<tr><td style="height:5px;background:#E5101F;font-size:0;line-height:0">&nbsp;</td></tr>' +
     '<tr><td style="padding:28px">' +

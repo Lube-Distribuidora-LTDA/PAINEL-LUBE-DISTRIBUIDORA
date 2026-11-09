@@ -81,7 +81,7 @@ test('visual do editor: o de antes até ligar, e o da Lube só com tema conhecid
   const antes = montarEditor(cfgBase()).editorConfig.customization;
   assert.equal(antes.uiTheme, 'theme-dark');
   assert.equal(antes.compactHeader, false);
-  assert.equal(antes.goback.text, 'Voltar ao LUBE OFFICE');
+  assert.equal(antes.goback.text, 'Voltar ao Lube Work');
 
   const lube = montarEditor({ ...cfgBase(), visual: visualDoEditor({ visual: 'lube' }) }).editorConfig.customization;
   assert.equal(lube.uiTheme, 'theme-lube-claro');

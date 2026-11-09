@@ -137,7 +137,7 @@
     $('[data-tabela]').classList.toggle('is-grade', est.formato === 'grade');
     document.title = (est.visao === 'pasta' && est.caminho.length
       ? est.caminho[est.caminho.length - 1].nome
-      : est.visao === 'busca' ? 'Busca' : TITULO[est.visao] || 'LUBE OFFICE') + ' — LUBE OFFICE';
+      : est.visao === 'busca' ? 'Busca' : TITULO[est.visao] || 'Lube Work') + ' — Lube Work';
     if (window.OFC_AGENDA && est.eu) {
       if (agenda) {
         window.OFC_AGENDA.mostrar({ eu: est.eu, evento: est.evento, nova: est.agendaNova });
@@ -196,7 +196,7 @@
     $('.link-mais', secao).hidden = todos;
     var h = '';
     if (todos) {
-      [['docx', 'Documento em branco'], ['xlsx', 'Planilha em branco'], ['pptx', 'Apresentação em branco']].forEach(function (b) {
+      [['docx', 'Lube Texto em branco'], ['xlsx', 'Lube Planilha em branco'], ['pptx', 'Lube Slides em branco']].forEach(function (b) {
         var cls = O.classeTipo(b[0]);
         h += '<button class="modelo vivo" type="button" data-criar="' + b[0] + '" style="--i:' + (h.split('class="modelo').length - 1) + '">' +
           '<div class="modelo__capa modelo__capa--branco modelo__capa--' + cls + '"><span class="capa capa--branco">' + SVG.mais2 + '</span></div>' +
@@ -273,8 +273,8 @@
       'Depois disso são apagados para sempre, com todas as versões, e não dá mais para restaurar.';
     if (!est.itens.length) {
       tab.hidden = true;
-      var criar = '<button class="btn btn--prim" type="button" data-criar="docx">' + SVG.mais2 + 'Documento</button>' +
-                  '<button class="btn" type="button" data-criar="xlsx">Planilha</button>' +
+      var criar = '<button class="btn btn--prim" type="button" data-criar="docx">' + SVG.mais2 + 'Lube Texto</button>' +
+                  '<button class="btn" type="button" data-criar="xlsx">Lube Planilha</button>' +
                   '<button class="btn" type="button" data-enviar>Enviar arquivo</button>';
       var V = {
         meus: ['Seu espaço está pronto', 'Crie um documento, uma planilha ou uma apresentação, ou arraste arquivos do computador para cá.', criar],
@@ -390,7 +390,7 @@
       w.document.title = 'Abrindo…';
       w.document.body.style.cssText = 'margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
         'background:#030616;color:#E7EAF4;font:500 15px/1.4 Archivo,system-ui,sans-serif';
-      w.document.body.textContent = 'Abrindo no LUBE OFFICE…';
+      w.document.body.textContent = 'Abrindo no Lube Work…';
     } catch (e) {}
     return w;
   }
@@ -494,8 +494,8 @@
         '<input type="email" data-env-email placeholder="cliente@empresa.com.br" autocomplete="off" spellcheck="false" aria-label="E-mail de fora"' +
         (comEmail ? '' : ' disabled') + '></label>' +
         '<p class="enviar__nota">' + (comEmail
-          ? 'Vai como anexo, pela caixa de e-mail do LUBE OFFICE, com o seu nome. A resposta volta para ' + esc(est.eu.pessoa.email) + '.'
-          : 'O envio por e-mail ainda não foi ligado: falta cadastrar a caixa de e-mail do LUBE OFFICE.') + '</p></section>' +
+          ? 'Vai como anexo, pela caixa de e-mail do Lube Work, com o seu nome. A resposta volta para ' + esc(est.eu.pessoa.email) + '.'
+          : 'O envio por e-mail ainda não foi ligado: falta cadastrar a caixa de e-mail do Lube Work.') + '</p></section>' +
       '<label class="enviar__msg"><span class="mono rotulo">Mensagem (opcional)</span>' +
         '<textarea data-env-msg rows="3" maxlength="1000" placeholder="Um recado para quem recebe"></textarea></label>' +
       '<p class="dialogo__erro" data-dlg-erro></p>' +
@@ -713,7 +713,7 @@
     });
     if (recusados.length) {
       O.toast('Não enviado' + (recusados.length > 1 ? 's' : '') + ': ' + recusados.join(', ') +
-        '. Aceitos: Word, Excel, PowerPoint, PDF, OpenDocument, CSV e TXT.', 'erro', null, 12000);
+        '. Aceitos: .docx, .xlsx, .pptx, PDF, OpenDocument, CSV e TXT.', 'erro', null, 12000);
     }
     if (!fila.length) return;
     var t = O.toast('Enviando…', 'info', null, 0);
@@ -1179,7 +1179,7 @@
     m.classList.toggle('is-ok', sit === 'ligado');
     m.classList.toggle('is-fora', sit === 'fora');
     $('[data-motor-txt]').textContent = sit === 'ligado'
-      ? 'Editor no ar: Word, Excel e PowerPoint abrem aqui dentro, juntos.'
+      ? 'Editor no ar: Lube Texto, Lube Planilha e Lube Slides abrem aqui dentro, juntos.'
       : sit === 'fora'
       ? 'Editor fora do ar: o servidor da Lube não responde desde ' + O.quando(est.eu.motor_visto_em) + '.'
       : 'Editor sendo ligado no servidor da Lube. O Drive já funciona.';
@@ -1391,13 +1391,13 @@
      ========================================================= */
   function iaLigada() { return !!(est.eu && est.eu.ia && est.eu.ia.ligada); }
   var TIPOS_IA = {
-    docx: { nome: 'Documento', desc: 'Ata, proposta, comunicado, relatório', cls: '',
+    docx: { nome: 'Lube Texto', desc: 'Ata, proposta, comunicado, relatório', cls: '',
       ex: ['Ata da reunião a partir da foto do quadro', 'Proposta comercial para um supermercado, com condições e prazos',
            'Comunicado interno sobre o novo horário de entregas', 'Procedimento de recebimento de mercadoria, passo a passo'] },
-    xlsx: { nome: 'Planilha', desc: 'Controle, metas, cálculos com gráfico', cls: 'plan',
+    xlsx: { nome: 'Lube Planilha', desc: 'Controle, metas, cálculos com gráfico', cls: 'plan',
       ex: ['Metas de vendas por RCA com % atingido e gráfico', 'Controle de contas a pagar do mês com total',
            'Planilha a partir da foto da tabela impressa', 'Escala de entregas da semana por rota'] },
-    pptx: { nome: 'Apresentação', desc: 'Slides com a marca, animados', cls: 'apre',
+    pptx: { nome: 'Lube Slides', desc: 'Slides com a marca, animados', cls: 'apre',
       ex: ['Resultado do mês para a diretoria, com números em destaque', 'Treinamento dos RCAs sobre o SAC',
            'Slides a partir da foto do quadro', 'Lançamento do e-commerce B2B para os clientes'] }
   };
@@ -1670,7 +1670,7 @@
     limparPedidosVelhos();
     O.pronto().then(function () { return O.token(); }).then(function (t) {
       if (!t) {
-        bloquear('Entre pelo painel', 'O LUBE OFFICE abre com o mesmo login do Painel de Sistemas.',
+        bloquear('Entre pelo painel', 'O Lube Work abre com o mesmo login do Painel de Sistemas.',
           { texto: 'Ir para o login', href: '../?voltar=office' });
         return;
       }
@@ -1691,7 +1691,7 @@
         if (e.status === 401) {
           bloquear('Sua sessão acabou', 'Entre de novo pelo Painel de Sistemas.', { texto: 'Ir para o login', href: '../?voltar=office' });
         } else if (e.status === 403) {
-          bloquear('Sem acesso', 'Seu usuário não está ativo no painel. Procure o TI.', { texto: 'Voltar ao painel', href: '../' });
+          bloquear('Sem acesso', 'Seu usuário não está ativo no painel. Procure o administrador.', { texto: 'Voltar ao painel', href: '../' });
         } else {
           bloquear('Não abriu agora', e.message, { texto: 'Tentar de novo', href: location.href });
         }

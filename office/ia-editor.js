@@ -139,7 +139,7 @@
         procurarPlugin();
         if (++n > 60) {
           clearInterval(t);
-          falha(new Error('A IA não carregou dentro do editor. Recarregue a página; se continuar, avise o TI.'));
+          falha(new Error('A IA não carregou dentro do editor. Recarregue a página; se continuar, avise o administrador.'));
         }
       }, 500);
     });
