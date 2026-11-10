@@ -1165,6 +1165,7 @@
     var av = $('[data-eu-av]');
     av.textContent = O.iniciais(p.nome);
     av.style.setProperty('--c', O.corPessoa(p.id));
+    if (p.foto) av.setAttribute('data-foto', p.foto); else av.removeAttribute('data-foto');
     $('[data-primeiro-nome]').textContent = O.primeiroNome(p.nome);
     var hr = new Date().getHours();
     $('[data-saudacao]').textContent = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';

@@ -10,11 +10,15 @@ autenticação e banco de dados.
 ## Estrutura
 
 ```
-index.html      portal: login, abertura ("SISTEMAS CORPORATIVOS" + caminhão) e o painel
+index.html      portal: entrada (login e primeiro acesso), abertura e o painel
 admin.html      painel administrativo (só abre para perfis is_admin)
-styles.css      sistema visual do portal (cores, tipografia, animações)
+styles.css      base visual do portal e do admin (cores, tipografia, cortina, caminhão)
+abertura.css    entrada, abertura com as fotos, barra de vidro, Meu perfil e aviso de novidade
 admin.css       estilos do painel administrativo
-app.js          abertura: marca, cortina, hero, caminhão e a chegada animada do painel
+app.js          abertura: marca, cortina, fundo de cinema, caminhão, barra de vidro e a chegada do painel
+emblema.js      o "L" da Lube em 3D (three.js, pelo jsDelivr); sem WebGL fica a marca plana
+fotos.js        fotos de perfil: pinta todo data-foto (painel, admin e Lube Work)
+perfil.js       Meu perfil (foto com recorte e nome) e o aviso de novidade
 shell.js        painel: menu "BI LUBE" (fixados, áreas, cadeado), abas e BI dentro do painel
 shell.css       estilos do painel (menu azul flutuante, palco, abas, chegada)
 portal.js       sessão, permissões, passe da Sentinela e dados para o shell.js
@@ -305,6 +309,13 @@ sa-east-1). O SQL aplicado está em `db/01_schema.sql`.
 | `permissoes_excecao` | sistemas retirados de quem tem `acesso_total` (ignorada para quem não tem) |
 | `acessos` | registro de entradas e aberturas |
 | `icones` | ícones predefinidos dos sistemas |
+| `favoritos` | BIs que cada pessoa fixou no menu |
+| `avisos_vistos` | avisos de novidade que cada pessoa já viu (aparecem uma vez) |
+
+Foto de perfil: `profiles.foto` guarda o caminho no bucket **privado** `avatares`
+(`<id da pessoa>/<arquivo>.jpg`). Quem está ativo no painel lê as fotos; cada um só
+grava e apaga a própria, pela função `meu_perfil_salvar` (a pessoa não tem UPDATE em
+`profiles`). SQL em `db/16_perfil_foto.sql`.
 
 A chave em `config.js` é a *anon key*: ela é pública por natureza e não dá
 acesso a nada sozinha — quem decide o que pode ser lido são as políticas RLS.
@@ -324,6 +335,45 @@ Não há etapa de build. Conecte este repositório na Vercel e configure:
 - Framework Preset: **Other**
 - Build Command: *(vazio)*
 - Output Directory: `.`
+
+## Entrada, abertura e perfil
+
+**Fundo de cinema.** Na entrada e na abertura passam cinco fotos da Lube
+(`assets/abertura/*.webp`, tiradas do site lube.com.br): o CD de Cariacica, as docas,
+o armazém, o pátio e a loja de 1959. Cada uma fica 8,5 s, com um zoom bem leve
+(100% → 106%; a de 1959 quase parada). A lista está em `FOTOS`, no `app.js`: para
+trocar uma foto, salve outra com o mesmo nome; para incluir, acrescente uma linha.
+
+**"L" 3D.** `emblema.js` desenha a marca com volume (three.js 0.160 pelo jsDelivr,
+via `importmap` no `index.html`). Ele mora na entrada e voa para a abertura depois do
+login (`LubeAbertura.pousar`, no `app.js`). Sem WebGL, ou se o three.js não carregar,
+fica a marca plana que já está no HTML.
+
+**Entrada.** Cartão de vidro com Entrar e Primeiro acesso. O cadastro tem dois
+passos (foto opcional, nome e e-mail; depois a senha, com barra de força) e termina
+numa linha do tempo: cadastro enviado → TI libera → você entra. As regras são as de
+sempre: e-mail @lube.com.br (ou liberado), senha de 8 caracteres, aprovação do TI e a
+regra de rede da Sentinela.
+
+**Barra de vidro.** Depois do login, a barra flutuante do topo (classe `barra`) tem a
+foto e o nome (abre o Meu perfil), Painel admin e Sentinela (só admin), Sair, Painel e
+Lube Work. Sobre a parte branca ela fecha o azul (`sobre-claro`); some quando o painel
+chega. No celular as opções ficam na gaveta do botão de duas linhas.
+
+**Meu perfil.** A pessoa escolhe a foto, enquadra o rosto num recorte redondo
+(arrastar e zoom) e pode mudar o nome que aparece. A foto sobe recortada (320 px,
+JPEG) e aparece na barra, no menu do painel, na lista de usuários do admin e em todo o
+Lube Work (`office.json_pessoa` leva o caminho; `fotos.js` pinta qualquer elemento com
+`data-foto`).
+
+**Aviso de novidade.** Aparece uma vez por pessoa, na primeira entrada depois da
+atualização (tabela `avisos_vistos`, chave `AVISO` no `perfil.js`). Para avisar de
+novo numa próxima mudança, troque a chave e o texto. Quem se cadastrou depois de
+10/11/2026 vê "Bem-vindo ao Painel de Sistemas" no lugar de "cara nova".
+
+**Letras.** Os rótulos pequenos em maiúsculas usam Archivo em negrito (classe `mono`,
+que antes era a JetBrains Mono fina). Vale para o portal, o admin e as telas da regra
+de rede; Sentinela e Lube Work têm estilos próprios.
 
 ## Caminhão da abertura
 

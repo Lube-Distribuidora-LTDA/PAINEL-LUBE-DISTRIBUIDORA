@@ -34,6 +34,7 @@
   var okBox    = $('[data-gate-ok]');
   var okTexto  = $('[data-gate-ok-texto]');
   var modos    = $('.gate__modos');
+  var cartao   = $('[data-cartao]');
 
   var perfil = null;
   var icones = {};
@@ -46,10 +47,17 @@
     return v.indexOf('@') > -1 ? v : v + CFG.dominio;
   }
   function emailValido(v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v); }
-  function erro(msg) {
+  function erro(msg, campos) {
     if (!erroEl) return;
     erroEl.textContent = msg || '';
     erroEl.classList.toggle('is-on', !!msg);
+    $$('.campo.erro', gate).forEach(function (c) { c.classList.remove('erro'); });
+    if (!msg) return;
+    (campos || []).forEach(function (c) {
+      var el = $('[data-campo="' + c + '"]', gate);
+      if (el) el.classList.add('erro');
+    });
+    if (cartao) { cartao.classList.remove('treme'); void cartao.offsetWidth; cartao.classList.add('treme'); }
   }
   function carregando(on) {
     if (!btnEntrar) return;
@@ -334,13 +342,30 @@
   }
 
   /* ---------- sessão ---------- */
+  var veioDaEntrada = false;
   function mostrarPortal() {
+    veioDaEntrada = !!gate && gate.classList.contains('is-on');
     document.body.classList.add('autenticado');
-    if (gate) gate.classList.remove('is-on');
+    if (!gate) return;
+    if (veioDaEntrada) {
+      window.scrollTo(0, 0);
+      gate.classList.add('saindo');
+      if (window.LubeAbertura) window.LubeAbertura.pousar(true);
+      setTimeout(function () { gate.classList.remove('is-on', 'saindo'); }, 750);
+    } else {
+      gate.classList.remove('is-on');
+      if (window.LubeAbertura) window.LubeAbertura.pousar(false);
+    }
   }
   function mostrarGate() {
     document.body.classList.remove('autenticado');
-    if (gate) gate.classList.add('is-on');
+    if (gate) {
+      gate.classList.remove('saindo');
+      gate.classList.add('is-on');
+      // o L 3D volta para a entrada
+      var vaga = $('[data-vaga="entrada"]', gate), emblema = $('[data-emblema]');
+      if (vaga && emblema && emblema.parentNode !== vaga && !emblema.classList.contains('voando')) vaga.appendChild(emblema);
+    }
     if (window.LubeShell) window.LubeShell.limpar();
   }
 
@@ -435,6 +460,10 @@
       return;
     }
     mostrarPortal();
+    if (window.LubePerfil) {
+      // o aviso de novidade espera a abertura assentar; não aparece se a Sentinela mandou abrir um sistema
+      window.LubePerfil.iniciar({ sb: sb, perfil: perfil, novidade: !abrirSlug, espera: veioDaEntrada ? 2600 : 1800 });
+    }
     if (avisoRede) aviso(avisoRede);
     // a identidade só vai depois de um /rede que não mandou bloquear (login de fora não vira "confiável")
     informarIdentidade(sessao.access_token);
@@ -485,10 +514,10 @@
       var email = emailCompleto(campoUsr.value);
       var senha = campoPwd.value;
 
-      if (!email) { erro('Informe seu usuário.'); return; }
+      if (!email) { erro('Informe seu usuário.', ['user']); return; }
       // quem decide se o e-mail pode entrar é o banco (@lube.com.br ou a lista de e-mails liberados)
-      if (!emailValido(email)) { erro('Informe um e-mail válido.'); return; }
-      if (!senha) { erro('Informe a senha.'); return; }
+      if (!emailValido(email)) { erro('Informe um e-mail válido.', ['user']); return; }
+      if (!senha) { erro('Informe a senha.', ['pass']); return; }
 
       carregando(true);
       sb.auth.signInWithPassword({ email: email, password: senha })
@@ -497,9 +526,8 @@
             carregando(false);
             if (r.error.message === 'Invalid login credentials' ||
                 r.error.code === 'invalid_credentials') informarTentativa(email);
-            erro(r.error.message === 'Invalid login credentials'
-              ? 'Usuário ou senha incorretos.'
-              : r.error.message);
+            if (r.error.message === 'Invalid login credentials') erro('Usuário ou senha incorretos.', ['user', 'pass']);
+            else erro(r.error.message);
             return;
           }
           // o botão segue "carregando" enquanto a rede é conferida (até 3 s)
@@ -514,6 +542,10 @@
   }
 
   /* ---------- alternar entrar / primeiro acesso ---------- */
+  var TEXTOS = {
+    entrar:   ['Entre com a sua conta Lube', 'Use o seu usuário de e-mail e a senha do painel.'],
+    primeiro: ['Crie o seu acesso', 'Leva um minuto. Depois o TI libera os seus sistemas.']
+  };
   function irPara(modo) {
     erro('');
     $$('[data-modo]').forEach(function (b) {
@@ -524,6 +556,10 @@
     });
     if (modos) modos.classList.toggle('no-segundo', modo === 'primeiro');
     if (okBox) okBox.classList.remove('is-on');
+    if (cartao) cartao.classList.remove('feito');
+    var titulo = $('[data-gate-titulo]'), sub = $('[data-gate-sub]');
+    if (titulo && TEXTOS[modo]) { titulo.textContent = TEXTOS[modo][0]; sub.textContent = TEXTOS[modo][1]; }
+    irPasso(1);
   }
   $$('[data-modo]').forEach(function (b) {
     b.addEventListener('click', function () { irPara(b.getAttribute('data-modo')); });
@@ -531,39 +567,124 @@
   var voltar = $('[data-voltar-login]');
   if (voltar) voltar.addEventListener('click', function () { irPara('entrar'); });
 
-  /* ---------- primeiro acesso ---------- */
+  var ola = $('[data-gate-ola]');
+  if (ola) { var hr = new Date().getHours(); ola.textContent = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite'; }
+
+  // "Esqueci a senha": quem troca é o TI
+  var ajudaBtn = $('[data-ajuda-btn]'), ajuda = $('[data-ajuda]');
+  if (ajudaBtn && ajuda) ajudaBtn.addEventListener('click', function () {
+    var aberta = ajuda.classList.toggle('is-on');
+    ajudaBtn.setAttribute('aria-expanded', aberta ? 'true' : 'false');
+  });
+
+  // aviso de Caps Lock nos campos de senha
+  $$('.campo input[type="password"]', gate).forEach(function (campo) {
+    var caixa = campo.closest('.campo');
+    ['keydown', 'keyup'].forEach(function (ev) {
+      campo.addEventListener(ev, function (e) {
+        if (e.getModifierState) caixa.classList.toggle('caps', e.getModifierState('CapsLock'));
+      });
+    });
+    campo.addEventListener('blur', function () { caixa.classList.remove('caps'); });
+  });
+  $$('.campo input', gate).forEach(function (campo) {
+    campo.addEventListener('input', function () { if (erroEl && erroEl.classList.contains('is-on')) erro(''); });
+  });
+
+  /* ---------- primeiro acesso: dois passos ---------- */
   var formNovo = $('[data-form="primeiro"]');
+  var passoAtual = 1;
+  function irPasso(n) {
+    passoAtual = n;
+    $$('[data-passo]', gate).forEach(function (p) { p.classList.toggle('is-on', p.getAttribute('data-passo') === String(n)); });
+    var num = $('[data-passo-n]'), barra = $('[data-passo-barra]');
+    if (num) num.textContent = n;
+    if (barra) barra.style.width = (n * 50) + '%';
+  }
+  // passo 1: nome e e-mail (e a foto, opcional)
+  function conferirPasso1() {
+    var nome  = $('[data-novo-nome]').value.trim();
+    var email = emailCompleto($('[data-novo-user]').value);
+    if (!nome)  { erro('Informe seu nome completo.', ['nome']); return false; }
+    if (!email) { erro('Informe seu e-mail corporativo.', ['email']); return false; }
+    if (!emailValido(email)) { erro('Informe um e-mail válido.', ['email']); return false; }
+    return true;
+  }
+  var continuar = $('[data-continuar]');
+  if (continuar) continuar.addEventListener('click', function () {
+    erro('');
+    if (!conferirPasso1()) return;
+    irPasso(2);
+    var s1 = $('[data-novo-pass]');
+    if (s1) s1.focus();
+  });
+  var voltarPasso = $('[data-voltar-passo]');
+  if (voltarPasso) voltarPasso.addEventListener('click', function () { erro(''); irPasso(1); });
+
+  // força da senha (só orienta; a regra é ter 8 caracteres e as duas iguais)
+  var campoS1 = $('[data-novo-pass]'), campoS2 = $('[data-novo-pass2]'), forca = $('[data-forca]');
+  function medirSenha() {
+    if (!campoS1 || !forca) return;
+    var v = campoS1.value, n = 0;
+    if (v.length >= 1) n = 1;
+    if (v.length >= 8) n = 2;
+    if (v.length >= 8 && /[a-zA-Z]/.test(v) && /\d/.test(v)) n = 3;
+    if (v.length >= 12 && /[a-z]/.test(v) && /[A-Z]/.test(v) && /\d/.test(v) && /[^a-zA-Z0-9]/.test(v)) n = 4;
+    forca.setAttribute('data-n', n);
+    $('[data-forca-txt]').textContent = ['—', 'curta', 'ok', 'boa', 'forte'][n];
+    $('[data-regra="tam"]').classList.toggle('ok', v.length >= 8);
+    $('[data-regra="igual"]').classList.toggle('ok', !!v && v === campoS2.value);
+  }
+  if (campoS1) campoS1.addEventListener('input', medirSenha);
+  if (campoS2) campoS2.addEventListener('input', medirSenha);
+
+  // foto no cadastro (opcional): fica pronta aqui e sobe depois que a conta nasce
+  var fotoCad = null;
+  var cadArquivo = $('[data-cad-arquivo]'), cadAvatar = $('[data-cad-avatar]');
+  function limparFotoCad() {
+    fotoCad = null;
+    if (cadAvatar) { cadAvatar.style.backgroundImage = ''; cadAvatar.classList.remove('tem-foto'); }
+  }
+  if (cadArquivo && cadAvatar) cadArquivo.addEventListener('change', function () {
+    var arquivo = cadArquivo.files[0];
+    cadArquivo.value = '';
+    if (!arquivo || !window.LubePerfil) return;
+    window.LubePerfil.quadrada(arquivo).then(function (f) {
+      fotoCad = f;
+      cadAvatar.style.backgroundImage = 'url(' + f.url + ')';
+      cadAvatar.classList.add('tem-foto');
+      erro('');
+    }, function (e) { limparFotoCad(); erro(e.message); });
+  });
+
   if (formNovo) {
     formNovo.addEventListener('submit', function (ev) {
       ev.preventDefault();
       erro('');
+      // Enter no passo 1 só avança
+      if (passoAtual === 1) { if (conferirPasso1()) { irPasso(2); if (campoS1) campoS1.focus(); } return; }
 
       var nome  = $('[data-novo-nome]').value.trim();
       var email = emailCompleto($('[data-novo-user]').value);
-      var s1    = $('[data-novo-pass]').value;
-      var s2    = $('[data-novo-pass2]').value;
+      var s1    = campoS1.value;
+      var s2    = campoS2.value;
       var botao = $('[data-novo-submit]');
 
-      if (!nome)  { erro('Informe seu nome completo.'); return; }
-      if (!email) { erro('Informe seu e-mail corporativo.'); return; }
-      if (!emailValido(email)) { erro('Informe um e-mail válido.'); return; }
-      if (s1.length < 8) { erro('A senha precisa ter ao menos 8 caracteres.'); return; }
-      if (s1 !== s2)     { erro('As duas senhas não são iguais.'); return; }
+      if (!conferirPasso1()) { irPasso(1); return; }
+      if (s1.length < 8) { erro('A senha precisa ter ao menos 8 caracteres.', ['s1']); return; }
+      if (s1 !== s2)     { erro('As duas senhas não são iguais.', ['s2']); return; }
 
       botao.disabled = true;
       botao.classList.add('is-loading');
+      var soltar = function () { botao.disabled = false; botao.classList.remove('is-loading'); };
 
       sb.auth.signUp({ email: email, password: s1, options: { data: { nome: nome } } })
         .then(function (r) {
-          botao.disabled = false;
-          botao.classList.remove('is-loading');
-
           if (r.error) {
+            soltar();
             var m = r.error.message || '';
             if (/already registered|already been registered/i.test(m)) {
               erro('Esse e-mail já tem cadastro. Use "Entrar" ou peça a senha ao TI.');
-            } else if (/@lube\.com\.br/i.test(m)) {
-              erro(m);
             } else {
               erro(m);
             }
@@ -571,23 +692,32 @@
           }
 
           var precisaConfirmar = !r.data.session;
+          // com a conta recém-criada ainda logada, sobe a foto (se a pessoa escolheu uma).
+          // Se não der, o cadastro vale do mesmo jeito: ela põe a foto depois, pelo perfil.
+          var envio = (!precisaConfirmar && fotoCad && r.data.user && window.LubePerfil)
+            ? window.LubePerfil.enviarNoCadastro(sb, r.data.user.id, fotoCad.blob).then(function () {}, function () {})
+            : Promise.resolve();
           // a conta nasce pendente: ninguém entra antes da liberação
-          return sb.auth.signOut().then(function () {
+          return envio.then(function () { return sb.auth.signOut(); }).then(function () {
+            soltar();
             $$('[data-form]').forEach(function (f) { f.classList.remove('is-on'); });
             if (okTexto) {
               okTexto.textContent = precisaConfirmar
                 ? 'Confirme o endereço pelo link enviado para ' + email +
                   ' e aguarde a liberação do TI para ver seus sistemas.'
                 : 'Sua conta foi criada para ' + email +
-                  '. O TI precisa liberar seus sistemas antes do primeiro login — você será avisado.';
+                  '. Falta só o TI liberar os seus sistemas.';
             }
+            if (cartao) cartao.classList.add('feito');
             if (okBox) okBox.classList.add('is-on');
             formNovo.reset();
+            limparFotoCad();
+            medirSenha();
+            irPasso(1);
           });
         })
         .catch(function () {
-          botao.disabled = false;
-          botao.classList.remove('is-loading');
+          soltar();
           erro('Falha de conexão. Tente de novo.');
         });
     });

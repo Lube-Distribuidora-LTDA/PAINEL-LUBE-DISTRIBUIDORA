@@ -1,8 +1,9 @@
 /* =========================================================
    LUBE DISTRIBUIDORA — PAINEL DE SISTEMAS
-   Abertura (marca, cortina, "SISTEMAS CORPORATIVOS", caminhão) em
-   vanilla JS. Rolando, a página cai no painel: menu "BI LUBE" e BIs
-   ficam em shell.js; login e dados em portal.js.
+   Abertura em vanilla JS: marca, cortina, o fundo de cinema com as fotos
+   da Lube, "SISTEMAS CORPORATIVOS", o caminhão e a barra de vidro.
+   Rolando, a página cai no painel: menu "BI LUBE" e BIs ficam em
+   shell.js; login e dados em portal.js; o "L" 3D em emblema.js.
    ========================================================= */
 (function () {
   'use strict';
@@ -40,14 +41,9 @@
   window.LUBE_MARCA = markSVG;
 
   $$('[data-logo-mark]').forEach(function (el) {
-    if (el.classList.contains('curtain__mark')) {
-      el.innerHTML = markSVG('#FFFFFF', RED);          // sobre o fundo escuro
-    } else if (el.classList.contains('nav__mark')) {
-      el.innerHTML =
-        '<span class="mark mark--light">' + markSVG('#FFFFFF', RED) + '</span>' +
-        '<span class="mark mark--dark">'  + markSVG(NAVY, RED)      + '</span>';
-    } else if (el.classList.contains('side__mark')) {
-      el.innerHTML = markSVG('#FFFFFF', RED);          // sobre o menu azul
+    if (el.classList.contains('curtain__mark') || el.classList.contains('side__mark') ||
+        el.classList.contains('marca-clara')) {
+      el.innerHTML = markSVG('#FFFFFF', RED);          // sobre fundo escuro, menu azul ou vidro
     } else {
       el.innerHTML = markSVG(NAVY, RED);
     }
@@ -127,6 +123,84 @@
   }
 
   /* ---------------------------------------------------------
+     3b. FUNDO DE CINEMA
+     As fotos da Lube (assets/abertura) passam ao fundo, com um zoom bem
+     leve, na tela de entrada e na abertura ao mesmo tempo: quando a pessoa
+     entra, a foto continua de onde estava.
+     --------------------------------------------------------- */
+  var FOTOS = [
+    { src: 'cd-aerea',  pos: '50% 62%', dx0: '.6%',  dy0: '.5%',  dx1: '-.8%', dy1: '-.6%' },
+    { src: 'cd-docas',  pos: '50% 60%', dx0: '-.6%', dy0: '0%',   dx1: '.8%',  dy1: '-.5%' },
+    { src: 'armazem',   pos: '50% 45%', dx0: '0%',   dy0: '.5%',  dx1: '-.6%', dy1: '-.8%' },
+    { src: 'patio',     pos: '50% 60%', dx0: '.7%',  dy0: '0%',   dx1: '-.7%', dy1: '-.5%' },
+    // a primeira loja (1959): foto pequena e antiga, quase sem zoom
+    { src: 'loja-1959', pos: '50% 42%', pb: true, z1: '1.02', dx0: '0%', dy0: '-.2%', dx1: '0%', dy1: '.3%' }
+  ];
+  var telas = $$('[data-fotos]').map(function (caixa) {
+    return FOTOS.map(function (f) {
+      var d = document.createElement('div');
+      d.className = 'foto' + (f.pb ? ' pb' : '');
+      d.style.setProperty('--pos', f.pos);
+      if (f.z1) d.style.setProperty('--z1', f.z1);
+      ['dx0', 'dy0', 'dx1', 'dy1'].forEach(function (k) { d.style.setProperty('--' + k, f[k]); });
+      caixa.appendChild(d);
+      return d;
+    });
+  });
+  var fotoAtual = -1;
+  function enderecoFoto(i) { return 'assets/abertura/' + FOTOS[i].src + '.webp'; }
+  function proximaFoto() {
+    var ant = fotoAtual;
+    fotoAtual = (fotoAtual + 1) % FOTOS.length;
+    telas.forEach(function (els) {
+      var el = els[fotoAtual];
+      if (!el.style.backgroundImage) el.style.backgroundImage = 'url(' + enderecoFoto(fotoAtual) + ')';
+      el.classList.remove('is-on'); void el.offsetWidth; el.classList.add('is-on');
+      if (ant >= 0 && ant !== fotoAtual) { var a = els[ant]; setTimeout(function () { a.classList.remove('is-on'); }, 1800); }
+    });
+    new Image().src = enderecoFoto((fotoAtual + 1) % FOTOS.length);     // a próxima já vem vindo
+    if (ant >= 0 && window.LubeEmblema) window.LubeEmblema.giro();       // o L dá uma volta a cada foto
+  }
+  if (telas.length && !document.documentElement.classList.contains('em-moldura')) {
+    proximaFoto();
+    setInterval(function () {
+      // com a aba escondida ou o painel travado na tela, ninguém vê a abertura
+      if (document.hidden || document.documentElement.classList.contains('painel-fixo')) return;
+      proximaFoto();
+    }, 8500);
+  }
+
+  /* ---------------------------------------------------------
+     3c. O "L" 3D SAI DA ENTRADA E POUSA NA ABERTURA
+     --------------------------------------------------------- */
+  var emblema = $('[data-emblema]');
+  window.LubeAbertura = {
+    pousar: function (voando) {
+      var destino = $('[data-vaga="abertura"]');
+      if (!emblema || !destino || emblema.parentNode === destino) return;
+      if (!voando || reduced) { destino.appendChild(emblema); return; }
+      var a = emblema.getBoundingClientRect(), b = destino.getBoundingClientRect();
+      var por = function (r) {
+        emblema.style.left = r.left + 'px'; emblema.style.top = r.top + 'px';
+        emblema.style.width = r.width + 'px'; emblema.style.height = r.height + 'px';
+      };
+      emblema.style.transition = 'none';
+      por(a);
+      document.body.appendChild(emblema);
+      emblema.classList.add('voando');
+      void emblema.offsetWidth;
+      emblema.style.transition = '';
+      por(b);
+      if (window.LubeEmblema) window.LubeEmblema.giro();
+      setTimeout(function () {
+        emblema.classList.remove('voando');
+        emblema.style.cssText = '';
+        destino.appendChild(emblema);
+      }, 1450);
+    }
+  };
+
+  /* ---------------------------------------------------------
      4. CORTINA DE ENTRADA
      --------------------------------------------------------- */
   var counter = $('[data-count]');
@@ -135,7 +209,7 @@
     if (loadBar) loadBar.style.width = '100%';
     document.body.classList.remove('is-loading');
     document.body.classList.add('loaded');
-    $$('.hero .mask > span').forEach(function (s) { s.classList.add('in'); });
+    $$('.hero .mask > span, .gate .mask > span').forEach(function (s) { s.classList.add('in'); });
   }
 
   if (reduced || document.documentElement.classList.contains('em-moldura')) {
@@ -181,7 +255,7 @@
     }
 
     var hp = clamp(y / vh, 0, 1);
-    target.bg    = 1 + hp * 0.27;
+    target.bg    = 1 + hp * 0.1;
     target.title = 1 - clamp(y / (vh * 0.3), 0, 1) * 0.11;
 
     if (haul) {
@@ -278,31 +352,38 @@
       }
       return false;
     };
-    var w = window.innerWidth;
-    nav.classList.toggle('is-light-l', isLight(Math.min(70, w * 0.08)));
-    nav.classList.toggle('is-light-c', isLight(w / 2));
-    nav.classList.toggle('is-light-r', isLight(Math.max(12, w - 70)));
+    nav.classList.toggle('sobre-claro', isLight(window.innerWidth / 2));
   }
 
   /* ---------------------------------------------------------
-     8. MENU MOBILE
+     8. BARRA DE VIDRO
+     No celular as opções ficam numa gaveta; o reflexo do vidro acompanha
+     o mouse.
      --------------------------------------------------------- */
-  var burger = $('[data-burger]');
-  var menu   = $('[data-menu]');
-  if (burger && menu) {
-    burger.addEventListener('click', function () {
-      var open = menu.classList.toggle('open');
-      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
-      document.body.classList.toggle('menu-open', open);
-    });
-    $$('a', menu).forEach(function (a) {
-      a.addEventListener('click', function () {
-        menu.classList.remove('open');
-        burger.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('menu-open');
-      });
-    });
+  var mais   = $('[data-mais]');
+  var gaveta = $('[data-gaveta]');
+  function fecharGaveta() {
+    if (!gaveta) return;
+    gaveta.classList.remove('is-on');
+    if (mais) mais.setAttribute('aria-expanded', 'false');
   }
+  if (mais && gaveta) {
+    mais.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var aberta = gaveta.classList.toggle('is-on');
+      mais.setAttribute('aria-expanded', aberta ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (ev) {
+      if (!gaveta.contains(ev.target) || (ev.target.closest && ev.target.closest('a,button'))) fecharGaveta();
+    });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') fecharGaveta(); });
+  }
+  document.addEventListener('pointermove', function (ev) {
+    var v = ev.target.closest ? ev.target.closest('.vidro') : null;
+    if (!v) return;
+    var r = v.getBoundingClientRect();
+    v.style.setProperty('--mx', ((ev.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+  }, { passive: true });
 
   /* ---------------------------------------------------------
      9. CHEGADA NO PAINEL

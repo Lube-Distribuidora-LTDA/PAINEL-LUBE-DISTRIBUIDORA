@@ -681,6 +681,7 @@
     },
     travar: travar,
     soltar: soltar,
+    conta: function () { montarConta(); },      // o perfil mudou (nome ou foto)
     limpar: function () {
       Object.keys(quadros).forEach(function (k) { fechar(k); });
       ativo = null;
@@ -694,21 +695,13 @@
     var p = ctx.perfil;
     var nome = p.nome || p.email.split('@')[0];
     var ini = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(function (x) { return x.charAt(0); }).join('').toUpperCase();
+    // a foto (se houver) entra por cima das iniciais: fotos.js lê o data-foto
     conta.innerHTML =
-      '<span class="conta__avatar" data-dica="' + esc(nome) + '">' + esc(ini || '?') + '</span>' +
-      '<span class="conta__info"><span class="conta__nome">' + esc(nome) + '</span>' +
-        '<span class="conta__email">' + esc(p.email) + '</span></span>' +
+      '<button type="button" class="conta__eu" data-abrir-perfil title="Meu perfil: trocar a foto e o nome">' +
+        '<span class="conta__avatar" data-avatar data-dica="' + esc(nome) + '"' + (p.foto ? ' data-foto="' + esc(p.foto) + '"' : '') + '>' + esc(ini || '?') + '</span>' +
+        '<span class="conta__info"><span class="conta__nome">' + esc(nome) + '</span>' +
+          '<span class="conta__email">' + esc(p.email) + '</span></span>' +
+      '</button>' +
       '<button type="button" class="conta__sair" data-sair title="Sair" aria-label="Sair">' + ICO.sair + '</button>';
-
-    // barra da conta na navbar da abertura, como era antes: nome, Painel admin,
-    // Sentinela (só admin) e Sair
-    var topo = $('[data-nav-conta]');
-    if (topo) {
-      topo.innerHTML =
-        '<span class="nav-conta__nome">' + esc(nome) + '</span>' +
-        (p.is_admin ? '<a class="nav-conta__admin" href="admin.html">Painel admin</a>' +
-                      '<a class="nav-conta__link" href="sentinela/">Sentinela</a>' : '') +
-        '<button type="button" class="nav-conta__link" data-sair>Sair</button>';
-    }
   }
 })();

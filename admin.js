@@ -149,9 +149,13 @@
         : meus.length
           ? meus.map(function (s) { return '<span class="chip">' + esc(s.nome) + '</span>'; }).join('')
           : '<span class="chip chip--vazio">sem acesso</span>';
+      // foto de perfil (se a pessoa pôs uma): fotos.js lê o data-foto e pinta por cima das iniciais
+      var ini = String(u.nome || u.email || '?').trim().split(/\s+/).slice(0, 2)
+        .map(function (x) { return x.charAt(0); }).join('').toUpperCase();
       return '<tr>' +
-        '<td><span class="cel-nome">' + esc(u.nome || '—') + '</span>' +
-            '<span class="cel-email">' + esc(u.email) + '</span></td>' +
+        '<td><div class="cel-pessoa"><span class="cel-av"' + (u.foto ? ' data-foto="' + esc(u.foto) + '"' : '') + '>' + esc(ini) + '</span>' +
+            '<div><span class="cel-nome">' + esc(u.nome || '—') + '</span>' +
+            '<span class="cel-email">' + esc(u.email) + '</span></div></div></td>' +
         '<td>' + esc(u.cargo || '—') + '</td>' +
         '<td>' + (u.is_admin ? '<span class="tag tag--admin">Admin</span>'
                              : '<span class="tag tag--user">Usuário</span>') + '</td>' +
@@ -388,6 +392,8 @@
           'Se a ideia é só suspender o acesso, use <em>Editar</em> e desmarque “Acesso ativo”.</p>',
       function () {
         return fn({ acao: 'remover', user_id: id }).then(function () {
+          // a foto de perfil sai junto (se falhar, sobra só um arquivo sem uso)
+          if (u.foto) sb.storage.from('avatares').remove([u.foto]).then(function () {}, function () {});
           toast('Usuário removido.');
           return carregarTudo();
         });

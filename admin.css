@@ -57,7 +57,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .adm__user .mono{ color:var(--adm-fraco); font-size:.66rem; }
 
 .adm__link{
-  position:relative; font-family:'JetBrains Mono','Consolas',monospace;
+  position:relative; font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700;
   font-size:.66rem; letter-spacing:.14em; text-transform:uppercase;
   color:#AEB8E4; padding-bottom:2px; background:none; border:0; cursor:pointer;
   transition:color .3s var(--ease);
@@ -115,7 +115,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .adm__table{ width:100%; border-collapse:collapse; min-width:820px; }
 .adm__table th{
   text-align:left; padding:1rem 1.15rem; border-bottom:1px solid var(--adm-borda);
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.62rem;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.62rem;
   letter-spacing:.16em; text-transform:uppercase; color:var(--adm-fraco); font-weight:500;
   white-space:nowrap; background:rgba(255,255,255,.02);
 }
@@ -127,13 +127,19 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .adm__table tbody tr:hover{ background:rgba(44,63,196,.12); }
 .adm__table tbody tr:last-child td{ border-bottom:0; }
 
+.cel-pessoa{ display:flex; align-items:center; gap:.75rem; }
+.cel-av{
+  flex:none; width:38px; height:38px; border-radius:50%; display:grid; place-items:center; overflow:hidden;
+  font-weight:800; font-size:.8rem; color:#1E2B8C; background:#fff center/cover no-repeat;
+  box-shadow:0 0 0 2px rgba(255,255,255,.2);
+}
 .cel-nome{ font-weight:700; letter-spacing:-.02em; color:#fff; }
 .cel-email{ display:block; color:var(--adm-fraco); font-size:.76rem; margin-top:.2rem; }
 .cel-acoes{ display:flex; gap:1rem; justify-content:flex-end; white-space:nowrap; align-items:center; }
 
 .tag{
   display:inline-flex; align-items:center; gap:.4rem;
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.6rem;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.6rem;
   letter-spacing:.12em; text-transform:uppercase; padding:.35rem .6rem;
   border:1px solid currentColor;
 }
@@ -151,7 +157,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 
 .chips{ display:flex; flex-wrap:wrap; gap:.35rem; }
 .chip{
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.58rem;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.58rem;
   letter-spacing:.1em; text-transform:uppercase;
   padding:.3rem .5rem; background:rgba(143,160,240,.14); color:#AEB8E4;
 }
@@ -194,7 +200,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 /* ---------- campos ---------- */
 .campo{ display:flex; flex-direction:column; gap:.5rem; }
 .campo > span{
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.62rem;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.62rem;
   letter-spacing:.14em; text-transform:uppercase; color:var(--adm-fraco);
 }
 .campo input[type="text"],
@@ -228,7 +234,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .sufixo input{ border-right:0 !important; }
 .sufixo b{
   display:grid; place-items:center; padding:0 .9rem; border:1px solid var(--adm-borda);
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.68rem;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.68rem;
   color:var(--adm-fraco); font-weight:400; background:rgba(255,255,255,.03);
 }
 
@@ -263,7 +269,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 }
 .campo__dica--excecao{
   margin:0 0 .5rem; color:#FF9096; font-size:.68rem;
-  font-family:'JetBrains Mono','Consolas',monospace; letter-spacing:.1em; text-transform:uppercase;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
 }
 
 /* ---------- galeria de ícones ---------- */
@@ -283,7 +289,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .galeria__item input{ position:absolute; opacity:0; pointer-events:none; }
 .galeria__arte{ display:block; width:100%; max-width:74px; }
 .galeria__nome{
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.55rem;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.55rem;
   letter-spacing:.08em; text-transform:uppercase; color:var(--adm-fraco);
   text-align:center; line-height:1.4;
 }
@@ -342,7 +348,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .filtro__chip{
   display:inline-flex; align-items:center; gap:.55rem; cursor:pointer;
   padding:.35rem .6rem; color:#C7CEEA;
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.64rem; letter-spacing:.06em;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.64rem; letter-spacing:.06em;
   background:rgba(143,160,240,.14); border:1px solid rgba(143,160,240,.3);
   transition:border-color .3s var(--ease), color .3s var(--ease);
 }
@@ -380,7 +386,7 @@ html body.adm-body{ overflow-y:auto; height:auto; min-height:100vh; }
 .adm__badge{
   display:inline-grid; place-items:center; min-width:1.3rem; height:1.3rem; padding:0 .35rem;
   margin-left:.5rem; border-radius:999px; background:var(--red); color:#fff; vertical-align:middle;
-  font-family:'JetBrains Mono','Consolas',monospace; font-size:.62rem; font-weight:700; letter-spacing:0;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif; font-weight:700; font-size:.62rem; font-weight:700; letter-spacing:0;
   animation:pulsoSac 2s infinite;
 }
 .adm__badge[hidden]{ display:none; }

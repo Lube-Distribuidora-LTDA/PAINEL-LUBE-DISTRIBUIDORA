@@ -8,9 +8,11 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 112'%3E%3Cg transform='translate(20,0) skewX(-10)'%3E%3Cpath fill='%231E2B8C' d='M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z'/%3E%3Cpath fill='%23EE1B24' d='M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z'/%3E%3C/g%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261030" />
-<link rel="stylesheet" href="shell.css?v=20261030" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css?v=20261110" />
+<link rel="stylesheet" href="shell.css?v=20261110" />
+<link rel="stylesheet" href="abertura.css?v=20261110" />
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script>try{if(window.self!==window.top)document.documentElement.className+=' em-moldura';}catch(e){document.documentElement.className+=' em-moldura';}</script>
 </head>
 <body class="is-loading">
@@ -34,187 +36,191 @@
   </div>
 </div>
 
-<!-- ============ TELA DE ACESSO ============ -->
+<!-- ============ ENTRADA (login e primeiro acesso) ============ -->
 <div class="gate" data-gate>
-  <div class="gate__bg" aria-hidden="true"></div>
+  <div class="gate__bg cinema" aria-hidden="true"><div data-fotos></div><div class="cinema__tinta"></div><div class="cinema__brilho"></div><div class="cinema__veu cinema__veu--entrada"></div></div>
 
-  <div class="gate__box">
-    <div class="gate__logo">
-      <span class="gate__mark" data-logo-mark></span>
-      <span class="gate__word"><strong>LUBE</strong><em>Distribuidora</em></span>
-    </div>
+  <div class="gate__topo">
+    <span class="marca-clara" data-logo-mark></span>
+    <b>LUBE<em>Distribuidora</em></b>
+  </div>
 
-    <h1 class="gate__title">Painel de<br /><span>Sistemas</span></h1>
-    <p class="gate__lead" data-gate-lead>Acesso restrito a colaboradores com e-mail @lube.com.br.</p>
+  <div class="gate__grade">
+    <section class="gate__lado">
+      <!-- o "L" 3D mora aqui e voa para a abertura depois do login -->
+      <div class="vaga" data-vaga="entrada">
+        <div class="emblema" data-emblema aria-hidden="true">
+          <span class="emblema__aro"></span>
+          <canvas></canvas>
+          <span class="emblema__plano"><svg viewBox="0 0 140 112" aria-hidden="true"><g transform="translate(20,0) skewX(-10)"><path fill="#3550e6" d="M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z"/><path fill="#EE1B24" d="M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z"/></g></svg></span>
+        </div>
+      </div>
+      <h1 class="gate__title"><span class="mask t1"><span>Painel de</span></span><span class="mask t2"><span>sistemas</span></span></h1>
+      <p class="gate__frase" data-gate-lead>Todos os sistemas e BIs da Lube em um só lugar, com um único login.</p>
+      <div class="gate__pontos"><span class="ponto"><i></i>Desde 1959</span></div>
+    </section>
 
-    <div class="gate__modos" role="tablist">
-      <button class="gate__modo is-on" type="button" data-modo="entrar">Entrar</button>
-      <button class="gate__modo" type="button" data-modo="primeiro">Primeiro acesso</button>
-      <span class="gate__modo-barra" data-modo-barra></span>
-    </div>
+    <section class="cartao" data-cartao>
+      <p class="cartao__ola" data-gate-ola>Olá</p>
+      <h2 class="cartao__titulo" data-gate-titulo>Entre com a sua conta Lube</h2>
+      <p class="cartao__sub" data-gate-sub>Use o seu usuário de e-mail e a senha do painel.</p>
 
-    <form class="gate__form is-on" data-form="entrar">
-      <label class="gate__field">
-        <span class="mono">Usuário</span>
-        <span class="search__field">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <input type="text" data-gate-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
-          <span class="gate__suffix mono">@lube.com.br</span>
-        </span>
-      </label>
+      <div class="gate__modos" role="tablist">
+        <span class="gate__modo-barra" data-modo-barra></span>
+        <button class="gate__modo is-on" type="button" data-modo="entrar">Entrar</button>
+        <button class="gate__modo" type="button" data-modo="primeiro">Primeiro acesso</button>
+      </div>
 
-      <label class="gate__field">
-        <span class="mono">Senha</span>
-        <span class="search__field">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <input type="password" data-gate-pass autocomplete="current-password" placeholder="••••••••" />
-          <button type="button" class="gate__eye" data-eye="pass" aria-label="Mostrar senha">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </span>
-      </label>
+      <p class="gate__erro" data-gate-erro role="alert"></p>
 
-      <button class="btn gate__submit" type="submit" data-gate-submit>
-        <span class="btn__label">Entrar</span>
-        <span class="btn__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </button>
-    </form>
+      <!-- ENTRAR -->
+      <form class="gate__form is-on" data-form="entrar" novalidate>
+        <label class="campo" data-campo="user">
+          <span class="campo__rot"><span>Usuário</span></span>
+          <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+            <input type="text" data-gate-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
+            <span class="gate__suffix">@lube.com.br</span>
+          </span>
+        </label>
+        <label class="campo" data-campo="pass">
+          <span class="campo__rot"><span>Senha</span><em>Caps Lock ligado</em></span>
+          <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <input type="password" data-gate-pass autocomplete="current-password" placeholder="••••••••" />
+            <button type="button" class="gate__eye" data-eye="pass" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </span>
+        </label>
+        <button class="botao" type="submit" data-gate-submit><span class="btn__label">Entrar</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <div class="gate__linha"><span>Problemas para entrar?</span><button class="link" type="button" data-ajuda-btn aria-expanded="false">Esqueci a senha</button></div>
+        <div class="gate__ajuda" data-ajuda><div><div class="gate__ajuda-caixa">
+          <p>A senha é trocada pelo TI. Chame no WhatsApp:</p>
+          <a class="zap" href="https://wa.me/5527988819807?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20a%20minha%20senha%20do%20Painel%20Lube." target="_blank" rel="noopener"><i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></i>Júlio<em>(27) 98881-9807</em></a>
+          <a class="zap" href="https://wa.me/5527992736082?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20a%20minha%20senha%20do%20Painel%20Lube." target="_blank" rel="noopener"><i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></i>Alexandre<em>(27) 99273-6082</em></a>
+        </div></div></div>
+      </form>
 
-    <form class="gate__form" data-form="primeiro">
-      <label class="gate__field">
-        <span class="mono">Nome completo</span>
-        <span class="search__field">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <input type="text" data-novo-nome autocomplete="name" placeholder="Seu nome" />
-        </span>
-      </label>
+      <!-- PRIMEIRO ACESSO: dois passos -->
+      <form class="gate__form" data-form="primeiro" novalidate>
+        <div class="passos"><span>Passo <b data-passo-n>1</b> de 2</span><span class="passos__trilho"><i data-passo-barra></i></span></div>
 
-      <label class="gate__field">
-        <span class="mono">E-mail corporativo</span>
-        <span class="search__field">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <input type="text" data-novo-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
-          <span class="gate__suffix mono">@lube.com.br</span>
-        </span>
-      </label>
+        <div class="passo is-on" data-passo="1">
+          <div class="fotocad">
+            <label class="fotocad__alvo" title="Escolher foto"><input type="file" accept="image/*" data-cad-arquivo hidden />
+              <span class="avatar" data-cad-avatar><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6"/></svg></span><span class="fotocad__mais" aria-hidden="true">+</span></label>
+            <div><strong>Sua foto <em>(opcional)</em></strong><span>Para todo mundo saber que é você. Dá para trocar depois.</span></div>
+          </div>
+          <label class="campo" data-campo="nome">
+            <span class="campo__rot"><span>Nome completo</span></span>
+            <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+              <input type="text" data-novo-nome autocomplete="name" placeholder="Seu nome" />
+            </span>
+          </label>
+          <label class="campo" data-campo="email">
+            <span class="campo__rot"><span>E-mail corporativo</span></span>
+            <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+              <input type="text" data-novo-user autocomplete="username" placeholder="seu.nome" spellcheck="false" />
+              <span class="gate__suffix">@lube.com.br</span>
+            </span>
+          </label>
+          <button class="botao" type="button" data-continuar><span>Continuar</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
 
-      <label class="gate__field">
-        <span class="mono">Crie uma senha</span>
-        <span class="search__field">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <input type="password" data-novo-pass autocomplete="new-password" placeholder="mínimo 8 caracteres" />
-          <button type="button" class="gate__eye" data-eye="novo" aria-label="Mostrar senha">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </span>
-      </label>
+        <div class="passo" data-passo="2">
+          <label class="campo" data-campo="s1">
+            <span class="campo__rot"><span>Crie uma senha</span><em>Caps Lock ligado</em></span>
+            <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input type="password" data-novo-pass autocomplete="new-password" placeholder="mínimo 8 caracteres" />
+              <button type="button" class="gate__eye" data-eye="novo" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </span>
+          </label>
+          <div class="forca" data-forca data-n="0"><span class="forca__barras"><i></i><i></i><i></i><i></i></span><span class="forca__txt" data-forca-txt>—</span></div>
+          <label class="campo" data-campo="s2">
+            <span class="campo__rot"><span>Repita a senha</span></span>
+            <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input type="password" data-novo-pass2 autocomplete="new-password" placeholder="••••••••" />
+            </span>
+          </label>
+          <ul class="regras"><li data-regra="tam">8 caracteres ou mais</li><li data-regra="igual">As duas senhas iguais</li></ul>
+          <button class="botao" type="submit" data-novo-submit><span class="btn__label">Criar meu acesso</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="gate__voltar" type="button" data-voltar-passo>← Voltar</button>
+        </div>
+      </form>
 
-      <label class="gate__field">
-        <span class="mono">Repita a senha</span>
-        <span class="search__field">
-          <span class="search__frame" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <input type="password" data-novo-pass2 autocomplete="new-password" placeholder="••••••••" />
-        </span>
-      </label>
+      <!-- CADASTRO ENVIADO -->
+      <div class="gate__ok" data-gate-ok>
+        <span class="gate__ok-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m5 12 5 5L20 7"/></svg></span>
+        <h2>Cadastro enviado</h2>
+        <p data-gate-ok-texto></p>
+        <ol class="trilha">
+          <li class="ok" data-n="1"><div><strong>Cadastro enviado</strong><span>Recebemos o seu pedido agora.</span></div></li>
+          <li class="agora" data-n="2"><div><strong>TI libera os seus sistemas</strong><span>O TI já foi avisado no painel administrativo.</span></div></li>
+          <li data-n="3"><div><strong>Você entra no painel</strong><span>Com o usuário e a senha que acabou de criar.</span></div></li>
+        </ol>
+        <button class="botao botao--leve" type="button" data-voltar-login><span>Voltar para a entrada</span></button>
+      </div>
 
-      <button class="btn gate__submit" type="submit" data-novo-submit>
-        <span class="btn__label">Criar meu acesso</span>
-        <span class="btn__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </button>
-    </form>
-
-    <div class="gate__ok" data-gate-ok>
-      <span class="gate__ok-icone" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 7"/></svg>
-      </span>
-      <h2>Cadastro enviado</h2>
-      <p data-gate-ok-texto></p>
-      <button class="gate__voltar" type="button" data-voltar-login>Voltar para o login</button>
-    </div>
-
-    <p class="gate__erro" data-gate-erro role="alert"></p>
-
-    <!-- SAC: chamado do RCA, sem login (decisão do Júlio, 2026-10-07).
-         É um sistema à parte; o portal só leva até ele. -->
-    <div class="gate__ou mono" aria-hidden="true">ou, para RCAs</div>
-    <a class="gate__sac" href="https://sac-lube.vercel.app/">
-      <span class="gate__sac-sigla">SAC</span>
-      <span class="gate__sac-texto">
-        <strong>Abrir chamado</strong>
-        <span class="mono">RCAs e supervisores · login próprio do SAC</span>
-      </span>
-      <span class="gate__sac-seta" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </span>
-    </a>
-
-    <p class="gate__rodape mono">Esqueceu a senha? Fale com o TI · cpd@lube.com.br</p>
+      <!-- SAC: chamado do RCA (decisão do Júlio, 2026-10-07). É um sistema à parte; o portal só leva até ele. -->
+      <div class="gate__extras">
+        <div class="gate__ou" aria-hidden="true">RCA ou supervisor?</div>
+        <a class="gate__sac" href="https://sac-lube.vercel.app/">
+          <span class="gate__sac-sigla">SAC</span>
+          <span class="gate__sac-texto"><strong>Abrir chamado</strong><span>Login próprio do SAC</span></span>
+          <span class="gate__sac-seta" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </a>
+      </div>
+      <p class="gate__rodape"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Acesso restrito · e-mail @lube.com.br</p>
+    </section>
   </div>
 </div>
 
-<!-- ============ NAVBAR (marca centralizada; some quando o painel chega) ============ -->
-<header class="nav" id="topo">
-  <div class="nav__side nav__side--l">
-    <span class="nav-conta mono" data-nav-conta></span>
+<!-- ============ BARRA DE CIMA (vidro; some quando o painel chega) ============ -->
+<header class="nav barra vidro vidro--azul" id="topo">
+  <div class="barra__lado">
+    <button class="barra__eu" type="button" data-abrir-perfil title="Meu perfil: trocar a foto e o nome">
+      <span class="avatar" data-avatar>··</span><span class="barra__nome" data-eu-nome></span>
+    </button>
+    <a class="barra__op barra__op--admin" href="admin.html" data-admin-link hidden>Painel admin</a>
+    <a class="barra__op" href="sentinela/" data-admin-link hidden>Sentinela</a>
+    <button class="barra__op" type="button" data-sair>Sair</button>
   </div>
 
-  <a class="nav__brand" href="#topo" aria-label="Lube Distribuidora — início">
-    <span class="nav__mark" data-logo-mark></span>
-    <span class="nav__brandtext">LUBE<em>Distribuidora</em></span>
+  <a class="barra__marca" href="#topo" aria-label="Lube Distribuidora — início">
+    <span class="marca-clara" data-logo-mark></span>
+    <b>LUBE<em>Distribuidora</em></b>
   </a>
 
-  <div class="nav__side nav__side--r">
-    <nav class="nav__links" aria-label="Navegação principal">
-      <a href="#painel" data-ir-painel>Painel</a>
-      <a href="office/">Lube Work</a>
-    </nav>
-    <button class="nav__burger" type="button" aria-label="Abrir menu" aria-expanded="false" data-burger>
-      <span></span><span></span>
+  <div class="barra__lado barra__lado--d">
+    <a class="barra__link" href="#painel" data-ir-painel>Painel</a>
+    <a class="barra__link" href="office/">Lube Work</a>
+    <button class="barra__mais" type="button" data-mais aria-label="Mais opções" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg>
     </button>
   </div>
 </header>
 
-<!-- ============ MENU MOBILE ============ -->
-<div class="menu" data-menu data-surface="dark">
+<!-- no celular, as opções da barra ficam aqui -->
+<nav class="gaveta vidro vidro--escuro" data-gaveta aria-label="Opções">
   <a href="#painel" data-ir-painel>Painel</a>
   <a href="office/">Lube Work</a>
-  <a href="admin.html" data-admin-link hidden>Admin</a>
+  <button type="button" data-abrir-perfil>Meu perfil</button>
+  <a class="admin" href="admin.html" data-admin-link hidden>Painel admin</a>
   <a href="sentinela/" data-admin-link hidden>Sentinela</a>
-  <button type="button" class="menu__sair" data-sair>Sair</button>
-</div>
+  <button type="button" data-sair>Sair</button>
+</nav>
 
 <!-- ============ ABERTURA: "SISTEMAS CORPORATIVOS" e o caminhão; rolando, cai no painel ============ -->
 <div class="abertura">
 
 <!-- ============ HERO ============ -->
 <section class="hero" data-hero data-surface="dark">
-  <div class="hero__bg" data-hero-bg aria-hidden="true">
-    <div class="hero__glow"></div>
-    <div class="hero__grid"></div>
-  </div>
+  <div class="hero__bg cinema" data-hero-bg aria-hidden="true"><div data-fotos></div><div class="cinema__tinta"></div><div class="cinema__brilho"></div><div class="cinema__veu cinema__veu--abertura"></div></div>
 
   <div class="hero__content" data-hero-title>
+    <div class="vaga" data-vaga="abertura"></div>
     <h1 class="hero__title">
       <span class="mask"><span data-rise="2">SISTEMAS</span></span>
       <span class="mask hero__title--alt"><span data-rise="3">CORPORATIVOS</span></span>
     </h1>
-  </div>
-
-  <div class="hero__foot">
-    <span class="hero__cue" data-rise="5" aria-hidden="true"><i></i></span>
-    <div class="hero__meta" data-rise="6">
-      <div><span class="mono" data-stat-sistemas>00</span><small>Sistemas ativos</small></div>
-      <div><span class="mono" data-stat-areas>00</span><small>Áreas atendidas</small></div>
-      <div><span class="mono">24/7</span><small>Disponibilidade</small></div>
-    </div>
+    <p class="hero__kicker" data-rise="5"><i></i>Desde 1959 abastecendo o varejo do ES, RJ e BA</p>
   </div>
 </section>
 
@@ -356,12 +362,67 @@
   </main>
 </div>
 
+<!-- ============ MEU PERFIL: foto (recorte redondo) e nome ============ -->
+<div class="folha" data-perfil aria-hidden="true">
+  <div class="folha__fundo" data-fechar-perfil></div>
+  <section class="folha__caixa vidro vidro--escuro" role="dialog" aria-modal="true" aria-label="Meu perfil">
+    <header class="folha__topo">
+      <div><p class="folha__k">Meu perfil</p><h2>Sua foto e seu nome</h2></div>
+      <button class="folha__x" type="button" data-fechar-perfil aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </header>
+    <div class="perfil">
+      <div>
+        <div class="recorte" data-recorte><img data-recorte-img alt="" draggable="false" /><span class="recorte__ini" data-recorte-ini></span></div>
+        <div class="perfil__zoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6"/></svg><input type="range" min="1" max="3" step="0.01" value="1" data-zoom aria-label="Zoom da foto" disabled /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M8 11h6M11 8v6"/></svg></div>
+        <p class="perfil__dica" data-dica-foto>Escolha uma foto do seu rosto.</p>
+      </div>
+      <div>
+        <div class="perfil__botoes">
+          <label class="botao botao--p"><input type="file" accept="image/*" data-arquivo hidden /><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6"/></svg><span>Escolher foto</span></label>
+          <button class="link" type="button" data-remover-foto hidden>Remover a foto</button>
+        </div>
+        <label class="campo"><span class="campo__rot"><span>Como você quer ser chamado</span></span>
+          <span class="campo__caixa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><input type="text" data-perfil-nome maxlength="60" autocomplete="off" /></span></label>
+        <div class="perfil__como"><p>É assim que os outros veem você</p>
+          <div class="cracha"><span class="avatar" data-previa-avatar></span><span><strong data-previa-nome></strong><small data-previa-cargo></small></span></div></div>
+      </div>
+    </div>
+    <footer class="folha__pe">
+      <span class="folha__erro" data-perfil-erro role="alert"></span>
+      <button class="botao botao--leve" type="button" data-fechar-perfil><span>Cancelar</span></button>
+      <button class="botao" type="button" data-salvar-perfil><span class="btn__label">Salvar</span></button>
+    </footer>
+  </section>
+</div>
+
+<!-- ============ NOVIDADE: aparece uma vez por pessoa ============ -->
+<div class="folha" data-novidade aria-hidden="true">
+  <div class="folha__fundo" data-fechar-novidade></div>
+  <section class="folha__caixa novidade vidro vidro--escuro" role="dialog" aria-modal="true" aria-label="Novidades do painel">
+    <div class="novidade__arte"><span class="avatar" data-avatar>··</span><span class="novidade__cam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.6"/></svg></span></div>
+    <p class="novidade__k">Novidade</p>
+    <h2 data-novidade-titulo>O Painel está de cara nova</h2>
+    <p class="novidade__txt" data-novidade-txt>Abertura nova, barra de vidro no topo e os seus sistemas mais fáceis de achar.</p>
+    <div class="novidade__destaque">
+      <i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.2 5.6L20 9.3l-4.4 3.9 1.3 5.8L12 16l-4.9 3 1.3-5.8L4 9.3l5.8-.7Z"/></svg></i>
+      <div><strong>Agora você pode personalizar o seu perfil</strong><span>Coloque a sua foto para todos os usuários saberem que é você.</span></div>
+    </div>
+    <div class="novidade__botoes">
+      <button class="botao" type="button" data-novidade-perfil><span>Personalizar meu perfil</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <button class="botao botao--leve" type="button" data-fechar-novidade><span>Agora não</span></button>
+    </div>
+  </section>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=20261006"></script>
-<script src="rede.js?v=20261023a"></script>
+<script src="rede.js?v=20261110"></script>
 <script src="icones.js?v=20261006"></script>
-<script src="app.js?v=20261030"></script>
-<script src="shell.js?v=20261030"></script>
-<script src="portal.js?v=20261106a"></script>
+<script src="app.js?v=20261110"></script>
+<script src="fotos.js?v=20261110"></script>
+<script src="perfil.js?v=20261110"></script>
+<script src="shell.js?v=20261110"></script>
+<script src="portal.js?v=20261110"></script>
+<script type="module" src="emblema.js?v=20261110"></script>
 </body>
 </html>

@@ -35,11 +35,6 @@ body.autenticado .app{
     var(--app-bg);
 }
 
-/* a navbar da abertura some quando o painel chega */
-.nav{ transition:opacity .45s var(--ease), transform .55s var(--ease); }
-body.no-painel .nav{ opacity:0; transform:translateY(-14px); }
-body.no-painel .nav a,body.no-painel .nav button{ pointer-events:none; }
-
 /* =========================================================
    MENU LATERAL
    ========================================================= */
@@ -282,9 +277,12 @@ body.no-painel .nav a,body.no-painel .nav button{ pointer-events:none; }
 .conta__avatar{
   flex:none; width:40px; height:40px; border-radius:50%;
   display:grid; place-items:center; font-weight:800; font-size:.9rem; letter-spacing:.02em;
-  color:var(--blue); background:#fff;
+  color:var(--blue); background:#fff center/cover no-repeat; overflow:hidden;
   box-shadow:0 0 0 3px rgba(255,255,255,.18);
 }
+.conta__avatar.tem-foto{ color:transparent; }
+.conta__eu{ display:flex; align-items:center; gap:.7rem; flex:1; min-width:0; padding:.25rem; margin:-.25rem; border-radius:14px; text-align:left; transition:background .25s; }
+.conta__eu:hover{ background:rgba(255,255,255,.08); }
 .conta__info{ flex:1; min-width:0; line-height:1.25; }
 .conta__nome{ display:block; font-weight:700; font-size:.86rem; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .conta__email{ display:block; font-size:.68rem; color:var(--tx-side-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -602,34 +600,6 @@ body.autenticado .app.is-gaveta{
 }
 
 /* =========================================================
-   BARRA DA CONTA NA NAVBAR DA ABERTURA (como era antes)
-   ========================================================= */
-.nav-conta{ display:flex; align-items:center; gap:1.1rem; font-size:.66rem; }
-.nav-conta__nome{ opacity:.75; letter-spacing:.14em; text-transform:uppercase; }
-.nav-conta__admin,.nav-conta__link{
-  position:relative; font-family:inherit; font-size:.66rem; letter-spacing:.14em;
-  text-transform:uppercase; padding-bottom:2px; color:inherit;
-}
-.nav-conta__admin{ color:var(--red); font-weight:600; }
-.nav-conta__admin::after,.nav-conta__link::after{
-  content:''; position:absolute; left:0; bottom:0; width:100%; height:1px;
-  background:currentColor; transform:scaleX(0); transform-origin:right;
-  transition:transform .5s var(--ease);
-}
-.nav-conta__admin:hover::after,.nav-conta__link:hover::after{ transform:scaleX(1); transform-origin:left; }
-/* no celular a barra da conta encavalava no logo: some do topo e os atalhos
-   (Admin, Sentinela, Sair) ficam no menu de três linhas da abertura */
-@media (max-width:820px){ .nav-conta{ display:none; } }
-.menu .menu__sair{
-  padding:0; margin:0; border:0; background:none; align-self:flex-start;
-  font:inherit; font-size:13vw; font-weight:900; letter-spacing:-.04em; line-height:.95;
-  text-transform:uppercase; color:var(--red); text-align:left;
-  opacity:0; transform:translateY(30px);
-  transition:opacity .6s var(--ease), transform .8s var(--ease);
-}
-.menu.open .menu__sair{ opacity:1; transform:none; transition-delay:.36s; }
-
-/* =========================================================
    CHEGADA DO PAINEL (depois do "NOSSOS sistemas")
    --entra vai de 0 a 1 com a rolagem (app.js): o menu entra pela
    esquerda, o palco cresce de baixo; ao encaixar, um brilho passa
@@ -692,8 +662,7 @@ body.autenticado .app{ --entra:1; }
 html.painel-fixo,
 html.painel-fixo body{ overflow:hidden; overscroll-behavior:none; }
 html.painel-fixo .abertura,
-html.painel-fixo .nav,
-html.painel-fixo .menu{ display:none; }
+html.painel-fixo .nav{ display:none; }
 html.painel-fixo body.autenticado .app{ position:fixed; inset:0; z-index:5; }
 
 .stage__top .acao--subir{ flex:none; }

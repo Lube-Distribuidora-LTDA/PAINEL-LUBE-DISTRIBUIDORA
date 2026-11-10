@@ -194,7 +194,7 @@
     '.lube-rede-cartao p{margin:0 0 10px;font-size:15px;line-height:1.55;color:rgba(255,255,255,.72);font-weight:400}' +
     '.lube-rede-cartao p b{color:#fff;font-weight:700}' +
     '.lube-rede-ip{display:inline-block;margin:4px 0 14px;padding:7px 12px;border-radius:9px;background:rgba(3,6,22,.6);border:1px solid rgba(255,255,255,.16);' +
-      'font:600 14px/1.2 "JetBrains Mono",Consolas,monospace;color:#fff;letter-spacing:-.01em;word-break:break-all}' +
+      'font:700 14px/1.2 Archivo,system-ui,sans-serif;color:#fff;letter-spacing:-.01em;word-break:break-all}' +
     '.lube-rede-acoes{display:flex;flex-direction:column;gap:10px;margin-top:8px}' +
     '.lube-rede-btn{appearance:none;border:1px solid #EE1B24;background:#EE1B24;color:#fff;border-radius:11px;padding:14px 18px;' +
       'font-family:inherit;font-weight:700;font-size:15px;line-height:1.2;cursor:pointer;text-align:center;box-shadow:0 16px 36px -16px rgba(238,27,36,.8)}' +
@@ -204,7 +204,7 @@
     '.lube-rede-btn.leve:hover{border-color:rgba(255,255,255,.45);color:#fff}' +
     '.lube-rede-erro{margin-top:12px!important;color:#FF7B82!important;font-weight:600!important;font-size:14px!important}' +
     '.lube-rede-erro:empty{display:none}' +
-    '.lube-rede-rodape{margin-top:16px!important;font:500 11px/1.6 "JetBrains Mono",Consolas,monospace!important;letter-spacing:.12em;' +
+    '.lube-rede-rodape{margin-top:16px!important;font:700 11px/1.6 Archivo,system-ui,sans-serif!important;letter-spacing:.12em;' +
       'text-transform:uppercase;color:rgba(255,255,255,.38)!important}' +
     '.lube-rede-aviso{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:8000;box-sizing:border-box;width:min(560px,calc(100% - 32px));' +
       'display:flex;gap:12px;align-items:flex-start;padding:14px 14px 14px 16px;border-radius:14px;background:rgba(3,6,22,.96);' +

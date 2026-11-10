@@ -117,10 +117,12 @@
     var p = String(nome || '?').trim().split(/\s+/);
     return ((p[0] || '?').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase();
   }
+  // a foto de perfil (se a pessoa pôs uma no painel) entra por cima das iniciais: ../fotos.js lê o data-foto
   function avatar(p, tam) {
     if (!p) return '';
     return '<span class="av' + (tam ? ' av--' + tam : '') + '" style="--c:' + corPessoa(p.id) + '" title="' +
-      esc(p.nome + (p.email ? ' · ' + p.email : '')) + '">' + esc(iniciais(p.nome)) + '</span>';
+      esc(p.nome + (p.email ? ' · ' + p.email : '')) + '"' + (p.foto ? ' data-foto="' + esc(p.foto) + '"' : '') + '>' +
+      esc(iniciais(p.nome)) + '</span>';
   }
   function avatarTodos(tam) {
     return '<span class="av av--todos' + (tam ? ' av--' + tam : '') + '" title="Todos da Lube">' +
