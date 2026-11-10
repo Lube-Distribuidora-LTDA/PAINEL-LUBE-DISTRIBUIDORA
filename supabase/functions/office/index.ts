@@ -42,6 +42,9 @@ const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  // o navegador guarda a permissão por 2 h (o máximo do Chrome): sem isso, cada ação do Lube Work
+  // esperava uma consulta OPTIONS de ~0,3 s antes do pedido de verdade (medido em 2026-11-10)
+  'Access-Control-Max-Age': '7200',
 };
 
 const json = (body: unknown, status = 200) =>
