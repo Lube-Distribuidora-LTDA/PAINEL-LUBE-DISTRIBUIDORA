@@ -344,10 +344,11 @@ async function acaoDoPortal(req: Request) {
   try {
     switch (String(c.acao || '')) {
       case 'eu': {
-        const r = await rpc('office_srv_eu', { p_user: eu });
-        const m = await motorAtual();
-        const ia = await rpc('office_srv_ia_situacao', { p_user: eu });
-        const lixeiraDias = await rpc('office_srv_lixeira_dias', {});
+        // as quatro leituras saem juntas (antes, uma depois da outra; 2026-11-10)
+        const [r, m, ia, lixeiraDias] = await Promise.all([
+          rpc('office_srv_eu', { p_user: eu }), motorAtual(),
+          rpc('office_srv_ia_situacao', { p_user: eu }), rpc('office_srv_lixeira_dias', {}),
+        ]);
         return json({
           ...r, motor: m.situacao === 'ligado', motor_situacao: m.situacao, motor_visto_em: m.visto_em, email: smtpPronto(),
           ia: { ...ia, ligada: !!claude }, lixeira_dias: lixeiraDias,
@@ -398,11 +399,14 @@ async function acaoDoPortal(req: Request) {
 
       // abrir no editor: confere o papel, gera o link do arquivo (só para o motor) e assina a configuração
       case 'abrir': {
-        const a = await rpc('office_srv_abrir', { p_user: eu, p_arquivo: exigeUuid(c.id, 'Arquivo') });
+        // o que não depende do arquivo sai junto com a conferência dele (antes era um depois do outro; 2026-11-10)
+        const [a, m, quem, pluginIa, visual] = await Promise.all([
+          rpc('office_srv_abrir', { p_user: eu, p_arquivo: exigeUuid(c.id, 'Arquivo') }), motorAtual(),
+          rpc('office_srv_eu', { p_user: eu }), pluginIaDe(req), visualAtual(),
+        ]);
         const arquivo = { ...a };
         delete arquivo.caminho;
         if (!tipoDocumento(a.extensao)) return json({ arquivo, motor: null, motivo: 'Este tipo de arquivo não abre no editor.' });
-        const m = await motorAtual();
         if (m.situacao === 'nao_instalado') {
           return json({ arquivo, motor: null, situacao: m.situacao, motivo: 'O editor está sendo ligado no servidor da Lube (SRV-IA).' });
         }
@@ -410,7 +414,7 @@ async function acaoDoPortal(req: Request) {
           return json({ arquivo, motor: null, situacao: m.situacao,
             motivo: 'O editor está fora do ar: o servidor da Lube (SRV-IA) não responde desde ' + horaBrasilia(m.visto_em) + '.' });
         }
-        const pessoa = (await rpc('office_srv_eu', { p_user: eu })).pessoa;
+        const pessoa = quem.pessoa;
         const config = montarEditor({
           arquivo: a,
           // o link vale 5 minutos: só o motor usa, na hora de abrir
@@ -418,8 +422,8 @@ async function acaoDoPortal(req: Request) {
           callbackUrl: `${URL_SB}/functions/v1/office/motor?arquivo=${a.id}`,
           voltarUrl: `${PORTAL}/office/`,
           pessoa: { id: pessoa.id, nome: pessoa.nome },
-          pluginIa: await pluginIaDe(req),
-          visual: await visualAtual(),
+          pluginIa,
+          visual,
         });
         const token = await assinarHS256(config, MOTOR_CHAVE);
         return json({ arquivo, situacao: m.situacao, motor: { api: `${m.url}/web-apps/apps/api/documents/api.js`, config: { ...config, token } } });
@@ -650,16 +654,20 @@ async function testeMotor(req: Request) {
       await rpc('office_srv_arquivo_confirmar', { p_user: dono, p_arquivo: r.id, p_tamanho: bytes.byteLength, p_origem: 'novo' });
       id = r.id;
     }
-    const a = await rpc('office_srv_abrir', { p_user: dono, p_arquivo: id });
+    // o mesmo caminho do "abrir" do portal: as leituras saem juntas
+    const [a, quem, pluginIa, visualPadrao] = await Promise.all([
+      rpc('office_srv_abrir', { p_user: dono, p_arquivo: id }), rpc('office_srv_eu', { p_user: dono }),
+      pluginIaDe(req), visualAtual(),
+    ]);
     if (!String(a.nome).startsWith('Teste do motor')) return json({ erro: 'Só arquivos "Teste do motor" abrem por aqui' }, 403);
-    const pessoa = (await rpc('office_srv_eu', { p_user: dono })).pessoa;
+    const pessoa = quem.pessoa;
     const config = montarEditor({
       arquivo: a, urlArquivo: await linkAssinado(a.caminho, 300),
       callbackUrl: `${URL_SB}/functions/v1/office/motor?arquivo=${a.id}`,
       voltarUrl: `${PORTAL}/office/`, pessoa: { id: pessoa.id, nome: pessoa.nome },
-      pluginIa: await pluginIaDe(req),
+      pluginIa,
       // o teste pode pedir um tema da Lube antes de ele valer para todos
-      visual: typeof c.tema === 'string' ? visualDoEditor({ visual: 'lube', tema: c.tema }) : await visualAtual(),
+      visual: typeof c.tema === 'string' ? visualDoEditor({ visual: 'lube', tema: c.tema }) : visualPadrao,
     });
     const arquivo = { ...a };
     delete arquivo.caminho;
