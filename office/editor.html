@@ -9,22 +9,52 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 112'%3E%3Cg transform='translate(20,0) skewX(-10)'%3E%3Cpath fill='%231E2B8C' d='M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z'/%3E%3Cpath fill='%23EE1B24' d='M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="office.css?v=20261021e">
-<link rel="stylesheet" href="editor.css?v=20261022b">
-<link rel="stylesheet" href="ia.css?v=20261021c">
+<link rel="preconnect" href="https://wkkdcsqwlxjxorutrbnx.supabase.co" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap">
+<link rel="stylesheet" href="entrada.css?v=20261110a">
+<link rel="stylesheet" href="office.css?v=20261110a">
+<link rel="stylesheet" href="editor.css?v=20261110a">
+<link rel="stylesheet" href="ia.css?v=20261110a">
+<script>
+/* O motor do editor começa a carregar já, junto com o pedido do arquivo (antes era um depois do
+   outro). O endereço e o tema da última abertura ficam guardados neste navegador; se o motor
+   mudou de endereço, o editor.js carrega o novo. */
+(function () {
+  try {
+    var api = localStorage.getItem('lw_motor_api');
+    if (!api || !/^https:\/\/[^\/?#]+\/(?:[\w.-]+\/)?web-apps\/apps\/api\/documents\/api\.js$/i.test(api)) return;
+    var origem = new URL(api).origin;
+    var l = document.createElement('link');
+    l.rel = 'preconnect'; l.href = origem; l.crossOrigin = '';
+    document.head.appendChild(l);
+    var s = document.createElement('script');
+    s.src = api; s.async = true;
+    var pronto = new Promise(function (ok, falha) { s.onload = ok; s.onerror = falha; });
+    pronto.catch(function () {});
+    window.LW_MOTOR_CEDO = { src: api, pronto: pronto };
+    document.head.appendChild(s);
+    // a página do tema da Lube (grava as cores na memória do editor antes de ele abrir)
+    var tema = localStorage.getItem('lw_motor_tema');
+    if (!/^theme-lube-[a-z]+(\|1)?$/.test(tema || '')) return;
+    var partes = tema.split('|'), f = document.createElement('iframe');
+    var feito = new Promise(function (ok) {
+      addEventListener('message', function ouvir(ev) {
+        if (ev.origin === origem && ev.source === f.contentWindow && ev.data && ev.data.lubeTema) { removeEventListener('message', ouvir); ok(); }
+      });
+    });
+    window.LW_TEMA_CEDO = { origem: origem, tema: partes[0], forcar: partes[1] === '1', feito: feito, moldura: f };
+    f.hidden = true; f.setAttribute('aria-hidden', 'true'); f.style.display = 'none';
+    f.src = origem + '/web-apps/apps/common/main/resources/lube/tema-lube.html?tema=' + encodeURIComponent(partes[0]) + (partes[1] === '1' ? '&forcar=1' : '');
+    document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(f); });
+  } catch (e) {}
+})();
+</script>
 </head>
 <body class="carregando editor-pg">
+<!-- entrada: o ícone e o nome do editor, e a bolinha da IA apagando as letras -->
+<script src="entrada.js?v=20261110a" data-entrada="editor"></script>
 
 <div class="tarja-demo" data-tarja-demo hidden>DEMONSTRAÇÃO · dados sintéticos, nada aqui é real</div>
-
-<div class="carga" aria-hidden="true">
-  <div class="carga__caixa">
-    <span class="carga__marca" data-marca-branca></span>
-    <div class="carga__barra"><i></i></div>
-    <span class="mono" data-carga-txt>Abrindo o arquivo</span>
-  </div>
-</div>
 
 <div class="bloqueio" data-bloqueio hidden>
   <div class="bloqueio__caixa">
@@ -108,8 +138,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="../config.js?v=20261006"></script>
 <script src="../marca.js?v=20261006"></script>
-<script src="comum.js?v=20261106a"></script>
+<script src="comum.js?v=20261110a"></script>
 <script src="ia-editor.js?v=20261106a"></script>
-<script src="editor.js?v=20261106a"></script>
+<script src="editor.js?v=20261110a"></script>
 </body>
 </html>

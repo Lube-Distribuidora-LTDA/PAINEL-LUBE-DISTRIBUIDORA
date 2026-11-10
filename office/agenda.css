@@ -29,7 +29,7 @@
 .ag-mini__topo button:hover{ background:rgba(255,255,255,.08); color:#fff; }
 .ag-mini__topo svg{ width:15px; }
 .ag-mini__grade{ display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; text-align:center; }
-.ag-mini__grade span{ font:600 .6rem 'JetBrains Mono',monospace; color:var(--muted-d); padding:.25rem 0; }
+.ag-mini__grade span{ font:700 .6rem 'Archivo',sans-serif; color:var(--muted-d); padding:.25rem 0; }
 .ag-mini__grade button{
   height:28px; border-radius:50%; font-size:.76rem; color:var(--off); position:relative;
   transition:background .15s;
@@ -107,20 +107,20 @@
 .ag-cab__sala b i{ width:10px; height:10px; border-radius:50%; flex:none; background:var(--c); box-shadow:0 0 10px var(--c); }
 .ag-cab__sala b span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ag-cab__sala small{ color:var(--muted); font-size:.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ag-estado{ justify-self:start; display:inline-flex; align-items:center; gap:.35rem; font:600 .6rem 'JetBrains Mono',monospace; letter-spacing:.08em; text-transform:uppercase; padding:.2rem .5rem; border-radius:999px; }
+.ag-estado{ justify-self:start; display:inline-flex; align-items:center; gap:.35rem; font:700 .6rem 'Archivo',sans-serif; letter-spacing:.08em; text-transform:uppercase; padding:.2rem .5rem; border-radius:999px; }
 .ag-estado::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
 .ag-estado--livre{ color:#3FD68A; background:rgba(31,178,107,.14); }
 .ag-estado--ocupada{ color:#FF8A91; background:rgba(238,27,36,.16); }
 
 .ag-diatodo{ display:grid; border-bottom:1px solid var(--line); min-height:30px; background:rgba(12,21,71,.3); }
-.ag-diatodo__rot{ font:600 .58rem 'JetBrains Mono',monospace; color:var(--muted-d); padding:.45rem .4rem; text-align:right; letter-spacing:.06em; }
+.ag-diatodo__rot{ font:700 .58rem 'Archivo',sans-serif; color:var(--muted-d); padding:.45rem .4rem; text-align:right; letter-spacing:.06em; }
 .ag-diatodo__col{ border-left:1px solid var(--line); padding:3px; display:grid; gap:3px; align-content:start; min-width:0; }
 
 .ag-corpo{ position:relative; overflow-y:auto; overflow-x:hidden; max-height:calc(100vh - var(--topo) - 13.5rem); min-height:420px; }
 .ag-linhas{ display:grid; position:relative; }
 .ag-horas{ position:relative; }
 .ag-horas span{
-  position:absolute; right:.45rem; transform:translateY(-50%); font:500 .62rem 'JetBrains Mono',monospace; color:var(--muted-d);
+  position:absolute; right:.45rem; transform:translateY(-50%); font:700 .62rem 'Archivo',sans-serif; color:var(--muted-d);
 }
 .ag-col{
   position:relative; border-left:1px solid var(--line); min-width:0; cursor:cell;
@@ -175,7 +175,7 @@
 
 /* ---------- mês ---------- */
 .ag-mes{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); }
-.ag-mes__sem{ padding:.55rem; text-align:center; font:600 .6rem 'JetBrains Mono',monospace; color:var(--muted); letter-spacing:.12em; border-bottom:1px solid var(--line); background:rgba(12,21,71,.55); }
+.ag-mes__sem{ padding:.55rem; text-align:center; font:700 .6rem 'Archivo',sans-serif; color:var(--muted); letter-spacing:.12em; border-bottom:1px solid var(--line); background:rgba(12,21,71,.55); }
 .ag-mes__dia{
   min-height:118px; padding:.35rem; border-left:1px solid var(--line); border-top:1px solid var(--line);
   display:flex; flex-direction:column; gap:3px; min-width:0; cursor:cell;
@@ -215,7 +215,7 @@
 .ag-pessoas{ display:grid; gap:.35rem; }
 .ag-pessoa{ display:flex; align-items:center; gap:.55rem; font-size:.84rem; min-width:0; }
 .ag-pessoa > span:not(.av){ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ag-pessoa em{ font-style:normal; font:600 .58rem 'JetBrains Mono',monospace; letter-spacing:.08em; text-transform:uppercase; padding:.15rem .4rem; border-radius:999px; flex:none; }
+.ag-pessoa em{ font-style:normal; font:700 .58rem 'Archivo',sans-serif; letter-spacing:.08em; text-transform:uppercase; padding:.15rem .4rem; border-radius:999px; flex:none; }
 .ag-r--sim{ color:#3FD68A; background:rgba(31,178,107,.15); }
 .ag-r--nao{ color:#FF8A91; background:rgba(238,27,36,.15); }
 .ag-r--talvez{ color:#F5C451; background:rgba(245,165,36,.15); }

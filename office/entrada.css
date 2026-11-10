@@ -1,0 +1,90 @@
+/* =========================================================
+   LUBE WORK — entrada (2026-11-10, aprovada pelo Júlio pela prévia)
+   O nome grande aparece, a bolinha da IA passa por cima apagando
+   as letras e abre o sistema num círculo a partir dela (entrada.js).
+   ========================================================= */
+.lw-ent{
+  position:fixed; inset:0; z-index:200; overflow:hidden; pointer-events:auto;
+  font-family:'Archivo',-apple-system,'Segoe UI',sans-serif;
+}
+/* a tampa (fundo + nome) é o que abre no círculo; a bolinha fica por cima, inteira */
+.lw-ent__tampa{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(1100px 620px at 78% -12%, var(--lw-brilho-a, rgba(44,63,196,.30)), transparent 62%),
+    radial-gradient(900px 520px at -10% 112%, var(--lw-brilho-b, rgba(238,27,36,.14)), transparent 62%),
+    #030616;
+}
+.lw-ent.is-dentro{ position:absolute; }
+.lw-ent--doc { --lw-brilho-a:rgba(93,123,255,.30); }
+.lw-ent--plan{ --lw-brilho-a:rgba(47,212,134,.22); }
+.lw-ent--apre{ --lw-brilho-a:rgba(255,112,72,.24); }
+
+.lw-ent__fx{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.lw-ent__palco{ position:absolute; inset:0; display:grid; place-items:center; padding:0 16px; }
+.lw-ent__bloco{ display:grid; justify-items:center; gap:clamp(14px, 2.2vw, 28px); opacity:0; }
+.lw-ent.is-medido .lw-ent__bloco{ opacity:1; }
+
+.lw-ent__linha{
+  display:flex; align-items:center; gap:.2em; white-space:nowrap;
+  font:italic 900 var(--fs, 150px)/.92 'Archivo',sans-serif; letter-spacing:-.045em;
+  -webkit-mask-image:linear-gradient(90deg, transparent var(--apaga, -999px), #000 calc(var(--apaga, -999px) + var(--suave, 60px)));
+          mask-image:linear-gradient(90deg, transparent var(--apaga, -999px), #000 calc(var(--apaga, -999px) + var(--suave, 60px)));
+}
+.lw-ent__palavra{ display:inline-flex; }
+.lw-ent__palavra span{
+  display:inline-block; padding:0 .07em .06em 0; margin-right:-.07em;     /* o itálico não perde a ponta */
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  will-change:transform, opacity, filter;
+}
+.lw-ent__a span{ background-image:linear-gradient(180deg, #FFFFFF 38%, #C3CCF5 100%); }
+.lw-ent__b span{ background-image:linear-gradient(180deg, #FF6A71 0%, #EE1B24 52%, #B0121A 100%); }
+.lw-ent--doc  .lw-ent__b span{ background-image:linear-gradient(180deg, #B8C4FF 0%, #6F8BFF 60%, #4D6BFF 100%); }
+.lw-ent--plan .lw-ent__b span{ background-image:linear-gradient(180deg, #A2F5CB 0%, #3FDB92 60%, #1FB26B 100%); }
+.lw-ent--apre .lw-ent__b span{ background-image:linear-gradient(180deg, #FFC0AC 0%, #FF7D58 60%, #FF4A3D 100%); }
+
+.lw-ent__ico{ position:relative; width:1em; height:1em; flex:none; margin-right:.1em; transform-style:preserve-3d; will-change:transform, opacity; }
+.lw-ent__ico svg{ width:100%; height:100%; display:block; filter:drop-shadow(0 .06em .16em rgba(0,0,0,.5)); }
+.lw-ent__ico::before{
+  content:''; position:absolute; inset:-18%; border-radius:30%; z-index:-1; filter:blur(.18em); opacity:.55;
+  background:radial-gradient(circle, var(--lw-cor, #5D7BFF), transparent 70%);
+}
+.lw-ent--doc  { --lw-cor:#5D7BFF; }
+.lw-ent--plan { --lw-cor:#2FD486; }
+.lw-ent--apre { --lw-cor:#FF7048; }
+
+.lw-ent__sub{
+  font:700 clamp(11px, 1.05vw, 14px)/1.2 'Archivo',sans-serif; letter-spacing:.34em; text-transform:uppercase;
+  color:#8A93AB; text-align:center; will-change:transform, opacity;
+}
+.lw-ent__sub b{ color:#C9D2FF; font-weight:800; }
+.lw-ent__sub--arquivo{ letter-spacing:.02em; text-transform:none; font-size:clamp(13px, 1.25vw, 17px); color:#C9D2FF; }
+
+/* a bolinha da IA, em tamanho grande */
+.lw-ent__orbe{
+  position:absolute; left:0; top:0; width:var(--d, 110px); height:var(--d, 110px); border-radius:50%;
+  opacity:0; will-change:transform, opacity; pointer-events:none;
+  box-shadow:0 0 calc(var(--d, 110px) * .45) rgba(77,107,255,.55), 0 0 calc(var(--d, 110px) * .9) rgba(229,16,31,.22), 0 0 0 1px rgba(255,255,255,.14);
+}
+.lw-ent__orbe > i,.lw-ent__orbe > b{ position:absolute; border-radius:50%; }
+.lw-ent__orbe > i{ inset:0; overflow:hidden; }
+.lw-ent__orbe > i > u{
+  position:absolute; inset:-30%; border-radius:50%;
+  background:conic-gradient(from 0deg, #E5101F, #2C3FC4 30%, #6F86FF 50%, #2C3FC4 70%, #E5101F);
+  filter:blur(calc(var(--d, 110px) * .05)); will-change:transform;
+}
+.lw-ent__orbe > b{
+  inset:4%;
+  background:radial-gradient(circle at 34% 28%, rgba(255,255,255,.8), rgba(255,255,255,.1) 34%, rgba(6,11,41,.22) 55%, rgba(6,11,41,.8) 84%);
+}
+
+.lw-ent__anel{
+  position:absolute; left:0; top:0; border-radius:50%; pointer-events:none; opacity:0;
+  box-shadow:0 0 0 2px rgba(175,192,255,.75), 0 0 34px 8px rgba(111,134,255,.55), inset 0 0 30px rgba(229,16,31,.35);
+}
+.lw-ent__status{
+  position:absolute; left:0; top:0; transform:translate(-50%, 0); opacity:0; white-space:nowrap;
+  font:700 12px/1 'Archivo',sans-serif; letter-spacing:.28em; text-transform:uppercase; color:#AFC0FF;
+  transition:opacity .35s ease;
+}
+.lw-ent.is-esperando .lw-ent__status{ opacity:.9; }

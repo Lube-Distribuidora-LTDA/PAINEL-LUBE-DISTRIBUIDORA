@@ -222,12 +222,12 @@
     $('[data-vazio]').hidden = true;
   }
 
-  function carregar() {
-    if (!est.eu || est.visao === 'modelos' || est.visao === 'agenda') return;
+  function dadosLista() { return est.visao === 'pasta' ? { pasta: est.pasta } : { visao: est.visao, busca: est.busca }; }
+  function carregar(jaPedido) {
+    if (!est.eu || est.visao === 'modelos' || est.visao === 'agenda') return Promise.resolve();
     var n = ++est.pedido;
     esqueleto();
-    var dados = est.visao === 'pasta' ? { pasta: est.pasta } : { visao: est.visao, busca: est.busca };
-    O.api('listar', dados).then(function (r) {
+    return (jaPedido || O.api('listar', dadosLista())).then(function (r) {
       if (n !== est.pedido) return;
       est.itens = r.itens || [];
       est.caminho = r.caminho || [];
@@ -376,8 +376,8 @@
 
   /* ---------- abrir ---------- */
   function urlEditor(it) {
-    var u = 'editor.html?id=' + encodeURIComponent(it.id);
-    if (O.DEMO) u += '&demo=1&nome=' + encodeURIComponent(it.nome) + '&ext=' + encodeURIComponent(it.extensao || 'docx');
+    var u = 'editor.html?id=' + encodeURIComponent(it.id) + (it.extensao ? '&ext=' + encodeURIComponent(it.extensao) : '');
+    if (O.DEMO) u += '&demo=1&nome=' + encodeURIComponent(it.nome) + (it.extensao ? '' : '&ext=docx');
     return u;
   }
   // a janela nasce no clique (senão o bloqueador de pop-up barra) e recebe o endereço depois
@@ -389,8 +389,8 @@
       w.opener = null;
       w.document.title = 'Abrindo…';
       w.document.body.style.cssText = 'margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
-        'background:#030616;color:#E7EAF4;font:500 15px/1.4 Archivo,system-ui,sans-serif';
-      w.document.body.textContent = 'Abrindo no Lube Work…';
+        'background:#030616;color:#AFC0FF;font:700 12px/1.4 Archivo,system-ui,sans-serif;letter-spacing:.28em;text-transform:uppercase';
+      w.document.body.textContent = 'Criando o arquivo…';
     } catch (e) {}
     return w;
   }
@@ -1192,6 +1192,7 @@
     var b = $('[data-bloqueio-botao]');
     if (botao) { b.textContent = botao.texto; b.setAttribute('href', botao.href); }
     $('[data-bloqueio]').hidden = false;
+    if (ENTRADA) ENTRADA.encerrar();
     document.body.classList.remove('carregando');
   }
 
@@ -1270,7 +1271,8 @@
       if (t.closest('[data-gav-abrir]') && est.gav) { var g = est.gav.it; fecharGaveta(); abrirItem(g); return; }
       if (t.closest('[data-gav-enviar]') && est.gav) { dialogoEnviar(est.gav.it); return; }
       if (t.closest('[data-gav-link]') && est.gav) {
-        var link = location.origin + location.pathname.replace(/[^/]*$/, '') + 'editor.html?id=' + est.gav.it.id;
+        var link = location.origin + location.pathname.replace(/[^/]*$/, '') + 'editor.html?id=' + est.gav.it.id +
+          (est.gav.it.extensao ? '&ext=' + encodeURIComponent(est.gav.it.extensao) : '');
         (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(function () {
           O.toast('Link copiado. Só abre para quem tem acesso.');
         }, function () { O.toast(link, 'info', null, 12000); });
@@ -1661,6 +1663,12 @@
   }
 
   /* ---------- início ---------- */
+  // entrada (entrada.js): LUBE WORK e a bolinha da IA; abre quando a conta e a lista chegarem
+  var ENTRADA = window.LW_ENTRADA || null;
+  function abrirTela() {
+    var mostrar = function () { document.body.classList.remove('carregando'); };
+    if (ENTRADA) ENTRADA.liberar(mostrar); else mostrar();
+  }
   function iniciar() {
     O.marcas();
     $$('[data-ico]').forEach(function (el) { el.innerHTML = O.icone(el.getAttribute('data-ico')); });
@@ -1675,10 +1683,14 @@
           { texto: 'Ir para o login', href: '../?voltar=office' });
         return;
       }
+      // a lista de arquivos é pedida junto com a conta (antes era uma depois da outra)
+      var lista = est.visao === 'modelos' || est.visao === 'agenda' ? null : O.api('listar', dadosLista());
+      if (lista) lista.catch(function () {});
       return atualizarEu().then(function () {
-        document.body.classList.remove('carregando');
         render();
-        carregar();
+        var listou = carregar(lista) || Promise.resolve();
+        // abre com a lista na tela; se ela demorar mais de 4 s, abre com o esqueleto
+        Promise.race([listou, new Promise(function (ok) { setTimeout(ok, 4000); })]).then(abrirTela, abrirTela);
         carregarAvisos();
         var u = new URLSearchParams(location.search);
         // vindo do editor: abre o compartilhar ou o enviar daquele arquivo

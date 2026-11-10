@@ -21,6 +21,12 @@
     history.replaceState(null, '', location.pathname + '?' + u.toString() + location.hash);
   }
 
+  // entrada (entrada.js): o editor só aparece quando abre; o bloqueio tira a entrada na hora
+  var ENTRADA = window.LW_ENTRADA || null;
+  function mostrarTela() { document.body.classList.remove('carregando'); }
+  function abrirTela() { if (ENTRADA) ENTRADA.liberar(mostrarTela); else mostrarTela(); }
+  function tirarEntrada() { if (ENTRADA) ENTRADA.encerrar(); mostrarTela(); }
+
   function sufixoDemo() { return O.DEMO ? 'demo=1' : ''; }
   function urlDrive(extra) {
     var q = [extra, sufixoDemo()].filter(Boolean).join('&');
@@ -39,12 +45,13 @@
     b.textContent = botao ? botao.texto : 'Voltar ao Lube Work';
     b.setAttribute('href', botao ? botao.href : urlDrive());
     $('[data-bloqueio]').hidden = false;
-    document.body.classList.remove('carregando');
+    tirarEntrada();
   }
 
   function mostrarArquivo(a) {
     arquivo = a;
     var nome = a.nome + '.' + a.extensao;
+    if (ENTRADA) ENTRADA.sub(nome);
     document.title = nome + ' — Lube Work';
     $('[data-ed-nome]').textContent = nome;
     $('[data-ed-sub]').textContent = O.nomeTipo(a.extensao) + ' · ' +
@@ -86,7 +93,7 @@
     ];
     $('[data-ed-detalhes]').innerHTML = linhas.map(function (l) { return '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>'; }).join('');
     $('[data-ed-espera]').hidden = false;
-    document.body.classList.remove('carregando');
+    abrirTela();
   }
 
   function carregarScript(src, ms) {
@@ -98,6 +105,17 @@
       s.onerror = function () { clearTimeout(t); falha(new Error('O motor de edição está fora do ar.')); };
       document.head.appendChild(s);
     });
+  }
+
+  // api.js do motor: usa o que o editor.html já começou a carregar, se for o mesmo endereço;
+  // depois de abrir, guarda o endereço para a próxima vez (é só o endereço público do motor)
+  function carregarApi(src) {
+    var cedo = window.LW_MOTOR_CEDO;
+    var p = cedo && cedo.src === src
+      ? Promise.race([cedo.pronto, new Promise(function (ok, falha) { setTimeout(function () { falha(new Error('O motor de edição não respondeu.')); }, 20000); })])
+          .then(null, function () { return carregarScript(src, 20000); })
+      : carregarScript(src, 20000);
+    return p.then(function () { try { localStorage.setItem('lw_motor_api', src); } catch (e) {} });
   }
 
   // modo claro e escuro da Lube: a escolha fica neste navegador (botão da lua no topo ou
@@ -146,6 +164,15 @@
     var botao = $('[data-tema-trocar]');
     if (botao) botao.hidden = false;
     var origem = new URL(m.api).origin;
+    var forcar = !!escolhido;
+    try { localStorage.setItem('lw_motor_tema', tema + (forcar ? '|1' : '')); } catch (e) {}
+    // a página do tema já foi aberta no começo (editor.html) com o mesmo tema: só espera ela
+    var cedo = window.LW_TEMA_CEDO;
+    if (cedo && cedo.origem === origem && cedo.tema === tema && cedo.forcar === forcar) {
+      return Promise.race([cedo.feito, new Promise(function (ok) { setTimeout(ok, 2500); })]).then(function () {
+        if (cedo.moldura && cedo.moldura.parentNode) cedo.moldura.parentNode.removeChild(cedo.moldura);
+      });
+    }
     return new Promise(function (ok) {
       var f = document.createElement('iframe');
       var fim = function () { window.removeEventListener('message', ouvir); f.remove(); ok(); };
@@ -161,13 +188,12 @@
   }
 
   function abrirMotor(m) {
-    $('[data-carga-txt]').textContent = 'Abrindo o editor';
-    return Promise.all([carregarScript(m.api, 20000), prepararTema(m)]).then(function () {
+    return Promise.all([carregarApi(m.api), prepararTema(m)]).then(function () {
       if (!window.DocsAPI) throw new Error('O motor de edição respondeu sem o editor.');
       var cfg = Object.assign({}, m.config, {
         events: {
-          onAppReady: function () { document.body.classList.remove('carregando'); },
-          onDocumentReady: function () { document.body.classList.remove('carregando'); },
+          onAppReady: abrirTela,
+          onDocumentReady: abrirTela,
           // lista de pessoas do painel para @mencionar
           onRequestUsers: function (ev) {
             var c = ev && ev.data && ev.data.c ? ev.data.c : 'mention';
@@ -198,8 +224,8 @@
       });
       $('[data-ed-motor]').hidden = false;
       editor = new window.DocsAPI.DocEditor('editor-onlyoffice', cfg);
-      // se o editor não avisar que abriu, a tela de carga sai sozinha
-      setTimeout(function () { document.body.classList.remove('carregando'); }, 15000);
+      // se o editor não avisar que abriu, a entrada sai sozinha
+      setTimeout(abrirTela, 15000);
       // IA da Lube: o plugin só vem na configuração para quem pode editar e com a IA ligada
       var plugins = m.config && m.config.editorConfig && m.config.editorConfig.plugins;
       if (window.OFC_IA_EDITOR) {

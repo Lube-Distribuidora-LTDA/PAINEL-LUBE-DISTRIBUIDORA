@@ -124,7 +124,7 @@
 .ia-resumo{ font-size:.9rem; line-height:1.5; font-weight:600; }
 .ia-oque{ color:var(--muted); font-size:.8rem; line-height:1.45; }
 .ia-meta{ display:flex; flex-wrap:wrap; gap:.35rem; }
-.ia-meta span{ font:500 .62rem 'JetBrains Mono',monospace; letter-spacing:.06em; padding:.25rem .5rem; border-radius:999px; background:rgba(255,255,255,.06); color:var(--muted); }
+.ia-meta span{ font:700 .62rem 'Archivo',sans-serif; letter-spacing:.06em; padding:.25rem .5rem; border-radius:999px; background:rgba(255,255,255,.06); color:var(--muted); }
 .ia-meta__aviso{ color:#FFD08A !important; background:rgba(245,165,36,.12) !important; }
 .ia-avisos{ font-size:.74rem; color:var(--muted); }
 .ia-avisos summary{ cursor:pointer; }
@@ -165,7 +165,7 @@
 .ia__opcao input:checked + i::after{ transform:translateX(12px); }
 .ia__opcao input:focus-visible + i{ box-shadow:0 0 0 3px rgba(77,107,255,.5); }
 .ia__opcao--img{ padding-left:.2rem; }
-.ia__rodape{ display:flex; align-items:center; gap:.6rem; font:500 .6rem 'JetBrains Mono',monospace; letter-spacing:.04em; color:var(--muted-d); }
+.ia__rodape{ display:flex; align-items:center; gap:.6rem; font:700 .6rem 'Archivo',sans-serif; letter-spacing:.04em; color:var(--muted-d); }
 .ia__rodape span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ia__medidor{ flex:1; height:3px; border-radius:3px; background:rgba(255,255,255,.08); overflow:hidden; min-width:40px; }
 .ia__medidor b{ display:block; height:100%; width:2%; background:linear-gradient(90deg, #1FB26B, #F5A524, #E5101F); background-size:600% 100%; border-radius:3px; transition:width .6s var(--ease); }
@@ -270,7 +270,7 @@
 .ia-criar__soltar svg{ width:20px; color:#FF8A91; flex:none; }
 .ia-criar__soltar strong{ color:var(--off); }
 .ia-criar__pe{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
-.ia-criar__gasto{ flex:1; min-width:200px; font:500 .62rem 'JetBrains Mono',monospace; letter-spacing:.04em; color:var(--muted-d); }
+.ia-criar__gasto{ flex:1; min-width:200px; font:700 .62rem 'Archivo',sans-serif; letter-spacing:.04em; color:var(--muted-d); }
 .btn--ia-criar{ height:44px; padding:0 1.25rem; border:0; color:#fff; font-weight:800; position:relative; overflow:hidden;
   background:linear-gradient(110deg, #E5101F, #2C3FC4, #E5101F); background-size:200% 100%; animation:ia-borda 6s linear infinite;
   box-shadow:0 10px 30px rgba(229,16,31,.35); }
