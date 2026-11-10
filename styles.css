@@ -95,92 +95,82 @@ button{ font:inherit; color:inherit; background:none; border:0; cursor:pointer; 
 
 /* =========================================================
    CORTINA DE ENTRADA
+   O "L" 3D gira no meio enquanto a página carrega. Na saída ele voa para
+   o lugar dele (entrada ou abertura) e a cortina se abre em círculo a
+   partir de onde ele estava, mostrando o sistema por trás. O L é o mesmo
+   [data-emblema] das outras telas: fica por cima da cortina (app.js).
    ========================================================= */
+@property --furo{ syntax:'<length>'; initial-value:0px; inherits:true; }
 .curtain{
+  --furo:0px; --fx:50%; --fy:42%;          /* raio e centro da abertura */
   position:fixed; inset:0; z-index:8000;
   background:var(--blue-ink);
   display:grid; place-items:center;
-  transition:transform 1.2s var(--ease);
+  -webkit-mask-image:radial-gradient(circle at var(--fx) var(--fy), transparent calc(var(--furo) - 110px), #000 var(--furo));
+          mask-image:radial-gradient(circle at var(--fx) var(--fy), transparent calc(var(--furo) - 110px), #000 var(--furo));
+  transition:--furo 1.3s cubic-bezier(.66,0,.2,1), visibility 0s linear 1.35s;
 }
 .curtain::after{
   content:''; position:absolute; inset:0;
-  background:radial-gradient(ellipse at center, rgba(30,43,140,.55) 0%, rgba(6,11,41,.85) 55%, rgba(3,6,22,.98) 100%);
+  background:radial-gradient(ellipse at 50% 42%, rgba(30,43,140,.6) 0%, rgba(6,11,41,.85) 55%, rgba(3,6,22,.98) 100%);
+}
+/* onda de luz na borda da abertura */
+.curtain::before{
+  content:''; position:absolute; inset:0; z-index:1; opacity:0; pointer-events:none;
+  background:radial-gradient(circle at var(--fx) var(--fy),
+    transparent calc(var(--furo) - 8px), rgba(140,168,255,.6) var(--furo),
+    rgba(70,100,255,.28) calc(var(--furo) + 40px), transparent calc(var(--furo) + 190px));
 }
 .curtain__inner{
-  position:relative; z-index:1;
-  display:flex; flex-direction:column; align-items:center; gap:1.9rem;
+  --L:clamp(170px, min(26vw, 34vh), 340px);    /* tamanho do "L" 3D na cortina (a .vaga usa) */
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; align-items:center;
   padding:0 var(--pad);
 }
 
-/* ---- logotipo completo, em movimento ---- */
-.curtain__logo{
-  position:relative; overflow:hidden;
-  display:flex; align-items:center; gap:clamp(.8rem,1.6vw,1.3rem);
-  padding:.4rem .6rem;
-  animation:logoFloat 2.8s var(--ease-io) infinite alternate;
+.curtain__word{
+  display:flex; flex-direction:column; align-items:center; line-height:1;
+  /* o aro do L passa uns 16% da caixa dele: o nome começa depois do aro */
+  margin-top:calc(var(--L) * .16 + clamp(1rem, 3vh, 1.9rem));
 }
-@keyframes logoFloat{
-  from{ transform:translateY(5px) }
-  to  { transform:translateY(-5px) }
-}
-
-.curtain__mark{
-  width:clamp(52px,8vw,88px); display:block; flex:none;
-  animation:markBeat 2.1s var(--ease) infinite;
-  transform-origin:60% 60%;
-}
-@keyframes markBeat{
-  0%  { transform:scale(1)    rotate(0deg) }
-  35% { transform:scale(1.07) rotate(-4deg) }
-  70% { transform:scale(.99)  rotate(1.5deg) }
-  100%{ transform:scale(1)    rotate(0deg) }
-}
-
-.curtain__word{ display:flex; flex-direction:column; line-height:1; }
 .curtain__word strong{
-  font-size:clamp(2.1rem,5.2vw,3.6rem); font-weight:900; letter-spacing:-.04em;
+  font-size:clamp(2.2rem,5vw,3.6rem); font-weight:900; letter-spacing:-.04em;
   color:#fff;
-  animation:wordIn 1s var(--ease) both;
+  animation:wordIn .7s var(--ease) both;
 }
 .curtain__word em{
-  font-style:normal; font-weight:300;
-  font-size:clamp(.6rem,1.15vw,.82rem); letter-spacing:.42em; text-transform:uppercase;
-  color:rgba(255,255,255,.62); margin-top:.5rem;
-  animation:wordIn 1s var(--ease) .12s both;
+  font-style:normal; font-weight:700;
+  font-size:clamp(.62rem,1.1vw,.82rem); letter-spacing:.34em; text-indent:.34em; text-transform:uppercase;
+  color:rgba(255,255,255,.74); margin-top:.55rem;
+  animation:wordIn .7s var(--ease) .1s both;
 }
 @keyframes wordIn{
   from{ opacity:0; transform:translateY(16px) }
   to  { opacity:1; transform:none }
 }
 
-/* brilho que atravessa o logotipo */
-.curtain__shine{
-  position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(105deg,
-    transparent 35%, rgba(255,255,255,.34) 48%, rgba(255,255,255,.06) 56%, transparent 66%);
-  transform:translateX(-120%);
-  animation:shine 2.6s var(--ease-io) infinite;
-}
-@keyframes shine{
-  0%  { transform:translateX(-120%) }
-  55% { transform:translateX(120%) }
-  100%{ transform:translateX(120%) }
-}
-
 /* ---- progresso ---- */
 .curtain__bar{
-  width:min(260px,52vw); height:2px; background:rgba(255,255,255,.14); overflow:hidden;
+  margin-top:1.9rem;
+  width:min(260px,52vw); height:3px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden;
 }
 .curtain__bar i{
-  display:block; height:100%; width:0;
+  display:block; height:100%; width:0; border-radius:3px;
   background:linear-gradient(90deg, var(--blue-bright), var(--red));
   transition:width .25s linear;
 }
 .curtain__count{
-  font-size:.72rem; color:var(--muted); letter-spacing:.3em;
+  margin-top:1.1rem;
+  font-size:.74rem; color:rgba(255,255,255,.72); letter-spacing:.24em;
 }
 
-body.loaded .curtain{ transform:translateY(-101%); }
+/* ---- saída: o nome e a barra somem, o L voa e a cortina se abre em círculo ---- */
+.curtain__word,.curtain__bar,.curtain__count{ transition:opacity .35s var(--ease), transform .5s var(--ease); }
+body.loaded .curtain__word,
+body.loaded .curtain__bar,
+body.loaded .curtain__count{ opacity:0; transform:translateY(12px); }
+body.loaded .curtain{ --furo:125vmax; visibility:hidden; pointer-events:none; }
+body.loaded .curtain::before{ opacity:1; }
 
 /* A barra de cima, a entrada (login e primeiro acesso) e a abertura ficam em abertura.css. */
 

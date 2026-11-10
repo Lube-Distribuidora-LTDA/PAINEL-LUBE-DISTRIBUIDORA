@@ -1,6 +1,6 @@
 /* =========================================================
    LUBE DISTRIBUIDORA — PAINEL DE SISTEMAS
-   Abertura em vanilla JS: marca, cortina, o fundo de cinema com as fotos
+   Abertura em vanilla JS: marca, cortina (com o "L" 3D), o fundo de cinema com as fotos
    da Lube, "SISTEMAS CORPORATIVOS", o caminhão e a barra de vidro.
    Rolando, a página cai no painel: menu "BI LUBE" e BIs ficam em
    shell.js; login e dados em portal.js; o "L" 3D em emblema.js.
@@ -41,8 +41,7 @@
   window.LUBE_MARCA = markSVG;
 
   $$('[data-logo-mark]').forEach(function (el) {
-    if (el.classList.contains('curtain__mark') || el.classList.contains('side__mark') ||
-        el.classList.contains('marca-clara')) {
+    if (el.classList.contains('side__mark') || el.classList.contains('marca-clara')) {
       el.innerHTML = markSVG('#FFFFFF', RED);          // sobre fundo escuro, menu azul ou vidro
     } else {
       el.innerHTML = markSVG(NAVY, RED);
@@ -171,58 +170,121 @@
   }
 
   /* ---------------------------------------------------------
-     3c. O "L" 3D SAI DA ENTRADA E POUSA NA ABERTURA
+     3c. O "L" 3D: CORTINA → ENTRADA → ABERTURA
+     É um elemento só. Enquanto a página carrega ele fica por cima da
+     cortina; na saída voa para a vaga dele: a da entrada (quem ainda vai
+     fazer login) ou a da abertura (quem já está dentro). Depois do login
+     voa da entrada para a abertura.
      --------------------------------------------------------- */
   var emblema = $('[data-emblema]');
-  window.LubeAbertura = {
-    pousar: function (voando) {
-      var destino = $('[data-vaga="abertura"]');
-      if (!emblema || !destino || emblema.parentNode === destino) return;
-      if (!voando || reduced) { destino.appendChild(emblema); return; }
-      var a = emblema.getBoundingClientRect(), b = destino.getBoundingClientRect();
-      var por = function (r) {
-        emblema.style.left = r.left + 'px'; emblema.style.top = r.top + 'px';
-        emblema.style.width = r.width + 'px'; emblema.style.height = r.height + 'px';
-      };
-      emblema.style.transition = 'none';
-      por(a);
-      document.body.appendChild(emblema);
-      emblema.classList.add('voando');
-      void emblema.offsetWidth;
-      emblema.style.transition = '';
-      por(b);
-      if (window.LubeEmblema) window.LubeEmblema.giro();
-      setTimeout(function () {
-        emblema.classList.remove('voando');
-        emblema.style.cssText = '';
-        destino.appendChild(emblema);
-      }, 1450);
+  var cortina = $('.curtain');
+  var casa = 'entrada';               // a vaga onde o L deve morar agora
+  var voo = 0;                        // relógio do voo em andamento
+  function vaga(nome) { return $('[data-vaga="' + nome + '"]'); }
+  function por(r) {
+    emblema.style.left = r.left + 'px'; emblema.style.top = r.top + 'px';
+    emblema.style.width = r.width + 'px'; emblema.style.height = r.height + 'px';
+  }
+  function assentar() {               // põe o L na vaga dele, sem animação
+    clearTimeout(voo); voo = 0;
+    emblema.classList.remove('voando', 'na-cortina', 'da-cortina');
+    emblema.style.cssText = '';
+    var v = vaga(casa);
+    if (v && emblema.parentNode !== v) v.appendChild(emblema);
+  }
+  function voar(daCortina) {
+    var destino = vaga(casa);
+    var b = destino ? destino.getBoundingClientRect() : null;
+    if (reduced || !b || !b.width) { assentar(); return; }      // vaga escondida: vai direto
+    var a = emblema.getBoundingClientRect();
+    emblema.style.transition = 'none';
+    por(a);
+    if (emblema.parentNode !== document.body) document.body.appendChild(emblema);
+    emblema.classList.remove('na-cortina');
+    emblema.classList.add('voando');
+    emblema.classList.toggle('da-cortina', !!daCortina);
+    void emblema.offsetWidth;
+    emblema.style.transition = '';
+    por(b);
+    if (window.LubeEmblema) window.LubeEmblema.giro();
+    clearTimeout(voo);
+    voo = setTimeout(assentar, 1450);
+  }
+  function mudar(nome, voando) {
+    casa = nome;
+    if (!emblema || emblema.classList.contains('na-cortina')) return;   // na cortina, a saída dela decide
+    if (voo) {                                                          // em voo: pousa na vaga nova
+      if (voando) voar(emblema.classList.contains('da-cortina'));
+      return;
     }
+    if (emblema.parentNode === vaga(casa)) return;
+    if (voando) voar(false); else assentar();
+  }
+  window.LubeAbertura = {
+    pousar: function (voando) { mudar('abertura', voando); },   // entrou: o L vai para a abertura
+    voltar: function () { mudar('entrada', false); }            // saiu: o L volta para a entrada
   };
+
+  // enquanto carrega, o L fica no meio da cortina
+  var vagaCortina = vaga('cortina');
+  var comCortina = !!(emblema && cortina && vagaCortina) && !reduced &&
+                   !document.documentElement.classList.contains('em-moldura');
+  function alinharNaCortina() {
+    if (emblema.classList.contains('na-cortina')) por(vagaCortina.getBoundingClientRect());
+  }
+  if (comCortina) {
+    document.body.appendChild(emblema);
+    emblema.classList.add('na-cortina');
+    alinharNaCortina();
+    window.addEventListener('resize', alinharNaCortina);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(alinharNaCortina);
+  }
 
   /* ---------------------------------------------------------
      4. CORTINA DE ENTRADA
+     A contagem segura nos 92% até o L 3D estar desenhado e a tela de trás
+     definida (entrada ou painel). Na saída a cortina se abre em círculo a
+     partir do L, que voa para o lugar dele.
      --------------------------------------------------------- */
   var counter = $('[data-count]');
   var loadBar = $('[data-load-bar]');
+  var bootou = false;
   function boot() {
+    if (bootou) return;
+    bootou = true;
     if (loadBar) loadBar.style.width = '100%';
+    var naCortina = comCortina && emblema.classList.contains('na-cortina');
+    if (naCortina) {
+      if (counter) counter.textContent = '100';
+      var r = emblema.getBoundingClientRect();
+      cortina.style.setProperty('--fx', (r.left + r.width / 2).toFixed(1) + 'px');
+      cortina.style.setProperty('--fy', (r.top + r.height / 2).toFixed(1) + 'px');
+    }
     document.body.classList.remove('is-loading');
     document.body.classList.add('loaded');
     $$('.hero .mask > span, .gate .mask > span').forEach(function (s) { s.classList.add('in'); });
+    if (naCortina) voar(true);
   }
 
-  if (reduced || document.documentElement.classList.contains('em-moldura')) {
+  if (!comCortina) {
     boot();
   } else {
+    var inicio = Date.now();
     var n = 0;
+    var pronto = function () {
+      var t = Date.now() - inicio;
+      var l3d  = !!window.LubeEmblema || window.LubeEmblemaPlano === true || t > 2600;
+      var tela = document.body.classList.contains('autenticado') || !!$('.gate.is-on') || t > 3800;
+      return l3d && tela;
+    };
     var tick = setInterval(function () {
-      n += Math.ceil(Math.random() * 9);
-      if (n >= 100) { n = 100; clearInterval(tick); setTimeout(boot, 320); }
+      n = Math.min(100, n + Math.ceil(Math.random() * 7));
+      if (n > 92 && !pronto()) n = 92;
       if (counter) counter.textContent = pad2(n);
       if (loadBar) loadBar.style.width = n + '%';
+      if (n >= 100) { clearInterval(tick); setTimeout(boot, 360); }
     }, 55);
-    setTimeout(function () { clearInterval(tick); boot(); }, 3200);
+    setTimeout(function () { clearInterval(tick); boot(); }, 4600);
   }
 
   /* ---------------------------------------------------------

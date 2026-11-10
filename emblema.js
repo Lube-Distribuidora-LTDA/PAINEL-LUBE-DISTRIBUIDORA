@@ -1,7 +1,8 @@
 /* =========================================================
    O "L" DA LUBE EM 3D (three.js)
-   Um só elemento [data-emblema], que mora na tela de entrada e voa para a
-   abertura depois do login (quem move é o app.js). Aqui fica só o desenho:
+   Um só elemento [data-emblema]: aparece na cortina de entrada, mora na tela
+   de entrada e voa para a abertura depois do login (quem move é o app.js).
+   Aqui fica só o desenho:
    a marca extrudada, brilhante, flutuando e olhando para o mouse.
    Sem WebGL (ou se o three.js não carregar) fica a marca plana do HTML.
    ========================================================= */
@@ -58,6 +59,9 @@ if (renderer) {
 
   let larg = 0, alt = 0;
   function tamanho() {
+    // em voo a caixa muda de tamanho a cada quadro: o desenho acompanha esticado
+    // e só se refaz no pouso (todas as vagas têm a mesma proporção)
+    if (larg && caixa.classList.contains('voando')) return;
     const w = caixa.clientWidth, h = caixa.clientHeight;
     if (!w || !h || (w === larg && h === alt)) return;
     larg = w; alt = h;
@@ -115,4 +119,6 @@ if (renderer) {
   };
   desenhar(performance.now());
   caixa.classList.add('tem-3d');          // o 3D assumiu: some a marca plana
+} else {
+  window.LubeEmblemaPlano = true;         // sem WebGL: a cortina não espera pelo 3D
 }

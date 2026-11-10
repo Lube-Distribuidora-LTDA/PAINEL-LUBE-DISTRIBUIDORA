@@ -349,6 +349,13 @@ via `importmap` no `index.html`). Ele mora na entrada e voa para a abertura depo
 login (`LubeAbertura.pousar`, no `app.js`). Sem WebGL, ou se o three.js não carregar,
 fica a marca plana que já está no HTML.
 
+**Cortina de entrada.** Enquanto a página carrega, o mesmo "L" 3D gira no meio da
+cortina, com o nome LUBE e a barra de progresso. A contagem segura nos 92% até o 3D
+estar desenhado e a tela de trás definida (entrada ou painel), com teto de 4,6 s. Na
+saída o L voa para o lugar dele e a cortina se abre em círculo a partir de onde ele
+estava (`--furo`, em `styles.css`; em navegador antigo ela só some). Com "reduzir
+movimento" ligado não há cortina.
+
 **Entrada.** Cartão de vidro com Entrar e Primeiro acesso. O cadastro tem dois
 passos (foto opcional, nome e e-mail; depois a senha, com barra de força) e termina
 numa linha do tempo: cadastro enviado → o administrador libera → você entra. As regras são as de

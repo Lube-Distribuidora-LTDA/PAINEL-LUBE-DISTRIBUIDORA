@@ -9,9 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20261110" />
+<link rel="stylesheet" href="styles.css?v=20261110b" />
 <link rel="stylesheet" href="shell.css?v=20261110a" />
-<link rel="stylesheet" href="abertura.css?v=20261110" />
+<link rel="stylesheet" href="abertura.css?v=20261110b" />
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script>try{if(window.self!==window.top)document.documentElement.className+=' em-moldura';}catch(e){document.documentElement.className+=' em-moldura';}</script>
 </head>
@@ -20,16 +20,16 @@
 <!-- ============ RUÍDO / GRAIN GLOBAL ============ -->
 <div class="grain" aria-hidden="true"></div>
 
-<!-- ============ CORTINA DE ENTRADA ============ -->
+<!-- ============ CORTINA DE ENTRADA ============
+     O "L" 3D gira aqui enquanto carrega (o app.js traz o [data-emblema] para
+     cima da cortina). Na saída ele voa para o lugar dele e a cortina se abre
+     em círculo, mostrando o sistema. -->
 <div class="curtain" aria-hidden="true">
   <div class="curtain__inner">
-    <div class="curtain__logo">
-      <span class="curtain__mark" data-logo-mark></span>
-      <span class="curtain__word">
-        <strong>LUBE</strong>
-        <em>Distribuidora</em>
-      </span>
-      <span class="curtain__shine"></span>
+    <div class="vaga curtain__vaga" data-vaga="cortina"></div>
+    <div class="curtain__word">
+      <strong>LUBE</strong>
+      <em>Distribuidora</em>
     </div>
     <div class="curtain__bar"><i data-load-bar></i></div>
     <span class="curtain__count mono"><span data-count>00</span>%</span>
@@ -413,11 +413,11 @@
 <script src="config.js?v=20261006"></script>
 <script src="rede.js?v=20261110a"></script>
 <script src="icones.js?v=20261006"></script>
-<script src="app.js?v=20261110"></script>
+<script src="app.js?v=20261110b"></script>
 <script src="fotos.js?v=20261110"></script>
 <script src="perfil.js?v=20261110"></script>
 <script src="shell.js?v=20261110a"></script>
-<script src="portal.js?v=20261110a"></script>
-<script type="module" src="emblema.js?v=20261110"></script>
+<script src="portal.js?v=20261110b"></script>
+<script type="module" src="emblema.js?v=20261110b"></script>
 </body>
 </html>

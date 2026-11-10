@@ -362,9 +362,8 @@
     if (gate) {
       gate.classList.remove('saindo');
       gate.classList.add('is-on');
-      // o L 3D volta para a entrada
-      var vaga = $('[data-vaga="entrada"]', gate), emblema = $('[data-emblema]');
-      if (vaga && emblema && emblema.parentNode !== vaga && !emblema.classList.contains('voando')) vaga.appendChild(emblema);
+      // o L 3D volta para a entrada (se ainda está na cortina, é para lá que ele voa)
+      if (window.LubeAbertura) window.LubeAbertura.voltar();
     }
     if (window.LubeShell) window.LubeShell.limpar();
   }

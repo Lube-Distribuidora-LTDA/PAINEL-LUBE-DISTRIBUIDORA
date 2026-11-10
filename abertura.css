@@ -1,7 +1,8 @@
 /* =========================================================
    PAINEL LUBE — entrada, abertura, barra de vidro, perfil e aviso
    (2026-11-10) As fotos da Lube passam ao fundo como um filme, o "L" em
-   3D mora na entrada e voa para a abertura depois do login, e a barra de
+   3D aparece na cortina de entrada, mora na tela de entrada e voa para a
+   abertura depois do login, e a barra de
    cima é de vidro (no estilo do iOS novo) com um degradê azul bem leve.
    ========================================================= */
 @property --ang{ syntax:'<angle>'; initial-value:0deg; inherits:false; }
@@ -53,6 +54,9 @@ body.loaded .emblema{ opacity:1; }
   position:fixed; inset:auto; z-index:7100; pointer-events:none;
   transition:left 1.4s var(--ease), top 1.4s var(--ease), width 1.4s var(--ease), height 1.4s var(--ease);
 }
+/* enquanto a página carrega o L fica por cima da cortina (z 8000); na saída voa para a vaga dele */
+.emblema.na-cortina{ position:fixed; inset:auto; z-index:8100; opacity:1; transition:none; pointer-events:none; }
+.emblema.voando.da-cortina{ z-index:8100; }
 .emblema::before{                      /* luz da marca por trás */
   content:''; position:absolute; inset:-30% -40%; z-index:-1;
   background:
