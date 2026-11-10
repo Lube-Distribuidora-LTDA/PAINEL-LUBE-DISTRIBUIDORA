@@ -351,8 +351,8 @@ fica a marca plana que já está no HTML.
 
 **Entrada.** Cartão de vidro com Entrar e Primeiro acesso. O cadastro tem dois
 passos (foto opcional, nome e e-mail; depois a senha, com barra de força) e termina
-numa linha do tempo: cadastro enviado → TI libera → você entra. As regras são as de
-sempre: e-mail @lube.com.br (ou liberado), senha de 8 caracteres, aprovação do TI e a
+numa linha do tempo: cadastro enviado → o administrador libera → você entra. As regras são as de
+sempre: e-mail @lube.com.br (ou liberado), senha de 8 caracteres, aprovação do administrador e a
 regra de rede da Sentinela.
 
 **Barra de vidro.** Depois do login, a barra flutuante do topo (classe `barra`) tem a
@@ -393,7 +393,7 @@ guardada em cache.
 ## Painel: menu BI LUBE e BI dentro do painel
 
 **Menu (shell.js).** Início, **BI LUBE**, Office e, no rodapé, Administração e
-Sentinela (só admin), Suporte TI e a conta. No BI LUBE:
+Sentinela (só admin), Suporte Administrador e a conta. No BI LUBE:
 
 - **Fixados** no topo: alfinete ao passar o mouse. Ficam na tabela `favoritos`
   (cada pessoa só lê e grava os seus) e no navegador.
@@ -431,16 +431,17 @@ cima, que pede um passe novo uma vez; se voltar de novo, a aba mostra o erro com
 "Abrir em nova aba". Os dados que um sistema guarda no navegador (ex.: planilha
 importada à mão no RH) ficam separados entre a aba normal e o painel.
 
-## Contatos do TI
+## Contato do administrador
 
-O item **Suporte TI**, no rodapé do menu do painel, abre dois atalhos de WhatsApp:
+Nas telas, quem cuida dos acessos é sempre "o administrador" (não "o TI"). O item
+**Suporte Administrador**, no rodapé do menu do painel, abre o WhatsApp do Júlio; o
+mesmo atalho aparece em "Esqueci a senha", na entrada:
 
 | Pessoa | Telefone | Link |
 |---|---|---|
 | Júlio | +55 (27) 98881-9807 | `https://wa.me/5527988819807` |
-| Alexandre | +55 (27) 99273-6082 | `https://wa.me/5527992736082` |
 
-Para trocar um número, edite o `href` do `.suporte__item` em `index.html` no
+Para trocar o número, edite o `href` do `.suporte__item` e do `.zap` em `index.html` no
 formato `55` + DDD + número, sem espaços.
 
 ## Pendências recomendadas

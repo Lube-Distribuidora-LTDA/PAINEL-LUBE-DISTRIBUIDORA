@@ -60,11 +60,11 @@
   }
   function dataValida(iso) { return typeof iso === 'string' && iso.length <= 40 && !isNaN(new Date(iso).getTime()); }
 
-  // 'Acesso de fora da empresa liberado pelo TI até 30/10, 18:00.'
+  // 'Acesso de fora da empresa liberado pelo administrador até 30/10, 18:00.'
   function textoLiberado(ateIso) {
-    if (!dataValida(ateIso)) return 'Acesso de fora da empresa liberado pelo TI.';
+    if (!dataValida(ateIso)) return 'Acesso de fora da empresa liberado pelo administrador.';
     var p = partes(new Date(ateIso));
-    return 'Acesso de fora da empresa liberado pelo TI até ' + p.dia + '/' + p.mes + ', ' + p.hora + ':' + p.min + '.';
+    return 'Acesso de fora da empresa liberado pelo administrador até ' + p.dia + '/' + p.mes + ', ' + p.hora + ':' + p.min + '.';
   }
 
   /* ---------- resposta da central, conferida campo a campo ---------- */
@@ -329,7 +329,7 @@
     ic.innerHTML = IC_FORA;
     var t = el('div');
     t.appendChild(el('b', null, (nome ? nome + ' só abre' : 'Este sistema só abre') + ' na rede da Lube'));
-    t.appendChild(document.createTextNode('Este aparelho não está na rede da Lube. Se precisa acessar de fora, fale com o TI: ' + CONTATO +
+    t.appendChild(document.createTextNode('Este aparelho não está na rede da Lube. Se precisa acessar de fora, fale com o administrador: ' + CONTATO +
       '. Na Lube, use o Wi-Fi da empresa (no celular, desligue os dados móveis e a VPN) e tente de novo.'));
     var x = el('button', null, '×');
     x.type = 'button';

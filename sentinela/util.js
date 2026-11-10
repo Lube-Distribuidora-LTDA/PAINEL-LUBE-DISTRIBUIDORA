@@ -279,7 +279,7 @@
     ia: 'IA', sem_login: 'sem login', cron: 'cron', previa_link: 'prévia de link', buscador: 'buscador',
     passe_invalido: 'passe inválido',
     // regra de rede da Lube (guarda 1.3.0)
-    fora_da_rede: 'Fora da rede da Lube', rede_liberado: 'Fora da rede · liberado pelo TI',
+    fora_da_rede: 'Fora da rede da Lube', rede_liberado: 'Fora da rede · liberado pelo administrador',
     rede_maquina: 'Fora da rede · máquina autenticada'
   };
   function regra(r) { return r ? (REGRAS[r] || r) : ''; }

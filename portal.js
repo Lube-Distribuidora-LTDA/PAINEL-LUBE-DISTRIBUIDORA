@@ -304,7 +304,7 @@
       if (!s && String(x.slug || '').toLowerCase() === slug) s = x;
     });
     if (!s || !s._liberado) {
-      aviso(s ? 'Você não tem autorização para abrir ' + s.nome + '. Peça a liberação ao TI.'
+      aviso(s ? 'Você não tem autorização para abrir ' + s.nome + '. Peça a liberação ao administrador.'
               : 'Esse sistema não está disponível para o seu usuário.');
       return;
     }
@@ -323,7 +323,7 @@
       if (ehFora(rs[0])) {
         if (avisoEl) avisoEl.style.opacity = '0';   // tira o "Abrindo…" de baixo do aviso
         if (window.LubeRede) window.LubeRede.avisoFora(s.nome);
-        else aviso('Este sistema só abre na rede da Lube. Se precisa acessar, fale com o TI.');
+        else aviso('Este sistema só abre na rede da Lube. Se precisa acessar, fale com o administrador.');
         return;
       }
       location.assign(rs[0] || s.url);
@@ -435,8 +435,8 @@
           return sb.auth.signOut().then(function () {
             mostrarGate();
             erro(pendente
-              ? 'Seu cadastro ainda não foi liberado pelo TI. Assim que for, é só entrar.'
-              : 'Seu acesso está desativado. Procure o TI.');
+              ? 'Seu cadastro ainda não foi liberado pelo administrador. Assim que for, é só entrar.'
+              : 'Seu acesso está desativado. Procure o administrador.');
           });
         }
         return conferirRede(sessao).then(function (segue) {
@@ -493,7 +493,7 @@
       // "sistemas ativos" e "áreas atendidas" contam a empresa toda,
       // não só o que esta pessoa pode abrir
       atualizarStats(lista);
-      // liberados primeiro, mantendo a ordem definida pelo TI
+      // liberados primeiro, mantendo a ordem definida pelo administrador
       lista.sort(function (a, b) {
         if (a._liberado !== b._liberado) return a._liberado ? -1 : 1;
         return a.ordem - b.ordem;
@@ -544,7 +544,7 @@
   /* ---------- alternar entrar / primeiro acesso ---------- */
   var TEXTOS = {
     entrar:   ['Entre com a sua conta Lube', 'Use o seu usuário de e-mail e a senha do painel.'],
-    primeiro: ['Crie o seu acesso', 'Leva um minuto. Depois o TI libera os seus sistemas.']
+    primeiro: ['Crie o seu acesso', 'Leva um minuto. Depois o administrador libera os seus sistemas.']
   };
   function irPara(modo) {
     erro('');
@@ -570,7 +570,7 @@
   var ola = $('[data-gate-ola]');
   if (ola) { var hr = new Date().getHours(); ola.textContent = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite'; }
 
-  // "Esqueci a senha": quem troca é o TI
+  // "Esqueci a senha": quem troca é o administrador
   var ajudaBtn = $('[data-ajuda-btn]'), ajuda = $('[data-ajuda]');
   if (ajudaBtn && ajuda) ajudaBtn.addEventListener('click', function () {
     var aberta = ajuda.classList.toggle('is-on');
@@ -684,7 +684,7 @@
             soltar();
             var m = r.error.message || '';
             if (/already registered|already been registered/i.test(m)) {
-              erro('Esse e-mail já tem cadastro. Use "Entrar" ou peça a senha ao TI.');
+              erro('Esse e-mail já tem cadastro. Use "Entrar" ou peça a senha ao administrador.');
             } else {
               erro(m);
             }
@@ -704,9 +704,9 @@
             if (okTexto) {
               okTexto.textContent = precisaConfirmar
                 ? 'Confirme o endereço pelo link enviado para ' + email +
-                  ' e aguarde a liberação do TI para ver seus sistemas.'
+                  ' e aguarde a liberação do administrador para ver seus sistemas.'
                 : 'Sua conta foi criada para ' + email +
-                  '. Falta só o TI liberar os seus sistemas.';
+                  '. Falta só o administrador liberar os seus sistemas.';
             }
             if (cartao) cartao.classList.add('feito');
             if (okBox) okBox.classList.add('is-on');

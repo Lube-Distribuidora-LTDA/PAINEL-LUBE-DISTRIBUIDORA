@@ -1,7 +1,7 @@
 /* =========================================================
    SENTINELA LUBE — painel de segurança
    Lê tudo pelas funções public.sentinela_* do banco do portal,
-   com a sessão do usuário (só o TI passa: is_admin()).
+   com a sessão do usuário (só o administrador passa: is_admin()).
    Painel completo a cada 60 s; eventos novos a cada 4 s com a
    aba visível. Falha de rede aparece numa faixa — nada some
    em silêncio.
@@ -82,7 +82,7 @@
   // mensagem limpa para o usuário (sem detalhe técnico do PostgREST)
   function texto(err) {
     if (err.rede) return 'Sem conexão com a central.';
-    if (err.restrito) return 'Acesso restrito ao TI.';
+    if (err.restrito) return 'Acesso restrito ao administrador.';
     return String(err.message || err).replace(/^sentinela:\s*/i, '');
   }
 
@@ -472,7 +472,7 @@
     }
     if (d === 'liberado' && e.regra === 'rede_liberado') {
       return { cls: 'verificado', txt: 'FORA · LIBERADO', chip: 'azul',
-               dica: 'Fora da rede da Lube, liberado pelo TI' + (e.identidade ? ': ' + e.identidade : '') };
+               dica: 'Fora da rede da Lube, liberado pelo administrador' + (e.identidade ? ': ' + e.identidade : '') };
     }
     if (d === 'liberado' && e.regra === 'rede_maquina') {
       return { cls: 'maquina', txt: 'FORA · MÁQUINA', chip: 'neutro',
@@ -1883,7 +1883,7 @@
           (semG ? ' · ' + U.num(semG) + ' sem o guarda 1.3.0' : ''),
         'Sistemas que barram quem está fora da rede da Lube. SAC e Supervisor ficam fora da regra (usados na rua).' +
           (semG ? ' Em vermelho: exigindo, mas o guarda da produção não confere a rede (Instant Rollback?).' : '')],
-      [lib ? 'new' : 'vazio', IC.chave, 'Liberados agora', U.num(lib), 'fora da rede, com prazo', 'Pessoas liberadas pelo TI para entrar de fora da rede'],
+      [lib ? 'new' : 'vazio', IC.chave, 'Liberados agora', U.num(lib), 'fora da rede, com prazo', 'Pessoas liberadas pelo administrador para entrar de fora da rede'],
       f.seriam
         ? [f.pessoas ? 'warn' : 'vazio', IC.observados, 'Seriam barrados em 24 h', U.num(f.pessoas),
            U.qtd(f.pessoas, 'pessoa', 'pessoas') + ' · ' + U.qtd(f.tentativas, 'tentativa', 'tentativas'),
@@ -2010,7 +2010,7 @@
       var fora = (+f.pessoas || +f.barrados || +f.observados || +f.liberados || +f.sem_regra)
         ? U.numeros(U.qtd(f.pessoas, 'pessoa', 'pessoas') + ' · ' + U.qtd(f.barrados, 'barrada', 'barradas') + ' · ' + U.num(f.observados) + ' seriam')
         : '<span class="fraco">—</span>';
-      var dicaFora = U.num(f.liberados) + ' liberados pelo TI · ' + U.num(f.sem_regra) + ' com a regra desligada';
+      var dicaFora = U.num(f.liberados) + ' liberados pelo administrador · ' + U.num(f.sem_regra) + ' com a regra desligada';
       var desde = s.modo_em ? esc(U.dataHora(s.modo_em)) + (s.modo_por ? '<br><span class="fraco">' + esc(s.modo_por) + '</span>' : '') : '<span class="fraco">—</span>';
       return '<tr class="' + (s.isento ? 'isento' : '') + '">' +
         '<td data-rot="Sistema"><b>' + esc(s.nome || s.projeto) + '</b><br><span class="fraco">' + esc(s.projeto) + '</span></td>' +
@@ -2086,7 +2086,7 @@
     var s = SIT[x.situacao] || SIT.regra_desligada, sub;
     if (x.situacao === 'barrado') sub = U.qtd(x.barrados, 'barrada', 'barradas');
     else if (x.situacao === 'seria_barrado') sub = U.num(x.observados) + ' seriam barradas';
-    else if (x.situacao === 'liberado') sub = x.liberacao ? 'até ' + U.dia(x.liberacao.fim) : 'pelo TI';
+    else if (x.situacao === 'liberado') sub = x.liberacao ? 'até ' + U.dia(x.liberacao.fim) : 'pelo administrador';
     else sub = 'seria pega se ligada';
     return '<span class="pilula ' + s.cls + '"><b><span class="em">' + s.ic + '</span>' + s.nome + '</b><small>' + esc(sub) + '</small></span>';
   }
@@ -2237,7 +2237,7 @@
           (r.criado_por ? ' por ' + esc(r.criado_por) : '') + '</p>' +
         (daqui ? '<div class="forte"><b>É a rede de onde você está agora</b> (' + esc(eu.ip) + '). Depois de remover, você fica fora da rede da Lube' +
           (exigindo ? ': é barrado nos sistemas que exigem a rede e, com o portal exigindo, sai da sessão ao recarregar. ' +
-            'De fora, só dá para cadastrar a rede de volta com liberação do TI ou pelo SQL de emergência' : '') + '.</div>' : '') +
+            'De fora, só dá para cadastrar a rede de volta com liberação do administrador ou pelo SQL de emergência' : '') + '.</div>' : '') +
         (ultima && exigindo
           ? '<div class="forte"><b>É a última rede</b> e há sistemas exigindo a rede: o banco recusa. Passe os sistemas para observar antes.</div>'
           : '<div class="forte ambar">Quem acessa deste endereço passa a ser tratado como <b>fora da rede</b> em até 1 minuto' +
@@ -2285,7 +2285,7 @@
           'Casa, 4G, hotel e cliente <b>não</b> são rede da Lube: para essas pessoas, use <b>Liberar pessoa</b>.</div>' +
         '<label class="campo"><span>Rede</span><input type="text" name="rede" value="' + esc(ip) + '" spellcheck="false" autocomplete="off"></label>' +
         '<div class="dica-rede" data-rd-dica></div>' +
-        '<label class="campo"><span>Descrição</span><input type="text" name="descricao" maxlength="120" value="' + esc(local ? local + ' · confirmado pelo TI' : '') +
+        '<label class="campo"><span>Descrição</span><input type="text" name="descricao" maxlength="120" value="' + esc(local ? local + ' · confirmado pelo administrador' : '') +
           '" placeholder="ex.: link reserva do escritório"></label>' +
         (s ? '<div><button class="btn link small" type="button" data-rd-nao-sao>Não é da Lube (esconder neste navegador)</button></div>' : ''),
       rotulo: 'Sim, é da Lube',
@@ -2366,7 +2366,7 @@
       var libs = (d.liberacoes || []).filter(function (l) { return l.estado === 'ativa' || l.estado === 'agendada'; });
       var velhos = sis.filter(function (s) { return !s.guarda_rede; });
       html = '<div class="forte">Quem abrir ' + esc(alvo) + ' de fora da rede da Lube passa a ver <b>“Este sistema só abre na rede da Lube”</b>, ' +
-          'mesmo com login. Só entram os liberados pelo TI e as máquinas autenticadas pelo próprio sistema.</div>' +
+          'mesmo com login. Só entram os liberados pelo administrador e as máquinas autenticadas pelo próprio sistema.</div>' +
         (sis.some(ehPortal) ? '<p class="texto">No <b>Painel Lube</b> a tela de login continua abrindo; depois do login, quem está fora sai da sessão.</p>' +
           '<div class="forte"><b>O Lube Work ainda não confere a rede</b> (parte D do desenho): um notebook que entrou na empresa e levou a sessão ' +
           'para casa abre o Lube Work direto pelo favorito. Só exija a rede no portal com o Lube Work conferindo.</div>' : '') +
@@ -2376,7 +2376,7 @@
         (velhos.length ? '<div class="forte">Ainda sem o guarda 1.3.0 visto na produção: <b>' + esc(velhos.map(function (s) { return s.nome || s.projeto; }).join(', ')) +
           '</b>. O banco recusa e nada muda.</div>' : '') +
         '<div class="difs-rot">Vistos fora da rede em ' + esc(rotuloDias()) + ' · ' + esc(U.num(vistos.length)) + '</div>' + listaVistos(vistos) +
-        '<div class="difs-rot">Liberados pelo TI · ' + esc(U.num(libs.length)) + '</div>' + listaLiberados(libs);
+        '<div class="difs-rot">Liberados pelo administrador · ' + esc(U.num(libs.length)) + '</div>' + listaLiberados(libs);
       rotulo = todos ? 'Exigir a rede em todos' : 'Exigir a rede em ' + (s1.nome || s1.projeto);
     } else if (modo === 'observar') {
       html = '<div class="forte ambar">Ninguém é barrado pela rede: quem acessa ' + esc(alvo) + ' de fora fica registrado como <b>“seria barrado”</b> em Tentativas de fora.</div>' +

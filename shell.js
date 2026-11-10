@@ -503,7 +503,7 @@
         '<span class="quadro__erro-ico">' + ICO.alerta + '</span>' +
         '<p class="quadro__txt">Não foi possível entrar em ' + esc(nomeBonito(s)) + ' por aqui.</p>' +
         '<p class="quadro__sub">A entrada pelo painel não foi aceita. Tente de novo ou abra em nova aba. ' +
-          'Se continuar, avise o TI.</p>' +
+          'Se continuar, avise o administrador.</p>' +
         '<div class="quadro__botoes">' +
           '<button type="button" class="botao botao--leve" data-q="recarregar">Tentar de novo</button>' +
           '<button type="button" class="botao" data-q="fora">' + ICO.fora + 'Abrir em nova aba</button>' +
@@ -563,7 +563,7 @@
   function abrir(id) {
     var s = porId[id];
     if (!s) return;
-    if (!s._liberado) { aviso('Você não tem autorização para abrir ' + nomeBonito(s) + '. Peça a liberação ao TI.'); return; }
+    if (!s._liberado) { aviso('Você não tem autorização para abrir ' + nomeBonito(s) + '. Peça a liberação ao administrador.'); return; }
     if (ctx && ctx.registrar) ctx.registrar('abriu_sistema', id);
 
     if (!s.abre_no_painel) {
