@@ -10,36 +10,36 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css?v=20261110b" />
-<link rel="stylesheet" href="admin.css?v=20261110" />
+<link rel="stylesheet" href="admin.css?v=20261113" />
 </head>
 <body class="adm-body">
 
-<div class="adm-carregando" data-carregando><span class="mono">Verificando acesso…</span></div>
+<div class="adm-ceu" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="adm-carregando" data-carregando>
+  <span class="adm-carregando__marca" data-marca-clara></span>
+  <span class="mono">Verificando acesso…</span>
+</div>
 
 <div class="adm" data-adm hidden>
 
-  <!-- ============ CABEÇALHO ============ -->
+  <!-- ============ BARRA DE CIMA (vidro) ============ -->
   <header class="adm__top">
-    <a class="adm__brand" href="index.html">
-      <span class="adm__mark" data-logo-mark></span>
+    <a class="adm__brand" href="index.html" title="Voltar ao painel de sistemas">
+      <span class="adm__mark" data-marca-clara></span>
       <span class="adm__brandtext">LUBE<em>Painel administrativo</em></span>
     </a>
     <div class="adm__user">
-      <span class="mono" data-adm-quem></span>
+      <span class="adm__eu" title="Você está neste painel como administrador">
+        <span class="cel-av adm__eu-av" data-adm-av></span>
+        <span class="adm__eu-txt" data-adm-quem></span>
+      </span>
       <a class="adm__link" href="sentinela/" title="Segurança dos sistemas: acessos, bloqueios e alertas">Sentinela</a>
       <a class="adm__link" href="sentinela/#rede" title="Redes da Lube, modo de cada sistema, liberados fora da rede e tentativas de fora">Rede da Lube</a>
       <a class="adm__link" href="index.html">Ver portal</a>
-      <button class="adm__link" type="button" data-sair>Sair</button>
+      <button class="adm__link adm__link--perigo" type="button" data-sair>Sair</button>
     </div>
   </header>
-
-  <!-- ============ ABAS ============ -->
-  <nav class="adm__tabs">
-    <button class="adm__tab is-on" type="button" data-aba="usuarios">Usuários</button>
-    <button class="adm__tab" type="button" data-aba="sistemas">Sistemas</button>
-    <button class="adm__tab" type="button" data-aba="acessos">Acessos do painel</button>
-    <button class="adm__tab" type="button" data-aba="sac">SAC · externos<span class="adm__badge" data-sac-badge hidden></span></button>
-  </nav>
 
   <!-- aviso de cadastro novo no SAC (o "primeiro acesso" dos RCAs) -->
   <div class="adm__aviso" data-sac-aviso hidden>
@@ -48,6 +48,43 @@
     <button class="adm__link adm__link--destaque" type="button" data-ir-sac>Ver cadastros</button>
   </div>
 
+  <!-- ============ RESUMO (cada cartão leva para a aba já filtrada) ============ -->
+  <section class="adm__resumo" aria-label="Resumo">
+    <button class="kpi" type="button" data-kpi="ativos">
+      <span class="kpi__rot">Usuários ativos</span>
+      <strong class="kpi__num" data-kpi-ativos>—</strong>
+      <span class="kpi__sub" data-kpi-ativos-sub>&nbsp;</span>
+    </button>
+    <button class="kpi" type="button" data-kpi="pendentes">
+      <span class="kpi__rot">Aguardando liberação</span>
+      <strong class="kpi__num" data-kpi-pendentes>—</strong>
+      <span class="kpi__sub">primeiro acesso no painel</span>
+    </button>
+    <button class="kpi" type="button" data-kpi="sistemas">
+      <span class="kpi__rot">Sistemas ativos</span>
+      <strong class="kpi__num" data-kpi-sistemas>—</strong>
+      <span class="kpi__sub" data-kpi-sistemas-sub>&nbsp;</span>
+    </button>
+    <button class="kpi" type="button" data-kpi="hoje">
+      <span class="kpi__rot">Entradas hoje</span>
+      <strong class="kpi__num" data-kpi-hoje>—</strong>
+      <span class="kpi__sub" data-kpi-hoje-sub>&nbsp;</span>
+    </button>
+    <button class="kpi" type="button" data-kpi="sac">
+      <span class="kpi__rot">SAC aguardando</span>
+      <strong class="kpi__num" data-kpi-sac>—</strong>
+      <span class="kpi__sub" data-kpi-sac-sub>&nbsp;</span>
+    </button>
+  </section>
+
+  <!-- ============ ABAS ============ -->
+  <nav class="adm__tabs" role="tablist" aria-label="Áreas do painel administrativo">
+    <button class="adm__tab is-on" type="button" role="tab" data-aba="usuarios">Usuários<b class="adm__n" data-n-usuarios></b></button>
+    <button class="adm__tab" type="button" role="tab" data-aba="sistemas">Sistemas<b class="adm__n" data-n-sistemas></b></button>
+    <button class="adm__tab" type="button" role="tab" data-aba="acessos">Acessos do painel</button>
+    <button class="adm__tab" type="button" role="tab" data-aba="sac">SAC · externos<span class="adm__badge" data-sac-badge hidden></span></button>
+  </nav>
+
   <!-- ============ USUÁRIOS ============ -->
   <section class="adm__painel is-on" data-painel="usuarios">
     <div class="adm__head">
@@ -55,22 +92,49 @@
         <h2 class="adm__h2">Usuários</h2>
         <p class="adm__sub" data-resumo-usuarios></p>
       </div>
-      <button class="btn adm__btn" type="button" data-novo-usuario>
-        <span class="btn__label">Novo usuário</span>
-        <span class="btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
-      </button>
+      <div class="adm__acoes">
+        <button class="bt bt--leve" type="button" data-exportar="usuarios" title="Baixa em Excel o que está na tela, com os filtros aplicados">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exportar Excel
+        </button>
+        <button class="bt bt--prim" type="button" data-novo-usuario>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Novo usuário
+        </button>
+      </div>
+    </div>
+
+    <div class="ferr" data-ferr="usuarios">
+      <label class="busca">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" data-busca placeholder="Buscar nome, e-mail, cargo ou sistema" autocomplete="off" spellcheck="false" aria-label="Buscar usuários" />
+        <kbd>/</kbd>
+      </label>
+      <div class="segs" data-seg="situacao" role="group" aria-label="Situação">
+        <button class="seg is-on" type="button" data-v="">Todos<b data-n=""></b></button>
+        <button class="seg" type="button" data-v="ativo">Ativos<b data-n="ativo"></b></button>
+        <button class="seg seg--alerta" type="button" data-v="pendente">Aguardando<b data-n="pendente"></b></button>
+        <button class="seg" type="button" data-v="off">Desativados<b data-n="off"></b></button>
+      </div>
+      <label class="sel"><span>Perfil</span>
+        <select data-f="perfil"><option value="">Todos</option><option value="admin">Admin</option><option value="user">Usuário</option></select>
+      </label>
+      <label class="sel"><span>Sistema</span>
+        <select data-f="sistema"><option value="">Todos</option></select>
+      </label>
+      <button class="adm__link" type="button" data-limpar hidden>Limpar filtros</button>
     </div>
 
     <div class="adm__tablewrap">
       <table class="adm__table">
         <thead>
           <tr>
-            <th>Usuário</th><th>Cargo</th><th>Perfil</th><th>Situação</th><th>Sistemas</th><th></th>
+            <th data-ordem="nome">Usuário</th><th data-ordem="cargo">Cargo</th><th data-ordem="perfil">Perfil</th>
+            <th data-ordem="situacao">Situação</th><th>Sistemas</th><th data-ordem="cadastro">Cadastro</th><th></th>
           </tr>
         </thead>
         <tbody data-tbody-usuarios></tbody>
       </table>
     </div>
+    <p class="adm__rodape mono" data-info></p>
   </section>
 
   <!-- ============ SISTEMAS ============ -->
@@ -78,22 +142,51 @@
     <div class="adm__head">
       <div>
         <h2 class="adm__h2">Sistemas</h2>
-        <p class="adm__sub">Plataformas que podem ser liberadas aos usuários.</p>
+        <p class="adm__sub" data-resumo-sistemas>Plataformas que podem ser liberadas aos usuários.</p>
       </div>
-      <button class="btn adm__btn" type="button" data-novo-sistema>
-        <span class="btn__label">Novo sistema</span>
-        <span class="btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
-      </button>
+      <div class="adm__acoes">
+        <button class="bt bt--leve" type="button" data-exportar="sistemas" title="Baixa em Excel o que está na tela, com os filtros aplicados">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exportar Excel
+        </button>
+        <button class="bt bt--prim" type="button" data-novo-sistema>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Novo sistema
+        </button>
+      </div>
+    </div>
+
+    <div class="ferr" data-ferr="sistemas">
+      <label class="busca">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" data-busca placeholder="Buscar nome, área, descrição ou endereço" autocomplete="off" spellcheck="false" aria-label="Buscar sistemas" />
+        <kbd>/</kbd>
+      </label>
+      <div class="segs" data-seg="situacao" role="group" aria-label="Situação">
+        <button class="seg is-on" type="button" data-v="">Todos<b data-n=""></b></button>
+        <button class="seg" type="button" data-v="ativo">Ativos<b data-n="ativo"></b></button>
+        <button class="seg" type="button" data-v="off">Inativos<b data-n="off"></b></button>
+      </div>
+      <label class="sel"><span>Área</span>
+        <select data-f="area"><option value="">Todas</option></select>
+      </label>
+      <label class="sel"><span>Onde abre</span>
+        <select data-f="onde"><option value="">Tanto faz</option><option value="painel">Dentro do painel</option><option value="aba">Em nova aba</option></select>
+      </label>
+      <button class="adm__link" type="button" data-limpar hidden>Limpar filtros</button>
     </div>
 
     <div class="adm__tablewrap">
       <table class="adm__table">
         <thead>
-          <tr><th>Sistema</th><th>Área</th><th>Endereço</th><th>Ordem</th><th>Situação</th><th></th></tr>
+          <tr>
+            <th data-ordem="nome">Sistema</th><th data-ordem="area">Área</th><th data-ordem="onde">Onde abre</th>
+            <th data-ordem="usuarios" title="Usuários ativos que enxergam o sistema">Usuários</th><th data-ordem="ordem">Ordem</th>
+            <th data-ordem="situacao">Situação</th><th></th>
+          </tr>
         </thead>
         <tbody data-tbody-sistemas></tbody>
       </table>
     </div>
+    <p class="adm__rodape mono" data-info></p>
   </section>
 
   <!-- ============ ACESSOS ============ -->
@@ -101,9 +194,16 @@
     <div class="adm__head">
       <div>
         <h2 class="adm__h2">Acessos do painel</h2>
-        <p class="adm__sub">Entradas, saídas e aberturas de sistemas, do mais recente para o mais antigo. Filtre por usuário, ação ou sistema. Os do SAC ficam na aba “SAC · externos”.</p>
+        <p class="adm__sub">Entradas, saídas e aberturas de sistemas, do mais recente para o mais antigo. Os do SAC ficam na aba “SAC · externos”.</p>
       </div>
-      <button class="adm__link" type="button" data-recarregar-acessos>Atualizar</button>
+      <div class="adm__acoes">
+        <button class="bt bt--leve" type="button" data-exportar="acessos" title="Baixa em Excel todos os registros que batem com os filtros">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exportar Excel
+        </button>
+        <button class="bt bt--leve" type="button" data-recarregar-acessos>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 6.2M20 5v6h-6"/></svg>Atualizar
+        </button>
+      </div>
     </div>
 
     <div class="adm__tablewrap">
@@ -121,30 +221,66 @@
         <h2 class="adm__h2">SAC · contas externas</h2>
         <p class="adm__sub" data-resumo-sac></p>
       </div>
-      <button class="adm__link" type="button" data-recarregar-sac>Atualizar</button>
+      <div class="adm__acoes">
+        <button class="bt bt--leve" type="button" data-exportar="sac" title="Baixa em Excel a lista que está aberta (contas ou acessos), com os filtros aplicados">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exportar Excel
+        </button>
+        <button class="bt bt--leve" type="button" data-recarregar-sac>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 6.2M20 5v6h-6"/></svg>Atualizar
+        </button>
+      </div>
     </div>
     <p class="adm__nota">RCAs e supervisores que abrem chamado no
       <a href="https://sac-lube.vercel.app/" target="_blank" rel="noopener">SAC</a>. Estas contas
       <strong>não entram no painel</strong>: só abrem chamado no SAC, depois de liberadas aqui.</p>
 
-    <div class="adm__tablewrap">
-      <table class="adm__table">
-        <thead><tr><th>Pessoa</th><th>Tipo</th><th>Situação</th><th>Cadastro</th><th></th></tr></thead>
-        <tbody data-tbody-sac></tbody>
-      </table>
+    <!-- as duas listas do SAC, uma de cada vez -->
+    <div class="subabas" role="tablist" aria-label="Listas do SAC">
+      <button class="subaba is-on" type="button" role="tab" data-subaba="contas">Contas</button>
+      <button class="subaba" type="button" role="tab" data-subaba="acessos">Acessos do SAC</button>
     </div>
 
-    <div class="adm__head adm__head--sub">
-      <div>
-        <h3 class="adm__h3">Acessos do SAC</h3>
-        <p class="adm__sub">Primeiros acessos, entradas, saídas e chamados enviados. Filtre por pessoa ou ação.</p>
+    <div class="subpainel is-on" data-subpainel="contas">
+      <div class="ferr" data-ferr="sac">
+        <label class="busca">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" data-busca placeholder="Buscar nome, e-mail ou código do RCA" autocomplete="off" spellcheck="false" aria-label="Buscar contas do SAC" />
+          <kbd>/</kbd>
+        </label>
+        <div class="segs" data-seg="situacao" role="group" aria-label="Situação">
+          <button class="seg is-on" type="button" data-v="">Todas<b data-n=""></b></button>
+          <button class="seg seg--alerta" type="button" data-v="pendente">Aguardando<b data-n="pendente"></b></button>
+          <button class="seg" type="button" data-v="liberado">Liberadas<b data-n="liberado"></b></button>
+          <button class="seg" type="button" data-v="bloqueado">Bloqueadas<b data-n="bloqueado"></b></button>
+          <button class="seg" type="button" data-v="recusado">Recusadas<b data-n="recusado"></b></button>
+        </div>
+        <label class="sel"><span>Tipo</span>
+          <select data-f="tipo"><option value="">Todos</option><option value="rca">RCA</option><option value="supervisor">Supervisor</option></select>
+        </label>
+        <button class="adm__link" type="button" data-limpar hidden>Limpar filtros</button>
       </div>
+
+      <div class="adm__tablewrap">
+        <table class="adm__table">
+          <thead>
+            <tr>
+              <th data-ordem="nome">Pessoa</th><th data-ordem="tipo">Tipo</th><th data-ordem="situacao">Situação</th>
+              <th data-ordem="cadastro">Cadastro</th><th data-ordem="decidido">Decidido em</th><th></th>
+            </tr>
+          </thead>
+          <tbody data-tbody-sac></tbody>
+        </table>
+      </div>
+      <p class="adm__rodape mono" data-info></p>
     </div>
-    <div class="adm__tablewrap">
-      <table class="adm__table">
-        <thead><tr><th>Quando</th><th>Pessoa</th><th>Ação</th><th>Detalhe</th></tr></thead>
-        <tbody data-tbody-sac-acessos></tbody>
-      </table>
+
+    <div class="subpainel" data-subpainel="acessos">
+      <div class="adm__tablewrap">
+        <table class="adm__table">
+          <thead><tr><th>Quando</th><th>Pessoa</th><th>Ação</th><th>Detalhe</th></tr></thead>
+          <tbody data-tbody-sac-acessos></tbody>
+        </table>
+      </div>
     </div>
   </section>
 </div>
@@ -163,9 +299,8 @@
     <p class="modal__erro" data-modal-erro></p>
     <div class="modal__acoes">
       <button class="adm__link" type="button" data-modal-fechar>Cancelar</button>
-      <button class="btn adm__btn" type="button" data-modal-ok>
-        <span class="btn__label">Salvar</span>
-        <span class="btn__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      <button class="bt bt--prim" type="button" data-modal-ok><span data-modal-ok-rotulo>Salvar</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
     </div>
   </div>
@@ -179,6 +314,7 @@
 <script src="icones.js?v=20261006"></script>
 <script src="marca.js?v=20261006"></script>
 <script src="fotos.js?v=20261110"></script>
-<script src="admin.js?v=20261110"></script>
+<script src="excel.js?v=20261113"></script>
+<script src="admin.js?v=20261113"></script>
 </body>
 </html>

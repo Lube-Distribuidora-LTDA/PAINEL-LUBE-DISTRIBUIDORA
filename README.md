@@ -22,7 +22,8 @@ perfil.js       Meu perfil (foto com recorte e nome) e o aviso de novidade
 shell.js        painel: menu "BI LUBE" (fixados, áreas, cadeado), abas e BI dentro do painel
 shell.css       estilos do painel (menu azul flutuante, palco, abas, chegada)
 portal.js       sessão, permissões, passe da Sentinela e dados para o shell.js
-admin.js        CRUD de usuários, sistemas, permissões e log de acessos
+admin.js        CRUD de usuários, sistemas, permissões e log de acessos, com busca, filtros e Excel
+excel.js        gera o .xlsx das exportações do admin no navegador, sem biblioteca
 icones.js       ícones dos sistemas (desenhados no padrão Lube ou imagem)
 marca.js        marca "L" em SVG para páginas que não carregam o app.js
 config.js       URL e chave pública do Supabase
@@ -128,7 +129,29 @@ permissão devolve para o portal).
   para os próximos cadastros. Um ícone novo pode ser *desenhado no padrão Lube*
   (você digita as linhas e vê a prévia na hora) ou *enviado como imagem*
   (PNG/JPG/SVG/WEBP até 2 MB, guardado no Storage do Supabase).
-- **Acessos** — últimos 200 registros de entrada e abertura de sistemas.
+- **Acessos do painel** — entradas, saídas e aberturas de sistemas. O filtro roda
+  no banco: pessoas (parte do e-mail, pode somar várias), período (Hoje, 7 dias,
+  30 dias ou De/Até), ação e sistema. A tela mostra de 200 em 200.
+- **SAC · externos** — as contas dos RCAs e supervisores e, na outra sub-aba, os
+  acessos do SAC.
+
+**Visual e ferramentas (2026-11-13).** No topo ficam cinco cartões de resumo
+(usuários ativos, aguardando liberação, sistemas ativos, entradas hoje e SAC
+aguardando); clicar num cartão abre a aba já filtrada. Cada aba tem:
+
+- **Busca** — na hora, sem acento e por várias palavras (a tecla `/` leva o cursor
+  para a busca). Em Usuários ela acha também pelo cargo e pelo nome do sistema.
+- **Filtros** — a situação em botões (com a contagem), e caixas de escolha:
+  perfil e sistema (Usuários), área e onde abre (Sistemas), tipo (SAC).
+- **Ordem** — clicar no título da coluna: crescente, decrescente, e de novo para
+  voltar à ordem normal (quem espera liberação no topo).
+- **Exportar Excel** — baixa um `.xlsx` de verdade (`excel.js`: cabeçalho azul,
+  congelado, com o filtro do Excel; datas e números como data e número; texto
+  nunca vira fórmula). Usuários, Sistemas e contas do SAC levam o que está na
+  tela, com os filtros; os Acessos buscam no banco tudo o que bate com o filtro,
+  até 20 mil linhas.
+
+A aba aberta fica no endereço (`admin.html#sac`), então recarregar volta para ela.
 
 Criar usuário, trocar senha e remover passam pela Edge Function `admin-users`,
 que confere o JWT e o `is_admin` no servidor antes de agir. A chave de serviço
